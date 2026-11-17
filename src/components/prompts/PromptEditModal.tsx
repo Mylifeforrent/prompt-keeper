@@ -1,0 +1,189 @@
+import { useEffect, useState } from 'react'
+import type { Prompt, PromptVariable } from '../../types'
+import { Badge, Button, Input, Select, Textarea } from '../ui/core'
+import { Modal } from '../ui/modal'
+import { Icon } from '../../lib/icons'
+import { cn, nowIso, uid } from '../../lib/utils'
+import { mergeVariableDefs } from '../../lib/variables'
+import { useStore } from '../../store/store'
+import { FOLDERS } from '../../data/seed'
+
+const emptyDraft = (): Prompt => ({
+  id: '',
+  title: '',
+  description: '',
+  systemPrompt: '',
+  userPrompt: '',
+  folder: '默认',
+  tags: [],
+  isFavorite: false,
+  isPinned: false,
+  usageCount: 0,
+  variables: [],
+  versions: [],
+  createdAt: nowIso(),
+  updatedAt: nowIso(),
+})
+
+export function PromptEditModal({
+  open,
+  prompt,
+  onClose,
+}: {
+  open: boolean
+  prompt: Prompt | null // null = 新建
+  onClose: () => void
+}) {
+  const { state, savePrompt } = useStore()
+  const [draft, setDraft] = useState<Prompt>(emptyDraft)
+  const [tagInput, setTagInput] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      setDraft(prompt ? { ...prompt } : emptyDraft())
+      setTagInput('')
+      setError(null)
+    }
+  }, [open, prompt])
+
+  const variableDefs = mergeVariableDefs([draft.systemPrompt, draft.userPrompt], draft.variables)
+  const set = (patch: Partial<Prompt>) => setDraft((d) => ({ ...d, ...patch }))
+
+  const submit = () => {
+    if (!draft.title.trim()) {
+      setError('标题必填')
+      return
+    }
+    if (!draft.systemPrompt.trim() && !draft.userPrompt.trim()) {
+      setError('System Prompt 与 User Prompt 至少填写一个')
+      return
+    }
+    const next: Prompt = {
+      ...draft,
+      id: draft.id || uid(),
+      title: draft.title.trim(),
+      variables: variableDefs,
+      updatedAt: nowIso(),
+    }
+    savePrompt(next)
+    onClose()
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={prompt ? '编辑 Prompt' : '新建 Prompt'}
+      width="max-w-2xl"
+      footer={
+        <>
+          {error && <span className="mr-auto text-xs text-danger">{error}</span>}
+          <Button variant="outline" onClick={onClose}>
+            取消
+          </Button>
+          <Button onClick={submit}>保存（自动生成版本）</Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">标题 *</label>
+            <Input value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="例如：代码审查助手" />
+          </div>
+          <div className="w-36">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">文件夹</label>
+            <Select value={draft.folder ?? ''} onChange={(e) => set({ folder: e.target.value || null })}>
+              {FOLDERS.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">描述</label>
+          <Input value={draft.description} onChange={(e) => set({ description: e.target.value })} placeholder="一句话说明用途" />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">System Prompt</label>
+          <Textarea rows={4} value={draft.systemPrompt} onChange={(e) => set({ systemPrompt: e.target.value })} placeholder="设定角色与输出要求…" />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">User Prompt</label>
+          <Textarea rows={5} value={draft.userPrompt} onChange={(e) => set({ userPrompt: e.target.value })} placeholder="正文模板，可用 {{变量名}} 或 {{变量名:示例值}}…" />
+        </div>
+
+        <div>
+          <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            标签
+            <span className="font-normal">回车添加，点击 × 移除</span>
+          </label>
+          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-input bg-card px-2.5 py-2">
+            {draft.tags.map((t) => (
+              <Badge key={t} variant="primary" className="gap-1 py-1">
+                {t}
+                <button
+                  type="button"
+                  className="cursor-pointer"
+                  onClick={() => set({ tags: draft.tags.filter((x) => x !== t) })}
+                >
+                  <Icon name="x" className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+            <input
+              className="min-w-24 flex-1 bg-transparent text-sm outline-none"
+              value={tagInput}
+              placeholder={draft.tags.length ? '' : '编程、写作…'}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && tagInput.trim()) {
+                  e.preventDefault()
+                  if (!draft.tags.includes(tagInput.trim())) set({ tags: [...draft.tags, tagInput.trim()] })
+                  setTagInput('')
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">识别到的模板变量</label>
+          {variableDefs.length === 0 ? (
+            <p className="text-xs text-muted-foreground">未检测到变量；在正文中写 {`{{变量名}}`} 即可，复制/测试时会弹表单填值。</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {variableDefs.map((v) => (
+                <VariableChip key={v.name} v={v} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+function VariableChip({ v }: { v: PromptVariable }) {
+  const [showDetail, setShowDetail] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={() => setShowDetail((s) => !s)}
+      className={cn(
+        'cursor-pointer rounded-md border px-2 py-1 text-left text-[11px] transition-colors',
+        showDetail ? 'border-primary bg-primary-soft' : 'border-border hover:bg-muted',
+      )}
+    >
+      <span className="font-mono">{`{{${v.name}}}`}</span>
+      <span className="ml-1.5 text-muted-foreground">{v.type}</span>
+      {v.options && <span className="ml-1 text-muted-foreground">({v.options.join('/')})</span>}
+    </button>
+  )
+}
