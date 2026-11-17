@@ -134,9 +134,126 @@ export interface McpTarget {
   format: 'json' | 'toml'
 }
 
+/* ---------------- Git 仓库同步 ---------------- */
+
+export type AssetKind = 'skill' | 'mcp' | 'prompt'
+export type SyncDirection = 'incoming' | 'outgoing' | 'conflict'
+export type SyncChangeKind = 'added' | 'modified' | 'deleted' | 'renamed'
+/** none=低风险；scripts=含可执行脚本；secrets=含明文密钥；network=会访问网络 */
+export type SyncRisk = 'none' | 'scripts' | 'secrets' | 'network'
+
+export interface RepoConfig {
+  connected: boolean
+  provider: 'github' | 'gitlab' | 'generic'
+  url: string
+  branch: string
+  localPath: string
+  auth: 'credential' | 'ssh' | 'token'
+  autoFetch: boolean
+  fetchIntervalMin: number
+  pushMode: 'direct' | 'branch-pr'
+  lastFetchedAt?: string
+  lastSyncedAt?: string
+  ahead: number
+  behind: number
+  layout: { skills: string; mcp: string; prompts: string }
+  /** 资产是否参与仓库同步；Prompt 默认关闭 */
+  policies: { skills: boolean; mcp: boolean; prompts: boolean }
+}
+
+export interface SyncChange {
+  id: string
+  kind: AssetKind
+  assetName: string
+  path: string
+  change: SyncChangeKind
+  direction: SyncDirection
+  summary: string
+  additions: number
+  deletions: number
+  risk: SyncRisk
+  versionLabel?: string
+  remoteVersion?: string
+  localVersion?: string
+  baseVersion?: string
+  remoteContent?: string
+  localContent?: string
+  baseContent?: string
+  files?: { path: string; size: string }[]
+  resolved?: boolean
+  blocked?: boolean
+}
+
+export interface AgentRuntime {
+  id: string
+  name: string
+  skillDir: string
+  mcpFile: string
+  supportsSkills: boolean
+  supportsMcp: boolean
+}
+
+export type FanoutStatus = 'synced' | 'stale' | 'drifted' | 'missing' | 'paused'
+
+export interface Deployment {
+  id: string
+  kind: 'skill' | 'mcp'
+  assetId: string
+  assetName: string
+  agentId: string
+  mode: InstallMode
+  status: FanoutStatus
+  deployedVersion: string
+  previousVersion?: string
+  deployedAt: string
+  note?: string
+}
+
+export type SyncEventType =
+  | 'fetch'
+  | 'pull'
+  | 'push'
+  | 'conflict'
+  | 'deploy'
+  | 'blocked'
+  | 'connect'
+  | 'rollback'
+  | 'review'
+
+export interface SyncEvent {
+  id: string
+  at: string
+  type: SyncEventType
+  title: string
+  detail?: string
+  result: 'success' | 'warning' | 'error'
+}
+
+/* ---------------- 平台 Prompt 发现 ---------------- */
+
+export interface PromptPlatformItem {
+  id: string
+  title: string
+  description: string
+  author: string
+  category: string
+  tags: string[]
+  systemPrompt: string
+  userPrompt: string
+  variables: PromptVariable[]
+  uses: number
+  updatedAt: string
+}
+
 export interface AppState {
   prompts: Prompt[]
   skills: Skill[]
   mcps: McpServer[]
   settings: { theme: ThemeMode }
+  repo: RepoConfig
+  syncChanges: SyncChange[]
+  deployments: Deployment[]
+  syncEvents: SyncEvent[]
+  /** 本机检测到的 Agent id；用于分发矩阵默认视图 */
+  detectedAgents: string[]
 }

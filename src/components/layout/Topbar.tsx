@@ -1,20 +1,25 @@
 import { forwardRef } from 'react'
-import { Input } from '../ui/core'
+import { Badge, Input } from '../ui/core'
 import { Icon } from '../../lib/icons'
 import type { ThemeMode } from '../../types'
 import { useStore } from '../../store/store'
+import { syncCounts } from '../../lib/sync'
 import type { Page } from './Sidebar'
 
 const TITLES: Record<Page, string> = {
   prompts: 'Prompts',
   skills: 'Skills',
   mcp: 'MCP',
+  sync: '同步中心',
   settings: '设置',
 }
 
-export const Topbar = forwardRef<HTMLInputElement, { page: Page; query: string; onQueryChange: (q: string) => void }>(
-  function Topbar({ page, query, onQueryChange }, ref) {
+export const Topbar = forwardRef<
+  HTMLInputElement,
+  { page: Page; query: string; onQueryChange: (q: string) => void; onNavigate: (p: Page) => void }
+>(function Topbar({ page, query, onQueryChange, onNavigate }, ref) {
     const { state, setTheme } = useStore()
+    const pending = syncCounts(state.syncChanges, state.deployments, state.mcps).pending
 
     const cycleTheme = () => {
       const order: ThemeMode[] = ['light', 'dark', 'system']
@@ -45,9 +50,29 @@ export const Topbar = forwardRef<HTMLInputElement, { page: Page; query: string; 
         >
           <Icon name={themeIcon} />
         </button>
-        <div className="flex items-center h-9 rounded-lg bg-muted px-3 text-xs text-muted-foreground">
-          {state.prompts.length} Prompts · {state.skills.length} Skills · {state.mcps.length} MCP
-        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate('sync')}
+          title="打开同步中心"
+          className="hidden h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs text-muted-foreground transition-colors hover:bg-muted lg:flex"
+        >
+          <Icon name="gitBranch" className="h-3.5 w-3.5" />
+          <span className="max-w-36 truncate font-mono text-[11px]">
+            {state.repo.connected ? state.repo.url : '未连接仓库'}
+          </span>
+          {state.repo.connected ? (
+            pending > 0 ? (
+              <Badge variant="warning">{pending} 待处理</Badge>
+            ) : (
+              <Badge variant="success">
+                <Icon name="check" className="h-3 w-3" />
+                已同步
+              </Badge>
+            )
+          ) : (
+            <Badge variant="warning">去连接</Badge>
+          )}
+        </button>
       </header>
     )
   },

@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Sidebar, type Page } from './components/layout/Sidebar'
 import { Topbar } from './components/layout/Topbar'
-import { PromptsWorkspace } from './components/prompts/PromptsWorkspace'
+import { PromptsTabs } from './components/prompts/PromptsTabs'
 import { SkillsTabs } from './components/skills/SkillsTabs'
 import { McpTabs } from './components/mcp/McpTabs'
+import { SyncCenter } from './components/sync/SyncCenter'
 import { SettingsView } from './components/settings/SettingsView'
 import { useStore } from './store/store'
+import { syncCounts } from './lib/sync'
 
 export default function App() {
   const { state } = useStore()
@@ -23,7 +25,9 @@ export default function App() {
         e.preventDefault()
         searchRef.current?.focus()
       } else if (e.key === 'n' || e.key === 'N') {
-        if (page !== 'settings') setCreateSignal((s) => ({ n: s.n + 1, page }))
+        if (page === 'prompts' || page === 'skills' || page === 'mcp') {
+          setCreateSignal((s) => ({ n: s.n + 1, page }))
+        }
       }
     }
     window.addEventListener('keydown', handler)
@@ -41,15 +45,26 @@ export default function App() {
         counts={{
           prompts: state.prompts.length,
           skills: state.skills.length,
-          mcps: state.mcps.length,
+          mcp: state.mcps.length,
+          sync: syncCounts(state.syncChanges, state.deployments, state.mcps).pending,
         }}
       />
       <main className="flex min-w-0 flex-1 flex-col">
-        <Topbar ref={searchRef} page={page} query={query} onQueryChange={setQuery} />
+        <Topbar
+          ref={searchRef}
+          page={page}
+          query={query}
+          onQueryChange={setQuery}
+          onNavigate={(p) => {
+            setPage(p)
+            setQuery('')
+          }}
+        />
         <div className="min-h-0 flex-1 overflow-hidden">
-          {page === 'prompts' && <PromptsWorkspace query={query} createSignal={createSignal} />}
+          {page === 'prompts' && <PromptsTabs query={query} createSignal={createSignal} />}
           {page === 'skills' && <SkillsTabs query={query} />}
           {page === 'mcp' && <McpTabs query={query} createSignal={{ n: createSignal.n, page: createSignal.page }} />}
+          {page === 'sync' && <SyncCenter />}
           {page === 'settings' && <SettingsView />}
         </div>
       </main>

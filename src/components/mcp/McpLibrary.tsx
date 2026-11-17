@@ -10,6 +10,7 @@ import { checkHealth, healthBadge, projectForTarget, serverConfigJson } from '..
 import { useToast } from '../ui/toast'
 import { McpEditModal } from './McpEditModal'
 import { VersionHistoryModal } from '../shared/VersionHistoryModal'
+import { AssetSyncBadge } from '../sync/AssetSyncBadge'
 
 /** 目标平台当前对某 server 的状态 */
 export type TargetStatus = 'managed' | 'missing' | 'external'
@@ -328,6 +329,7 @@ function McpDetail({
           <Badge variant={server.source === 'manual' ? 'outline' : server.source === 'market' ? 'primary' : 'warning'}>
             {server.source === 'manual' ? '手动创建' : server.source === 'market' ? '来自商店' : '导入'}
           </Badge>
+          <AssetSyncBadge kind="mcp" name={server.name} />
           {hb !== 'ok' && (
             <Badge variant={hb === 'error' ? 'danger' : 'warning'}>
               <Icon name="alert" className="h-3 w-3" />

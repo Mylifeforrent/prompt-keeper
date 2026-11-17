@@ -4,6 +4,7 @@ import { Badge, Button, Textarea } from '../ui/core'
 import { Icon } from '../../lib/icons'
 import { cn, formatDate } from '../../lib/utils'
 import { Markdown } from '../shared/Markdown'
+import { AssetSyncBadge } from '../sync/AssetSyncBadge'
 import { useStore } from '../../store/store'
 
 type InlineField = 'title' | 'description' | 'systemPrompt' | 'userPrompt'
@@ -132,6 +133,7 @@ export function PromptDetail({
           ))}
           <Badge variant="outline">v{prompt.versions[0]?.version ?? 1}</Badge>
           <Badge variant="outline">用 {prompt.usageCount} 次</Badge>
+          <AssetSyncBadge kind="prompt" name={prompt.title} />
           <span className="ml-auto text-[11px] text-muted-foreground">更新于 {formatDate(prompt.updatedAt)}</span>
         </div>
         <div className="mt-3 flex items-center gap-2">

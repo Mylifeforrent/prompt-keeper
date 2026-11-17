@@ -46,9 +46,32 @@ export function SettingsView() {
         </section>
 
         <section className="rounded-xl border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold">同步策略</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Git 仓库负责跨机器 / 跨团队共享；本机负责审核与向各 Agent 分发。Prompt 默认不进入这条链路。
+          </p>
+          <div className="mt-3 space-y-1.5">
+            {[
+              { label: 'Skills', value: '双向同步 · 审核后分发', tone: 'text-primary' },
+              { label: 'MCP', value: '模板双向 · 密钥只存本机', tone: 'text-info' },
+              { label: 'Prompts', value: '不参与仓库同步 · 平台发现', tone: 'text-muted-foreground' },
+            ].map((r) => (
+              <div key={r.label} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs">
+                <span className="w-16 font-medium">{r.label}</span>
+                <span className={r.tone}>{r.value}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
+            仓库连接、拉取 / 推送、冲突解决与 Agent 分发统一在左侧「同步」工作区完成。原型不会访问真实 Git 或文件系统。
+          </p>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">数据</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            原型数据保存在浏览器 localStorage（键 pk_state_v1）。真实产品为 SQLite + 工作区文件，支持 WebDAV / S3 同步与 .phub.gz 全量备份（后续迭代）。
+            原型数据保存在浏览器 localStorage（键 pk_state_v1）。真实产品为 SQLite + 应用托管的 Git 克隆目录 + 系统钥匙串；
+            WebDAV / S3 快照作为 Git 之外的备份选项保留在后续迭代。
           </p>
           <Button variant="outline" className="mt-3" onClick={() => setConfirmReset(true)}>
             <Icon name="refresh" />
@@ -59,9 +82,10 @@ export function SettingsView() {
         <section className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">关于</h2>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Prompt Keeper 原型 v0.1.0 · 功能提取自 PromptHub（AGPL-3.0）v0.6.2 的 Prompt / Skill / MCP 管理域。
+            Prompt Keeper 原型 v0.2.0 · 在 PromptHub（AGPL-3.0）v0.6.2 的 Prompt / Skill / MCP 管理域之上，
+            增加 Git 仓库双向同步与多 Agent 分发层。
             <br />
-            交互设计文档见 docs/interaction-design.md；本原型不含真实后端，所有分发与 AI 响应均为模拟。
+            交互设计文档见 docs/interaction-design.md；本原型不含真实后端，Git 操作、分发与 AI 响应均为模拟。
           </p>
         </section>
       </div>

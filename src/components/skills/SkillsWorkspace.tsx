@@ -7,6 +7,7 @@ import { Modal, ConfirmDialog } from '../ui/modal'
 import { Icon } from '../../lib/icons'
 import { Markdown } from '../shared/Markdown'
 import { VersionHistoryModal } from '../shared/VersionHistoryModal'
+import { AssetSyncBadge } from '../sync/AssetSyncBadge'
 import { formatDate, uid, nowIso } from '../../lib/utils'
 import { useToast } from '../ui/toast'
 
@@ -113,6 +114,7 @@ function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => voi
             <span className="text-base">{skill.emoji}</span>
             {skill.name}
             <Badge variant={src.variant}>{src.label}</Badge>
+            <AssetSyncBadge kind="skill" name={skill.name} />
           </span>
         }
         subtitle={`${skill.description} · v${skill.version} · ${skill.author}`}
