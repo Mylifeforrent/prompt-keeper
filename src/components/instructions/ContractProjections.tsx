@@ -67,7 +67,7 @@ export function ContractProjections() {
           status: p.status,
           supported: true,
           orphan: true,
-          title: p.contractTitle ?? '已删除的契约',
+          title: p.contractTitle ?? 'Deleted contract',
           path:
             target.merge === 'single-file'
               ? target.pathTemplate
@@ -95,10 +95,10 @@ export function ContractProjections() {
     if (!row.contract || !row.supported) return
     if (row.projection) {
       syncContractProjection(row.projection.id)
-      toast.success(`已重新投影「${row.contract.title}」→ ${row.target.label}`)
+      toast.success(`Reprojected "${row.contract.title}" → ${row.target.label}`)
     } else {
       deployContract(row.contract.id, row.target.id)
-      toast.success(`已投影「${row.contract.title}」→ ${row.target.label}`)
+      toast.success(`Projected "${row.contract.title}" → ${row.target.label}`)
     }
   }
 
@@ -108,14 +108,14 @@ export function ContractProjections() {
         <div className="flex items-start gap-2 rounded-xl border border-info/30 bg-info-soft px-3.5 py-2.5 text-xs leading-5 text-info">
           <Icon name="send" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            投影是<b>单向写出</b>：本地契约 → 目标工具的原生文件。单文件目标（AGENTS.md / CLAUDE.md / copilot-instructions）
-            由多条契约合并写入，使用 managed block 标记；目标文件被手工修改时标记为<b>漂移</b>，不会自动覆盖。
+            Projection is a <b>one-way write</b>: local contract → native file of the target tool. Single-file targets (AGENTS.md / CLAUDE.md / copilot-instructions)
+            merge multiple contracts using managed block markers; when a target file is edited by hand it is marked as <b>drifted</b> and never overwritten automatically.
           </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <Select className="h-8 w-56 text-xs" value={targetFilter} onChange={(e) => setTargetFilter(e.target.value)}>
-            <option value="all">全部目标格式</option>
+            <option value="all">All target formats</option>
             {CONTRACT_TARGETS.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.label} · {t.agentName}
@@ -125,11 +125,11 @@ export function ContractProjections() {
           <div className="inline-flex items-center gap-1 rounded-lg bg-muted p-1">
             {(
               [
-                { v: 'all', label: '全部' },
-                { v: 'synced', label: `已投影 ${counts.synced}` },
-                { v: 'stale', label: `待更新 ${counts.stale}` },
-                { v: 'drifted', label: `漂移 ${counts.drifted}` },
-                { v: 'missing', label: `未投影 ${counts.missing}` },
+                { v: 'all', label: 'All' },
+                { v: 'synced', label: `Projected ${counts.synced}` },
+                { v: 'stale', label: `Stale ${counts.stale}` },
+                { v: 'drifted', label: `Drifted ${counts.drifted}` },
+                { v: 'missing', label: `Not projected ${counts.missing}` },
               ] as const
             ).map((t) => (
               <button
@@ -146,7 +146,7 @@ export function ContractProjections() {
             ))}
           </div>
           <span className="ml-auto text-[11px] text-muted-foreground">
-            漂移项只能逐条覆盖，不参与批量操作
+            Drifted items must be overwritten one by one and are excluded from bulk actions
           </span>
         </div>
 
@@ -154,12 +154,12 @@ export function ContractProjections() {
           <table className="w-full min-w-max border-collapse text-left">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
-                <th className="px-3 py-2.5 font-medium">契约</th>
-                <th className="px-3 py-2.5 font-medium">目标</th>
-                <th className="px-3 py-2.5 font-medium">写入路径</th>
-                <th className="px-3 py-2.5 font-medium">状态</th>
-                <th className="px-3 py-2.5 font-medium">版本 / 时间</th>
-                <th className="px-3 py-2.5 font-medium">操作</th>
+                <th className="px-3 py-2.5 font-medium">Contract</th>
+                <th className="px-3 py-2.5 font-medium">Target</th>
+                <th className="px-3 py-2.5 font-medium">Write path</th>
+                <th className="px-3 py-2.5 font-medium">Status</th>
+                <th className="px-3 py-2.5 font-medium">Version / time</th>
+                <th className="px-3 py-2.5 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -178,12 +178,12 @@ export function ContractProjections() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="truncate text-xs font-medium">{row.title}</span>
-                            {row.orphan && <Badge variant="warning">已删除</Badge>}
+                            {row.orphan && <Badge variant="warning">Deleted</Badge>}
                           </div>
                           <div className="text-[10px] text-muted-foreground">
                             {row.contract
-                              ? `${contractVersionLabel(row.contract)} · 优先级 ${row.contract.priority}`
-                              : '只能清理或回滚，不能重新生成'}
+                              ? `${contractVersionLabel(row.contract)} · Priority ${row.contract.priority}`
+                              : 'Can only be cleaned up or rolled back; cannot be regenerated'}
                           </div>
                         </div>
                       </div>
@@ -197,7 +197,7 @@ export function ContractProjections() {
                         {row.path}
                       </code>
                       <div className="mt-0.5 text-[10px] text-muted-foreground">
-                        {row.target.merge === 'single-file' ? '与其他契约合并' : '独立文件'}
+                        {row.target.merge === 'single-file' ? 'Merged with other contracts' : 'Separate file'}
                       </div>
                     </td>
                     <td className="px-3 py-2">
@@ -208,8 +208,8 @@ export function ContractProjections() {
                         </Badge>
                       ) : (
                         <div>
-                          <Badge variant="outline">不支持</Badge>
-                          <div className="mt-0.5 text-[10px] text-muted-foreground">激活方式不兼容</div>
+                          <Badge variant="outline">Unsupported</Badge>
+                          <div className="mt-0.5 text-[10px] text-muted-foreground">Incompatible activation</div>
                         </div>
                       )}
                     </td>
@@ -226,11 +226,11 @@ export function ContractProjections() {
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1">
                         <Button size="sm" variant="outline" onClick={() => setDetailOf(row)}>
-                          详情
+                          Details
                         </Button>
                         {!row.orphan && !row.supported && (
-                          <Button size="sm" variant="outline" disabled title="目标不支持该激活方式，投影时会跳过">
-                            不兼容
+                          <Button size="sm" variant="outline" disabled title="Target does not support this activation; skipped on projection">
+                            Incompatible
                           </Button>
                         )}
                         {!row.orphan && row.supported && (
@@ -240,10 +240,10 @@ export function ContractProjections() {
                             onClick={() => (row.status === 'drifted' ? setConfirmDrift(row) : project(row))}
                           >
                             {row.status === 'missing'
-                              ? '投影'
+                              ? 'Project'
                               : row.status === 'drifted'
-                                ? '覆盖投影'
-                                : '重新投影'}
+                                ? 'Overwrite'
+                                : 'Reproject'}
                           </Button>
                         )}
                       </div>
@@ -257,7 +257,7 @@ export function ContractProjections() {
 
         {filtered.length === 0 && (
           <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-xs text-muted-foreground">
-            当前筛选下没有投影记录。调整筛选，或先在契约库为目标选择投影目标。
+            No projection records match the current filters. Adjust the filters, or first assign projection targets to contracts in the contract library.
           </p>
         )}
       </div>
@@ -270,13 +270,13 @@ export function ContractProjections() {
         onConfirm={() => {
           if (confirmDrift) project(confirmDrift)
         }}
-        title="覆盖 Agent 侧的手工修改？"
-        confirmText="覆盖并投影"
+        title="Overwrite manual edits on the Agent side?"
+        confirmText="Overwrite and project"
         message={
           <>
-            目标文件「<b className="text-foreground">{confirmDrift?.path ?? ''}</b>」
-            在 Agent 侧被手工修改过。重新投影会用本地契约重写对应 managed block，手工修改将被覆盖。
-            {confirmDrift?.target.merge === 'single-file' && ' 该文件还包含其他契约的合并内容。'}
+            Target file "<b className="text-foreground">{confirmDrift?.path ?? ''}</b>"
+            was edited by hand on the Agent side. Reprojecting rewrites the matching managed block from the local contract, overwriting those edits.
+            {confirmDrift?.target.merge === 'single-file' && ' This file also contains merged content from other contracts.'}
           </>
         }
       />
@@ -300,7 +300,7 @@ function ProjectionModal({ row, onClose }: { row: ProjectionRow; onClose: () => 
   const path = row.path
 
   const content = !row.contract
-    ? '<!-- 原契约已删除：无法重新生成内容。目标文件中可能仍保留该契约的 managed block，请移除投影或手动清理。 -->'
+    ? '<!-- Original contract deleted: content cannot be regenerated. Its managed block may remain in the target file; remove the projection or clean it up manually. -->'
     : row.target.merge === 'single-file'
       ? [
           '<!-- Generated by Prompt Keeper. Source of truth: instructions/*.contract.md. -->',
@@ -319,17 +319,17 @@ function ProjectionModal({ row, onClose }: { row: ProjectionRow; onClose: () => 
         onClose={onClose}
         width="max-w-2xl"
         title={`${row.title} → ${row.target.label}`}
-        subtitle={`${row.target.agentName} · 投影是单向写出，不修改本地库与仓库`}
+        subtitle={`${row.target.agentName} · Projection is a one-way write; the local library and repo are unchanged`}
         footer={
           <>
             {projection && (
               <Button variant="ghost" className="mr-auto text-danger" onClick={() => setConfirmRemove(true)}>
                 <Icon name="trash" className="h-3.5 w-3.5" />
-                移除投影
+                Remove projection
               </Button>
             )}
             <Button variant="outline" onClick={onClose}>
-              关闭
+              Close
             </Button>
             {row.contract && row.supported && (
               <Button
@@ -337,15 +337,15 @@ function ProjectionModal({ row, onClose }: { row: ProjectionRow; onClose: () => 
                 onClick={() => {
                   if (projection) {
                     syncContractProjection(projection.id)
-                    toast.success(`已重新投影「${row.title}」→ ${row.target.label}`)
+                    toast.success(`Reprojected "${row.title}" → ${row.target.label}`)
                   } else {
                     deployContract(row.contract!.id, row.target.id)
-                    toast.success(`已投影「${row.title}」→ ${row.target.label}`)
+                    toast.success(`Projected "${row.title}" → ${row.target.label}`)
                   }
                 }}
               >
                 <Icon name="send" />
-                {status === 'missing' ? '投影到此目标' : '重新投影'}
+                {status === 'missing' ? 'Project to this target' : 'Reproject'}
               </Button>
             )}
           </>
@@ -359,44 +359,44 @@ function ProjectionModal({ row, onClose }: { row: ProjectionRow; onClose: () => 
                 {meta.label}
               </Badge>
             ) : (
-              <Badge variant="outline">不支持该激活方式</Badge>
+              <Badge variant="outline">Activation not supported</Badge>
             )}
-            {row.orphan && <Badge variant="warning">本地契约已删除</Badge>}
+            {row.orphan && <Badge variant="warning">Local contract deleted</Badge>}
             <span className="text-xs text-muted-foreground">
               {projection
-                ? `当前 ${projection.deployedVersion} · 部署于 ${formatDate(projection.deployedAt ?? '')}`
-                : '该目标还没有写入此契约'}
+                ? `Current ${projection.deployedVersion} · Deployed ${formatDate(projection.deployedAt ?? '')}`
+                : 'This contract has not been written to this target yet'}
             </span>
           </div>
 
           <div className="rounded-lg border border-border px-3 py-2">
-            <div className="text-[11px] text-muted-foreground">目标路径</div>
+            <div className="text-[11px] text-muted-foreground">Target path</div>
             <div className="mt-0.5 break-all font-mono text-xs">{path}</div>
             <div className="mt-1 text-[10px] text-muted-foreground">
               {row.target.merge === 'single-file'
-                ? `该文件由 ${mergedCount} 条契约合并写入；重新投影会重写整个 managed block 区域。`
-                : '一契约一文件；重新投影只影响该文件。'}
+                ? `This file merges ${mergedCount} contracts; reprojecting rewrites the whole managed block region.`
+                : 'One file per contract; reprojecting only affects this file.'}
             </div>
           </div>
 
           {row.orphan && (
             <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2.5 text-xs leading-5 text-warning">
               <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              本地契约已删除，无法重新生成投影内容。你仍可以移除这条投影记录，或回滚到上一版本。
+              The local contract has been deleted, so projection content cannot be regenerated. You can still remove this projection record or roll back to the previous version.
             </div>
           )}
 
           {!row.supported && (
             <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2.5 text-xs leading-5 text-warning">
               <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              当前契约的激活方式不被 {row.target.label} 支持，投影时会跳过；请改用其他目标或调整激活方式。
+              {row.target.label} does not support this contract's activation, so it is skipped on projection; choose another target or change the activation.
             </div>
           )}
 
           {status === 'drifted' && (
             <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2.5 text-xs leading-5 text-danger">
               <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              {projection?.note ?? '检测到目标文件被手工修改。重新投影会覆盖该修改；请先确认内容。'}
+              {projection?.note ?? 'The target file was edited by hand. Reprojecting overwrites those edits; review the content first.'}
             </div>
           )}
 
@@ -409,8 +409,8 @@ function ProjectionModal({ row, onClose }: { row: ProjectionRow; onClose: () => 
 
           <div>
             <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              写入内容预览
-              <Badge variant="outline">{row.target.merge === 'single-file' ? '单条契约片段' : '完整文件'}</Badge>
+              Content preview
+              <Badge variant="outline">{row.target.merge === 'single-file' ? 'Single contract block' : 'Full file'}</Badge>
             </div>
             <pre className="max-h-72 overflow-auto rounded-lg border border-border bg-muted/60 p-3 font-mono text-[11px] leading-5">
               {content}
@@ -420,7 +420,7 @@ function ProjectionModal({ row, onClose }: { row: ProjectionRow; onClose: () => 
           {projection && (
             <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-2">
               <span className="text-[11px] text-muted-foreground">
-                最近更新 {relativeTime(projection.deployedAt)}
+                Last updated {relativeTime(projection.deployedAt)}
               </span>
               {projection.previousVersion && (
                 <Button
@@ -429,11 +429,11 @@ function ProjectionModal({ row, onClose }: { row: ProjectionRow; onClose: () => 
                   className="ml-auto"
                   onClick={() => {
                     rollbackContractProjection(projection.id)
-                    toast.warning(`已回滚到 ${projection.previousVersion}；本地库与仓库未变`)
+                    toast.warning(`Rolled back to ${projection.previousVersion}; local library and repo unchanged`)
                   }}
                 >
                   <Icon name="undo" className="h-3.5 w-3.5" />
-                  回滚到 {projection.previousVersion}
+                  Roll back to {projection.previousVersion}
                 </Button>
               )}
             </div>
@@ -447,17 +447,17 @@ function ProjectionModal({ row, onClose }: { row: ProjectionRow; onClose: () => 
         onConfirm={() => {
           if (projection) {
             removeContractProjection(projection.id)
-            toast.success(`已移除「${row.title}」在 ${row.target.label} 的投影`)
+            toast.success(`Removed "${row.title}" projection from ${row.target.label}`)
           }
           onClose()
         }}
-        title="移除这条投影？"
-        confirmText="移除"
+        title="Remove this projection?"
+        confirmText="Remove"
         message={
           <>
-            将从「<b className="text-foreground">{path}</b>」的 managed block 中移除这条契约（原型模拟）。
-            本地契约库与 Git 仓库不受影响。
-            {row.target.merge === 'single-file' && ` 同一文件中的其他 ${mergedCount - 1} 条契约保持不变。`}
+            Removes this contract from the managed block in "<b className="text-foreground">{path}</b>" (simulated in this prototype).
+            The local contract library and Git repo are unaffected.
+            {row.target.merge === 'single-file' && ` The other ${mergedCount - 1} contracts in the same file are unchanged.`}
           </>
         }
       />

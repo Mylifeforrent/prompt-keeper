@@ -1,12 +1,12 @@
 export type DiffLine = { type: 'same' | 'add' | 'del'; text: string }
 
-/** 简单 LCS 行级 diff（原型规模足够） */
+/** Simple line-level LCS diff (sufficient at prototype scale) */
 export function diffLines(before: string, after: string): DiffLine[] {
   const a = before.split('\n')
   const b = after.split('\n')
   const n = a.length
   const m = b.length
-  // dp[i][j] = LCS 长度 of a[i..], b[j..]
+  // dp[i][j] = LCS length of a[i..], b[j..]
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {

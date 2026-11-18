@@ -76,7 +76,7 @@ export function PromptsWorkspace({
         case 'created':
           return b.createdAt.localeCompare(a.createdAt)
         case 'title':
-          return a.title.localeCompare(b.title, 'zh')
+          return a.title.localeCompare(b.title, 'en')
         case 'usage':
           return b.usageCount - a.usageCount
         default:
@@ -94,7 +94,7 @@ export function PromptsWorkspace({
       : prompt.systemPrompt + '\n\n' + prompt.userPrompt
     const ok = await copyToClipboard(rendered.trim())
     markPromptUsed(prompt.id)
-    toast[ok ? 'success' : 'error'](ok ? `已复制「${prompt.title}」到剪贴板，用量 +1` : '复制失败，请检查浏览器剪贴板权限')
+    toast[ok ? 'success' : 'error'](ok ? `Copied "${prompt.title}" to clipboard; usage +1` : 'Copy failed; check browser clipboard permissions')
   }
 
   const hasFilter = !!query.trim() || favOnly || !!selectedFolder || tagFilter.length > 0
@@ -107,10 +107,10 @@ export function PromptsWorkspace({
         selected={selectedFolder}
         onSelect={setSelectedFolder}
         className="hidden w-[176px] shrink-0 border-r border-border bg-card/40 xl:flex"
-        title="Prompt 文件夹"
+        title="Prompt folders"
       />
 
-      {/* 列表栏 */}
+      {/* List panel */}
       <div className="flex w-[360px] shrink-0 flex-col border-r border-border bg-background/40 xl:w-[400px]">
         {selectedFolder && (
           <div className="flex items-center gap-1.5 border-b border-border bg-muted/25 px-4 py-1.5 text-[11px] text-muted-foreground">
@@ -121,38 +121,38 @@ export function PromptsWorkspace({
               onClick={() => setSelectedFolder('')}
               className="ml-auto shrink-0 cursor-pointer rounded px-1.5 py-0.5 transition-colors hover:bg-muted hover:text-foreground"
             >
-              返回全部
+              Back to all
             </button>
           </div>
         )}
         <div className="space-y-2.5 border-b border-border px-3.5 py-3">
           <div className="flex items-center gap-1.5">
             <Select className="h-8 flex-1 text-xs" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
-              <option value="updated">按更新时间</option>
-              <option value="created">按创建时间</option>
-              <option value="title">按标题</option>
-              <option value="usage">按使用次数</option>
+              <option value="updated">Last updated</option>
+              <option value="created">Date created</option>
+              <option value="title">Title</option>
+              <option value="usage">Usage count</option>
             </Select>
             <button
               type="button"
               onClick={() => setFavOnly((f) => !f)}
               aria-pressed={favOnly}
-              aria-label="只看收藏"
+              aria-label="Favorites only"
               className={cn(
                 'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors',
                 favOnly
                   ? 'border-warning/50 bg-warning-soft text-warning'
                   : 'border-input text-muted-foreground hover:border-border-strong hover:bg-muted hover:text-foreground',
               )}
-              title="只看收藏"
+              title="Favorites only"
             >
               <Icon name="star" className="h-3.5 w-3.5" />
             </button>
             <div className="inline-flex h-8 shrink-0 items-center rounded-lg border border-input bg-card p-0.5">
               {(
                 [
-                  { v: 'card' as const, icon: 'grid' as const, label: '卡片视图' },
-                  { v: 'table' as const, icon: 'sliders' as const, label: '表格视图' },
+                  { v: 'card' as const, icon: 'grid' as const, label: 'Card view' },
+                  { v: 'table' as const, icon: 'sliders' as const, label: 'Table view' },
                 ]
               ).map((t) => (
                 <button
@@ -176,11 +176,11 @@ export function PromptsWorkspace({
           </div>
           <div
             role="group"
-            aria-label="标签筛选"
+            aria-label="Tag filter"
             className="flex items-center gap-1 overflow-x-auto pb-0.5 pr-5 scrollbar-none [mask-image:linear-gradient(to_right,black_calc(100%-18px),transparent)]"
           >
             {allTags.length === 0 && (
-              <span className="text-[11px] text-muted-foreground/85">暂无标签</span>
+              <span className="text-[11px] text-muted-foreground/85">No tags yet</span>
             )}
             {allTags.map((t) => {
               const active = tagFilter.includes(t)
@@ -221,7 +221,7 @@ export function PromptsWorkspace({
         </div>
 
         <div className="flex items-center gap-2 border-t border-border px-3.5 py-2 text-[11px] text-muted-foreground">
-          <span className="tabular">{filtered.length} / {state.prompts.length} 条</span>
+          <span className="tabular">{filtered.length} / {state.prompts.length}</span>
           {hasFilter && (
             <button
               type="button"
@@ -232,7 +232,7 @@ export function PromptsWorkspace({
               }}
               className="cursor-pointer rounded px-1.5 py-0.5 text-primary transition-colors hover:bg-primary-soft"
             >
-              清除筛选
+              Clear filters
             </button>
           )}
           <Button
@@ -240,15 +240,15 @@ export function PromptsWorkspace({
             variant="outline"
             className="ml-auto h-7"
             onClick={() => setEditing({ open: true, prompt: null })}
-            title="新建 Prompt（快捷键 N）"
+            title="New Prompt (shortcut N)"
           >
             <Icon name="plus" className="h-3.5 w-3.5" />
-            新建
+            New
           </Button>
         </div>
       </div>
 
-      {/* 详情栏 */}
+      {/* Detail panel */}
       <div className="min-w-0 flex-1">
         {selected ? (
           <PromptDetail
@@ -262,21 +262,21 @@ export function PromptsWorkspace({
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            左侧选择一个 Prompt 查看详情
+            Select a Prompt on the left to view details
           </div>
         )}
       </div>
 
-      {/* 弹层 */}
+      {/* Overlays */}
       <PromptEditModal open={editing.open} prompt={editing.prompt} onClose={() => setEditing({ open: false, prompt: null })} />
 
       {varCopy && (
         <VariableFormModal
           open
-          title={`复制「${varCopy.title}」— 填写变量`}
+          title={`Copy "${varCopy.title}" — Fill variables`}
           vars={varCopy.variables}
           promptId={varCopy.id}
-          submitText="复制到剪贴板"
+          submitText="Copy to clipboard"
           onClose={() => setVarCopy(null)}
           onSubmit={(values) => {
             void doCopy(varCopy, values)
@@ -289,21 +289,21 @@ export function PromptsWorkspace({
         <VersionHistoryModal
           open
           onClose={() => setVersionOf(null)}
-          title={`版本历史 — ${versionOf.title}`}
+          title={`Version history — ${versionOf.title}`}
           versions={versionOf.versions}
           fields={[
-            { key: 'title', label: '标题' },
-            { key: 'description', label: '描述' },
+            { key: 'title', label: 'Title' },
+            { key: 'description', label: 'Description' },
             { key: 'systemPrompt', label: 'System Prompt' },
             { key: 'userPrompt', label: 'User Prompt' },
           ]}
           onRestore={(v) => {
             restorePromptVersion(versionOf.id, v.id)
-            toast.success(`已恢复 v${v.version}，当前内容已另存为新版本`)
+            toast.success(`Restored v${v.version}; previous content saved as a new version`)
           }}
           onDeleteVersion={(vid) => {
             deletePromptVersion(versionOf.id, vid)
-            toast.success('已删除该历史版本')
+            toast.success('Version deleted')
           }}
         />
       )}
@@ -319,16 +319,16 @@ export function PromptsWorkspace({
           if (deleteOf) {
             deletePrompt(deleteOf.id)
             setSelectedId(null)
-            toast.success(`已删除「${deleteOf.title}」`)
+            toast.success(`Deleted "${deleteOf.title}"`)
           }
         }}
-        title="删除 Prompt？"
+        title="Delete this Prompt?"
         message={
           <>
-            将删除「<b className="text-foreground">{deleteOf?.title}</b>」及其全部 {deleteOf?.versions.length ?? 0} 个历史版本，此操作不可撤销。
+            Deletes "<b className="text-foreground">{deleteOf?.title}</b>" and all {deleteOf?.versions.length ?? 0} of its versions. This cannot be undone.
             {deleteOf && promptEffectiveSync(state.repo, deleteOf) && (
               <p className="mt-2 rounded-lg border border-warning/30 bg-warning-soft px-2.5 py-2 text-xs leading-5 text-warning">
-                该 Prompt 参与仓库同步。本次只删除本地副本，不会修改仓库文件；远端若仍保留该文件，下次拉取会重新出现。
+                This Prompt participates in repo sync. Only the local copy is deleted; repo files are untouched. If the file remains on the remote, it will reappear on the next pull.
               </p>
             )}
           </>

@@ -4,7 +4,7 @@ import { repoFilePath, safePathSegment } from './folders'
 const SECRET_KEY_RE = /(KEY|TOKEN|SECRET|PASSWORD|PASSWD)/i
 const PLACEHOLDER_RE = /<[^>]+>|xxx+|\.\.\.|your[-_]/i
 
-/** 凭据字段脱敏：KEY/TOKEN/SECRET/PASSWORD 类值一律不回显 */
+/** Redact credential fields: values of KEY/TOKEN/SECRET/PASSWORD-like keys are never echoed back */
 export function isSecretKey(key: string): boolean {
   return SECRET_KEY_RE.test(key)
 }
@@ -27,7 +27,7 @@ export function serverConfigJson(server: McpServer): string {
   return JSON.stringify(redactServerConfig(server), null, 2)
 }
 
-/** 每个 MCP server 一个 JSON 文件：mcp/<folder>/<name>.json */
+/** One JSON file per MCP server: mcp/<folder>/<name>.json */
 export function mcpFilePath(
   server: Pick<McpServer, 'id' | 'name'> & { folder?: string | null },
   mcpDir = 'mcp',
@@ -36,8 +36,8 @@ export function mcpFilePath(
 }
 
 /**
- * 写入仓库的 MCP 模板：凭据只保留 ${VAR} 占位，
- * 真实值只存在本机库 / 钥匙串，不进入 Git 历史。
+ * MCP template written to the repository: credentials are kept only as ${VAR} placeholders,
+ * real values live only in the local library / keychain and never enter Git history.
  */
 export function serializeMcpRepoFile(server: McpServer): string {
   const env: Record<string, string> = {}
@@ -90,29 +90,29 @@ export function parseMcpRepoFile(text: string): Partial<McpServer> | null {
   }
 }
 
-/** 健康检查（原型为静态规则，真实产品检查 PATH / 网络） */
+/** Health check (static rules in the prototype; a real product checks PATH / network) */
 export function checkHealth(server: McpServer): HealthIssue[] {
   const issues: HealthIssue[] = []
   if (server.transport === 'stdio') {
     if (!server.command || !server.command.trim()) {
-      issues.push({ level: 'error', field: 'command', message: '未配置启动命令，分发后 Agent 将无法拉起该服务' })
+      issues.push({ level: 'error', field: 'command', message: 'No start command configured; after dispatch the Agent will not be able to launch this server' })
     }
   } else {
     if (!server.url || !/^https?:\/\/.+/.test(server.url)) {
-      issues.push({ level: 'error', field: 'url', message: 'URL 缺失或不是合法的 http(s) 地址' })
+      issues.push({ level: 'error', field: 'url', message: 'URL is missing or not a valid http(s) address' })
     }
   }
   for (const key of server.requiredEnv ?? []) {
     const v = server.env?.[key]
     if (v === undefined || v.trim() === '') {
-      issues.push({ level: 'error', field: `env.${key}`, message: `缺少必需环境变量 ${key}，服务启动后会因鉴权失败而不可用` })
+      issues.push({ level: 'error', field: `env.${key}`, message: `Missing required environment variable ${key}; the server will be unusable after startup due to authentication failure` })
     } else if (PLACEHOLDER_RE.test(v)) {
-      issues.push({ level: 'warning', field: `env.${key}`, message: `${key} 看起来还是占位值，请替换为真实凭据` })
+      issues.push({ level: 'warning', field: `env.${key}`, message: `${key} still looks like a placeholder; replace it with real credentials` })
     }
   }
   for (const [k, v] of Object.entries(server.env ?? {})) {
     if (isSecretKey(k) && v && PLACEHOLDER_RE.test(v) && !(server.requiredEnv ?? []).includes(k)) {
-      issues.push({ level: 'warning', field: `env.${k}`, message: `${k} 看起来是占位值` })
+      issues.push({ level: 'warning', field: `env.${k}`, message: `${k} looks like a placeholder` })
     }
   }
   return issues
@@ -124,7 +124,7 @@ export function healthBadge(issues: HealthIssue[]): 'ok' | 'warning' | 'error' {
   return 'ok'
 }
 
-/** 生成写入目标平台文件的投影配置（原型直接生成 JSON/TOML 文本） */
+/** Generate projection config for the target platform file (the prototype emits JSON/TOML text directly) */
 export function projectForTarget(servers: McpServer[], target: McpTarget): string {
   if (target.format === 'json') {
     const body: Record<string, unknown> = {}

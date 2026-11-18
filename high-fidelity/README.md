@@ -1,49 +1,49 @@
-# Prompt Keeper · 高保真页面
+# Prompt Keeper · High-Fidelity Pages
 
-独立的、零构建的高保真页面原型，用同一套演示数据复刻主项目的六个工作区，并把信息密度、层级、交互状态和响应式行为做到接近可交付视觉稿的程度。
+A standalone, zero-build high-fidelity page prototype. It mirrors the main project's six workspaces with the same demo data and brings information density, hierarchy, interaction states, and responsive behavior close to a deliverable visual spec.
 
-与主项目 `src/` 下的 React 原型相比，这里不依赖 Vite / React / Tailwind：只有 `index.html + styles.css + data.js + app.js`，双击即可打开，也方便作为设计评审、截图或交付说明的独立附件。
+Compared with the React prototype under the main project's `src/`, this version does not depend on Vite / React / Tailwind: it is just `index.html + styles.css + data.js + app.js`. Double-click to open it, and it also works as a standalone attachment for design reviews, screenshots, or handoff notes.
 
-## 打开方式
+## Opening
 
 ```bash
-# 方式一：直接打开
+# Option 1: open directly
 open index.html
 
-# 方式二：本地静态服务（推荐，剪贴板与字体行为更接近真实浏览器）
+# Option 2: local static server (recommended; clipboard and font behavior closer to a real browser)
 cd high-fidelity
 python3 -m http.server 4173
 # http://127.0.0.1:4173/
 ```
 
-无需安装依赖，不请求外网字体；系统字体在 macOS 使用 SF Pro / PingFang SC，其他平台回退到 Segoe UI / 系统无衬线字体。
+No dependencies to install, no external font requests; system fonts use SF Pro / PingFang SC on macOS and fall back to Segoe UI / system sans-serif elsewhere.
 
-可选参数：
+Optional parameters:
 
-- `?theme=dark` / `?theme=light` / `?theme=system`：指定初始主题，便于截图。
-- `#prompts`、`#instructions`、`#skills`、`#mcp`、`#sync`、`#settings`：直达工作区。
+- `?theme=dark` / `?theme=light` / `?theme=system`: set the initial theme, useful for screenshots.
+- `#prompts`, `#instructions`, `#skills`, `#mcp`, `#sync`, `#settings`: jump straight to a workspace.
 
-## 页面与可交互范围
+## Pages and interaction scope
 
-| 工作区 | 高保真页面内容 | 可直接操作的交互 |
+| Workspace | High-fidelity page content | Directly operable interactions |
 | --- | --- | --- |
-| **Prompts** | 多级文件夹树、按文件夹分组的卡片/表格双视图、标签与收藏筛选、Prompt 详情、System / User 正文、变量、仓库路径、同步状态 | 选择、搜索、排序、标签筛选、收藏/置顶、新建、编辑、复制（变量表单）、AI 测试抽屉、版本历史、同步范围、删除确认；平台发现页可预览/复制/保存到本地 |
-| **Agent 指令** | 契约库（文件夹树 + 契约详情 + 目标投影状态）、生效预览、项目投影记录、全局分发矩阵 | 契约切换、复制正文、编辑、版本、同步范围、目标/路径切换后的命中链与编译文件、全局目录路径改写/恢复默认、勾选指令与工具、写入预览、逐项覆盖 |
-| **Skills** | 我的技能（文件夹树 + 分组卡片）、技能详情、平台分发、技能商店 | 搜索、文件夹筛选、详情弹层、指令/平台页签、安装/移除平台、商店来源与分类筛选、三步安装审核向导 |
-| **MCP** | 我的库（文件夹树 + 主从详情 + 脱敏配置 + 健康检查 + 分发状态）、Agent MCP 反向导入、MCP 商店 | 启停、收藏、页签切换、复制脱敏配置、个人备注、商店安装审核、从 Agent 外部条目反向导入、应用到平台的写入预览 |
-| **同步中心** | 仓库概览、四类资产策略、目录结构终端面板、阻塞提醒、统计卡、Agent 状态、最近同步、变更列表、分发矩阵、完整历史 | 立即 fetch、推送弹窗、变更类型筛选、预览并接受（需勾选审核）、冲突三方对比与策略选择、明文凭据处理、分发矩阵单元格、过时批量同步 |
-| **设置** | 外观、同步策略、仓库目录结构、Agent 全局目录、数据、关于 | 亮色 / 暗色 / 跟随系统、全局目录路径展示、重置演示数据 |
+| **Prompts** | Nested folder tree, card/table views grouped by folder, tag and favorite filters, Prompt details, System / User content, variables, repository path, sync status | Select, search, sort, tag filtering, favorite/pin, new, edit, copy (variable form), AI test drawer, version history, sync scope, delete confirmation; the Platform Discovery page supports preview / copy / save locally |
+| **Agent Instructions** | Contract library (folder tree + contract details + target projection status), Resolution preview, project projection records, global dispatch matrix | Switch contracts, copy body, edit, versions, sync scope, match chain and compiled files after target/path switches, global directory path override / restore default, select instructions and tools, write preview, confirm overwrites individually |
+| **Skills** | My Skills (folder tree + grouped cards), skill details, platform dispatch, Skill Store | Search, folder filtering, detail overlay, content/platform tabs, install/remove platform, store source and category filters, three-step install review wizard |
+| **MCP** | My Library (folder tree + master-detail + redacted config + health check + dispatch status), Agent MCP reverse import, MCP Store | Enable/disable, favorite, tab switching, copy redacted config, personal notes, store install review, reverse import from external Agent entries, write preview when applying to platforms |
+| **Sync Center** | Repository overview, policies for the four asset types, directory-structure terminal panel, blocked warning, stat cards, Agent status, recent syncs, change list, dispatch matrix, full history | Fetch now, push dialog, change-type filter, preview and accept (review checkbox required), three-way conflict comparison and strategy selection, plaintext credential handling, dispatch matrix cells, bulk sync of stale items |
+| **Settings** | Appearance, Sync policy, Repository layout, Agent global directories, Data, About | Light / Dark / System, global directory path display, reset demo data |
 
-## 设计系统
+## Design system
 
-### 视觉方向
+### Visual direction
 
-- 高密度桌面工作台，接近 Minimalism / Swiss dashboard：弱装饰、强层级、细边框、低饱和表面。
-- 主色沿用主项目靛蓝 `#4F46E5`；成功 / 警告 / 危险 / 信息各有独立 token，不直接写死十六进制。
-- 亮暗双主题，同一套语义 token 驱动背景、卡片、文字、边框、状态与阴影。
-- 结构图标全部内联 SVG（Lucide 风格，统一 stroke），技能卡片中的 emoji 来自演示数据，属于内容而非结构图标。
+- High-density desktop workspace, close to a Minimalism / Swiss dashboard: restrained decoration, strong hierarchy, thin borders, low-saturation surfaces.
+- The primary color follows the main project's indigo `#4F46E5`; success / warning / danger / info each have their own token, with no hard-coded hex values.
+- Light and dark themes driven by the same semantic tokens for background, cards, text, borders, states, and shadows.
+- All structural icons are inline SVG (Lucide style, consistent stroke); emoji in skill cards come from demo data and are content, not structural icons.
 
-### 关键 token
+### Key tokens
 
 ```css
 --primary: #4f46e5;      /* indigo 600 */
@@ -63,59 +63,59 @@ python3 -m http.server 4173
 }
 ```
 
-### 版式与密度
+### Typography and density
 
-- 基准字号 13.5px；正文 12px，辅助文字 9.5–11px，代码 9–10.5px；使用 tabular-nums 对齐数字。
-- 主布局：侧栏 232px + 文件夹树 236px + 列表 404px + 详情自适应；顶栏 60px。
-- 间距以 4/6/8/10/14px 为主，卡片圆角 11px，面板圆角 13–17px。
-- 断点：
-  - `≤1440`：收窄文件夹树/列表。
-  - `≤1280`：侧栏收窄到 212px，策略卡两列。
-  - `≤1120`：侧栏变为 64px 图标栏，文件夹树隐藏。
-  - `≤900`：列表占满宽度，详情以整屏滑层出现；编译预览单列。
-  - `≤760`：侧栏 56px，顶栏压缩，列表/详情单列，弹层全宽。
-  - `≤420`：详情操作按钮两列。
-- 动效：页进入淡入、卡片 26ms 级联、抽屉/弹层 0.2–0.25s 曲线；`prefers-reduced-motion` 下全部收敛。
+- Base font size 13.5px; body 12px, auxiliary text 9.5–11px, code 9–10.5px; tabular-nums keeps numbers aligned.
+- Main layout: sidebar 232px + folder tree 236px + list 404px + adaptive detail; top bar 60px.
+- Spacing is mostly 4/6/8/10/14px, card radius 11px, panel radius 13–17px.
+- Breakpoints:
+  - `≤1440`: narrower folder tree/list.
+  - `≤1280`: sidebar narrows to 212px, policy cards in two columns.
+  - `≤1120`: sidebar becomes a 64px icon rail, folder tree hidden.
+  - `≤900`: list fills the width, detail opens as a full-screen sheet; compiled preview single column.
+  - `≤760`: sidebar 56px, compact top bar, list/detail single column, full-width overlays.
+  - `≤420`: detail action buttons in two columns.
+- Motion: page fade-in, 26ms card cascade, drawer/overlay 0.2–0.25s curves; everything collapses under `prefers-reduced-motion`.
 
-### 可访问性
+### Accessibility
 
-- 所有结构按钮具备可读名称或 `aria-label`；状态使用 `aria-pressed` / `aria-checked` / `role="switch"`。
-- 键盘：`/` 聚焦搜索，`N` 新建 Prompt / 契约，`Esc` 关闭弹层或返回列表；弹层内实现 Tab 循环。
-- 聚焦环统一为 2px 主色描边；亮暗主题分别验证对比度。
-- 弹层使用遮罩 + 模糊隔离背景；Toast 使用 `aria-live`。
+- All structural buttons have readable names or `aria-label`; states use `aria-pressed` / `aria-checked` / `role="switch"`.
+- Keyboard: `/` focuses search, `N` creates a Prompt / contract, `Esc` closes overlays or returns to the list; overlays implement a Tab loop.
+- The focus ring is a consistent 2px primary outline; contrast is verified in both light and dark themes.
+- Overlays use a scrim + blurred backdrop; toasts use `aria-live`.
 
-## 数据与模拟边界
+## Data and simulation boundaries
 
-演示数据取自主项目的 `src/data/seed.ts`、`syncSeed.ts`、`contractSeed.ts`、`contractTargets.ts`、`globalTargets.ts`，为便于高保真展示做了字段补充：
+Demo data comes from the main project's `src/data/seed.ts`, `syncSeed.ts`, `contractSeed.ts`, `contractTargets.ts`, and `globalTargets.ts`, with extra fields for high-fidelity display:
 
-- 全部为本地模拟数据，不含真实凭据；MCP 凭据统一显示 `[REDACTED]`。
-- Git fetch / 推送 / 冲突解决 / 项目投影 / 全局分发 / AI 测试均为前端模拟，不访问真实 Git、文件系统或模型。
-- 编辑、新建、收藏、审核等操作只修改当前页面内存；刷新后回到种子数据。
-- 主题与卡片/表格视图偏好写入 `localStorage`（`pk_hifi_theme`、`pk_hifi_prompt_view`）。
-- “复制”优先使用 Clipboard API，失败时回退到隐藏 textarea + `execCommand`，仅在成功时累加使用次数。
+- All data is local mock data and contains no real credentials; MCP credentials are always displayed as `[REDACTED]`.
+- Git fetch / push / conflict resolution / project projection / global dispatch / AI test are all simulated in the front end; no real Git, file system, or model is accessed.
+- Edit, create, favorite, review, and similar actions only modify current page memory; refreshing restores the seed data.
+- Theme and card/table view preferences are stored in `localStorage` (`pk_hifi_theme`, `pk_hifi_prompt_view`).
+- "Copy" prefers the Clipboard API and falls back to a hidden textarea + `execCommand`; the usage count only increments on success.
 
-## 验收记录
+## Acceptance record
 
-已在 Chrome 1512×982、1024×768、768×1024、375×812 四个视口逐页检查：
+Checked page by page in Chrome at 1512×982, 1024×768, 768×1024, and 375×812:
 
-- 六个工作区均可加载，无横向滚动溢出，无 console error / 未捕获异常。
-- 亮色、暗色、跟随系统主题均可用；单次点击主题按钮只切换一次。
-- Prompts：选择/新建/编辑/筛选/AI 测试/复制变量/版本/删除链路可用。
-- Agent 指令：预览目标切换后命中链、跳过原因、编译文件数量与路径同步变化；全局分发路径可改写/恢复。
-- Skills：商店三步向导可完成安装并回到“我的技能”。
-- MCP：Agent MCP 反向导入、商店安装审核可完成；脱敏配置、健康检查和分发状态可切换。
-- 同步：审核勾选控制接受按钮；冲突策略可切换并减少列表项；分发矩阵可打开单元格详情。
-- 移动端：点击卡片以整屏滑层打开详情，返回按钮与滚动行为正常。
+- All six workspaces load with no horizontal scroll overflow, no console errors / uncaught exceptions.
+- Light, dark, and system themes all work; a single click on the theme button toggles only once.
+- Prompts: select / new / edit / filter / AI test / copy with variables / versions / delete flows work.
+- Agent Instructions: switching the preview target updates the match chain, skip reasons, compiled file count, and paths in sync; global dispatch paths can be overridden / restored.
+- Skills: the three-step store wizard completes installation and returns to My Skills.
+- MCP: Agent MCP reverse import and store install review can be completed; redacted config, health check, and dispatch status can be toggled.
+- Sync: the review checkbox controls the accept button; conflict strategies can be switched and reduce the list; dispatch matrix cells open cell details.
+- Mobile: tapping a card opens the detail as a full-screen sheet; the back button and scrolling behave correctly.
 
-## 文件结构
+## File structure
 
 ```text
 high-fidelity/
-  index.html    页面外壳、内联 SVG 图标 sprite
-  styles.css    设计 token、布局、组件、亮暗主题、响应式
-  data.js       Prompt / 契约 / Skill / MCP / 同步演示数据
-  app.js        渲染、路由、状态、弹层、表单与交互
-  README.md     本说明
+  index.html    Page shell, inline SVG icon sprite
+  styles.css    Design tokens, layout, components, light/dark themes, responsive rules
+  data.js       Prompt / contract / Skill / MCP / sync demo data
+  app.js        Rendering, routing, state, overlays, forms, and interactions
+  README.md     This document
 ```
 
-交互设计背景与产品规则见主项目 [`docs/interaction-design.md`](../docs/interaction-design.md) 与 [`README.md`](../README.md)。
+Interaction design background and product rules: main project [`docs/interaction-design.md`](../docs/interaction-design.md) and [`README.md`](../README.md).

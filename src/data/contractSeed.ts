@@ -44,209 +44,209 @@ function makeVersions(
   }))
 }
 
-const baselineV1 = `# 仓库通用约定
+const baselineV1 = `# Repository Conventions
 
-## 构建与测试
-- 安装依赖使用 \`npm ci\`，不要手改 lockfile。
-- 提交前必须运行 \`npm run build\`，类型错误不得提交。
+## Build and test
+- Install dependencies with \`npm ci\`; do not hand-edit the lockfile.
+- Always run \`npm run build\` before committing; type errors must not be committed.
 
-## 代码风格
-- TypeScript 严格模式；禁止 \`any\`。
-- 注释只解释约束与原因，不复述代码。
+## Code style
+- TypeScript strict mode; \`any\` is forbidden.
+- Comments explain constraints and reasons, not restate the code.
 `
 
-const baselineBody = `# 仓库通用约定
+const baselineBody = `# Repository Conventions
 
-## 构建与测试
-- 安装依赖使用 \`npm ci\`，不要手改 lockfile。
-- 提交前必须运行 \`npm run build\`，类型错误不得提交。
-- 单元测试使用 \`npm test -- --run\`，新增逻辑必须带测试。
+## Build and test
+- Install dependencies with \`npm ci\`; do not hand-edit the lockfile.
+- Always run \`npm run build\` before committing; type errors must not be committed.
+- Run unit tests with \`npm test -- --run\`; new logic must include tests.
 
-## 代码风格
-- TypeScript 严格模式；禁止 \`any\`，确需逃逸时写 \`unknown\` + 类型守卫。
-- 组件保持单一职责；跨模块共享逻辑放 \`src/lib/\`。
-- 注释只解释约束与原因，不复述代码。
+## Code style
+- TypeScript strict mode; \`any\` is forbidden. When you truly need an escape hatch, use \`unknown\` plus a type guard.
+- Keep components single-purpose; put logic shared across modules in \`src/lib/\`.
+- Comments explain constraints and reasons, not restate the code.
 
-## 安全
-- 禁止把密钥、Token、真实用户数据写入仓库。
-- 外部输入必须校验；不要拼接 shell 命令。
+## Security
+- Never write secrets, tokens, or real user data into the repository.
+- Validate all external input; never concatenate shell commands.
 `
 
-const frontendV1 = `# 前端代码规范
+const frontendV1 = `# Frontend Code Standards
 
-## 组件
-- 函数组件 + hooks；不要新增 class 组件。
-- 状态提升到最近的共同父级。
+## Components
+- Function components + hooks; do not add class components.
+- Lift state to the nearest common parent.
 
-## 样式
-- 使用 Tailwind token，禁止散落十六进制颜色。
+## Styling
+- Use Tailwind tokens; never scatter raw hex colors.
 `
 
-const frontendBody = `# 前端代码规范
+const frontendBody = `# Frontend Code Standards
 
-## 组件
-- 函数组件 + hooks；不要新增 class 组件。
-- 状态提升到最近的共同父级；跨页面状态才进入 Context。
-- 列表渲染必须有稳定 key，禁止用数组下标。
+## Components
+- Function components + hooks; do not add class components.
+- Lift state to the nearest common parent; only cross-page state belongs in Context.
+- List rendering must use stable keys; never use array indices.
 
-## 样式
-- 使用 Tailwind token（\`bg-card\` / \`text-muted-foreground\`），禁止散落十六进制颜色。
-- 交互态必须覆盖 hover / focus-visible / disabled。
+## Styling
+- Use Tailwind tokens (\`bg-card\` / \`text-muted-foreground\`); never scatter raw hex colors.
+- Interaction states must cover hover / focus-visible / disabled.
 
-## 可访问性
-- 图标按钮必须有 \`title\` 或 \`aria-label\`。
-- 弹层打开后焦点进入弹层，Esc 可关闭。
+## Accessibility
+- Icon buttons must have a \`title\` or \`aria-label\`.
+- When an overlay opens, focus moves into it; Esc closes it.
 `
 
 const frontendRemote = `${frontendBody}
-## 性能
-- 大列表使用虚拟滚动；避免在渲染函数里创建新对象作为 props。
-- 图片懒加载，并显式设置宽高避免布局抖动。
+## Performance
+- Use virtual scrolling for large lists; avoid creating new objects as props inside render functions.
+- Lazy-load images and set explicit width/height to avoid layout shift.
 `
 
 const baselineSeed: ContractSeed = {
   id: 'c-repo-baseline',
-  title: '仓库通用约定',
-  description: '所有 Agent 在本仓库工作时必须遵守的构建、测试与安全约定',
+  title: 'Repository Conventions',
+  description: 'Build, test, and security conventions every Agent must follow when working in this repository',
   body: baselineBody,
-  folder: '团队/仓库基线',
+  folder: 'team/repository-baseline',
   scope: 'project',
   activation: { mode: 'always', globs: [] },
   priority: 100,
   imports: [],
   targets: ['agents-md', 'claude', 'copilot', 'cursor', 'windsurf'],
-  tags: ['仓库', '基线'],
+  tags: ['Repository', 'Baseline'],
   syncPolicy: 'inherit',
   inRepo: true,
 }
 
 const frontendSeed: ContractSeed = {
   id: 'c-frontend',
-  title: '前端代码规范',
-  description: '对 src 下的 TypeScript / TSX 文件生效的组件、样式与可访问性约束',
+  title: 'Frontend Code Standards',
+  description: 'Component, styling, and accessibility constraints for TypeScript / TSX files under src',
   body: frontendBody,
-  folder: '团队/前端',
+  folder: 'team/frontend',
   scope: 'path',
   path: 'src',
   activation: { mode: 'glob', globs: ['src/**/*.{ts,tsx}'] },
   priority: 60,
   imports: [],
   targets: ['copilot-path', 'cursor', 'agents-md'],
-  tags: ['前端', '规范'],
+  tags: ['Frontend', 'Standards'],
   syncPolicy: 'inherit',
   inRepo: true,
 }
 
 const claudeSeed: ContractSeed = {
   id: 'c-claude-session',
-  title: 'Claude Code 会话偏好',
-  description: '计划优先、先读设计文档、不自动提交；通过 @import 引用交互文档',
-  folder: '个人/会话偏好',
-  body: `# Claude Code 会话约定
+  title: 'Claude Code Session Preferences',
+  description: 'Plan first, read the design docs first, never auto-commit; reference the interaction design doc via @import',
+  folder: 'personal/session-preferences',
+  body: `# Claude Code Session Conventions
 
-- 先读 \`docs/interaction-design.md\`，再改交互相关代码。
-- 修改前先给出目标、涉及文件、验证命令；复杂任务先列计划。
-- 不要自动提交；提交信息使用简体中文。
-- 遇到设计文档与代码冲突时，先指出冲突，不要自行折中。
+- Read \`docs/interaction-design.md\` before changing interaction-related code.
+- Before editing, state the goal, the files involved, and the verification command; for complex tasks, write the plan first.
+- Do not auto-commit; write commit messages in English.
+- When the design doc and the code conflict, point out the conflict instead of inventing a compromise.
 `,
   scope: 'project',
   activation: { mode: 'always', globs: [] },
   priority: 80,
   imports: ['docs/interaction-design.md'],
   targets: ['claude'],
-  tags: ['Claude', '协作'],
+  tags: ['Claude', 'Collaboration'],
   syncPolicy: 'inherit',
   inRepo: true,
 }
 
 const reviewSeed: ContractSeed = {
   id: 'c-cursor-review',
-  title: 'Cursor 评审规则',
-  description: '当用户要求代码评审、review 或检查改动时应用的评审口径',
-  folder: '个人/评审',
-  body: `# 代码评审口径
+  title: 'Cursor Review Rules',
+  description: 'Review guidelines applied when the user asks for a code review or a change check',
+  folder: 'personal/review',
+  body: `# Code Review Guidelines
 
-- 先看正确性与边界条件，再看可读性、性能、安全。
-- 每条问题必须给出文件位置、触发条件、修复建议。
-- 不确定的结论标注「待验证」，不要猜测。
-- 不把风格偏好写成缺陷；风格问题单独归类。
+- Check correctness and edge cases first, then readability, performance, and security.
+- Every issue must include the file location, trigger conditions, and a fix suggestion.
+- Mark uncertain conclusions as "needs verification"; do not guess.
+- Do not present style preferences as defects; categorize style issues separately.
 `,
   scope: 'project',
   activation: {
     mode: 'model',
     globs: [],
-    description: '当用户要求代码评审、review 或检查改动时应用',
+    description: 'Applied when the user asks for a code review or a change check',
   },
   priority: 40,
   imports: [],
   targets: ['cursor', 'windsurf'],
-  tags: ['评审'],
+  tags: ['Review'],
   syncPolicy: 'inherit',
   inRepo: true,
 }
 
 const releaseSeed: ContractSeed = {
   id: 'c-release-checklist',
-  title: '发布检查清单',
-  description: '发版前手动引用的回滚、迁移与监控检查项',
-  folder: '团队/发布',
-  body: `# 发布检查清单
+  title: 'Release Checklist',
+  description: 'Rollback, migration, and monitoring checks to reference manually before a release',
+  folder: 'team/release',
+  body: `# Release Checklist
 
-1. 确认版本号与 CHANGELOG 一致。
-2. 运行完整测试与构建。
-3. 检查数据库迁移是否可回滚。
-4. 确认监控与告警已覆盖新接口。
-5. 准备回滚命令与负责人。
+1. Confirm the version number matches the CHANGELOG.
+2. Run the full test suite and build.
+3. Check that database migrations can be rolled back.
+4. Confirm monitoring and alerts cover the new endpoints.
+5. Prepare the rollback commands and assign an owner.
 `,
   scope: 'project',
   activation: { mode: 'manual', globs: [] },
   priority: 20,
   imports: [],
   targets: ['cursor', 'windsurf'],
-  tags: ['发布'],
+  tags: ['Release'],
   syncPolicy: 'inherit',
   inRepo: true,
 }
 
 const legacySeed: ContractSeed = {
   id: 'c-legacy-cursor',
-  title: '旧版 Cursor 规则（待合并）',
-  description: '与当前前端规范冲突的历史规则，保留用于对照合并',
-  folder: '归档/遗留规则',
-  body: `# 旧版 Cursor 规则
+  title: 'Legacy Cursor Rules (to be merged)',
+  description: 'Historical rules that conflict with the current frontend standards, kept for comparison during the merge',
+  folder: 'archive/legacy-rules',
+  body: `# Legacy Cursor Rules
 
-- 所有函数必须写 JSDoc。
-- 使用 4 空格缩进。
-- 优先使用 class 组件。
+- All functions must have JSDoc comments.
+- Use 4-space indentation.
+- Prefer class components.
 `,
   scope: 'project',
   activation: { mode: 'always', globs: [] },
   priority: 10,
   imports: [],
   targets: ['cursor'],
-  tags: ['遗留'],
+  tags: ['Legacy'],
   syncPolicy: 'inherit',
   inRepo: true,
 }
 
 const teamUiSeed: ContractSeed = {
   id: 'c-team-ui',
-  title: '团队 UI 约定',
-  description: '团队共享的组件命名与空状态规范，等待拉取',
-  folder: '团队/UI',
-  body: `# 团队 UI 约定
+  title: 'Team UI Conventions',
+  description: 'Team-wide component naming and empty-state conventions, pending pull',
+  folder: 'team/ui',
+  body: `# Team UI Conventions
 
-- 组件文件使用 PascalCase；一个文件只导出一个主组件。
-- 空状态必须区分「无数据」与「无匹配」，并提供下一步动作。
-- 危险操作的主按钮使用红色，并在文案中写明对象名。
-- 所有弹层支持 Esc 关闭，并在关闭后恢复焦点。
+- Component files use PascalCase; each file exports exactly one main component.
+- Empty states must distinguish "no data" from "no matches" and offer a next action.
+- Primary buttons for destructive actions use red, and the label names the object being affected.
+- All overlays close on Esc and restore focus afterward.
 `,
   scope: 'project',
   activation: { mode: 'always', globs: [] },
   priority: 70,
   imports: [],
   targets: ['agents-md', 'claude', 'copilot'],
-  tags: ['团队', 'UI'],
+  tags: ['Team', 'UI'],
   syncPolicy: 'inherit',
   inRepo: false,
   }
@@ -255,8 +255,8 @@ export const SEED_CONTRACTS: AgentContract[] = [
   {
     ...baselineSeed,
     versions: makeVersions(baselineSeed, [
-      { version: 2, at: daysAgo(1), note: '补充安全约束与测试要求' },
-      { version: 1, at: daysAgo(12), note: '初始版本', body: baselineV1 },
+      { version: 2, at: daysAgo(1), note: 'Added security constraints and testing requirements' },
+      { version: 1, at: daysAgo(12), note: 'Initial version', body: baselineV1 },
     ]),
     createdAt: daysAgo(12),
     updatedAt: daysAgo(1),
@@ -264,8 +264,8 @@ export const SEED_CONTRACTS: AgentContract[] = [
   {
     ...frontendSeed,
     versions: makeVersions(frontendSeed, [
-      { version: 2, at: daysAgo(2), note: '增加可访问性与列表 key 约束' },
-      { version: 1, at: daysAgo(9), note: '初始版本', body: frontendV1 },
+      { version: 2, at: daysAgo(2), note: 'Added accessibility and list key constraints' },
+      { version: 1, at: daysAgo(9), note: 'Initial version', body: frontendV1 },
     ]),
     createdAt: daysAgo(9),
     updatedAt: daysAgo(2),
@@ -273,8 +273,8 @@ export const SEED_CONTRACTS: AgentContract[] = [
   {
     ...claudeSeed,
     versions: makeVersions(claudeSeed, [
-      { version: 2, at: daysAgo(3), note: '加入 @import 与冲突处理要求' },
-      { version: 1, at: daysAgo(15), note: '初始版本' },
+      { version: 2, at: daysAgo(3), note: 'Added @import and conflict handling requirements' },
+      { version: 1, at: daysAgo(15), note: 'Initial version' },
     ]),
     createdAt: daysAgo(15),
     updatedAt: daysAgo(3),
@@ -282,8 +282,8 @@ export const SEED_CONTRACTS: AgentContract[] = [
   {
     ...reviewSeed,
     versions: makeVersions(reviewSeed, [
-      { version: 2, at: daysAgo(4), note: '区分缺陷与风格偏好' },
-      { version: 1, at: daysAgo(18), note: '初始版本' },
+      { version: 2, at: daysAgo(4), note: 'Separated defects from style preferences' },
+      { version: 1, at: daysAgo(18), note: 'Initial version' },
     ]),
     createdAt: daysAgo(18),
     updatedAt: daysAgo(4),
@@ -291,8 +291,8 @@ export const SEED_CONTRACTS: AgentContract[] = [
   {
     ...releaseSeed,
     versions: makeVersions(releaseSeed, [
-      { version: 2, at: daysAgo(6), note: '加入监控与回滚负责人' },
-      { version: 1, at: daysAgo(20), note: '初始版本' },
+      { version: 2, at: daysAgo(6), note: 'Added monitoring and rollback ownership' },
+      { version: 1, at: daysAgo(20), note: 'Initial version' },
     ]),
     createdAt: daysAgo(20),
     updatedAt: daysAgo(6),
@@ -300,14 +300,14 @@ export const SEED_CONTRACTS: AgentContract[] = [
   {
     ...legacySeed,
     versions: makeVersions(legacySeed, [
-      { version: 1, at: daysAgo(30), note: '历史规则导入' },
+      { version: 1, at: daysAgo(30), note: 'Imported historical rules' },
     ]),
     createdAt: daysAgo(30),
     updatedAt: daysAgo(30),
   },
 ]
 
-/* ---------------- 投影状态 ---------------- */
+/* ---------------- Projection status ---------------- */
 
 const projection = (
   contractId: string,
@@ -328,10 +328,10 @@ const projection = (
 
 export const SEED_CONTRACT_PROJECTIONS: ContractProjection[] = [
   projection('c-repo-baseline', 'agents-md', 'synced', 'v2', hoursAgo(2)),
-  projection('c-repo-baseline', 'claude', 'stale', 'v1', daysAgo(4), '本地已到 v2，等待重新投影'),
+  projection('c-repo-baseline', 'claude', 'stale', 'v1', daysAgo(4), 'Local copy is at v2; waiting to be re-projected'),
   projection('c-repo-baseline', 'copilot', 'synced', 'v2', hoursAgo(2)),
-  projection('c-frontend', 'copilot-path', 'drifted', 'v1', daysAgo(3), '目标文件在 Agent 侧被手工修改，未自动覆盖'),
-  projection('c-frontend', 'cursor', 'stale', 'v1', daysAgo(3), '契约已更新到 v2，等待重新投影'),
+  projection('c-frontend', 'copilot-path', 'drifted', 'v1', daysAgo(3), 'The target file was edited by hand on the Agent side; not overwritten automatically'),
+  projection('c-frontend', 'cursor', 'stale', 'v1', daysAgo(3), 'Contract updated to v2; waiting to be re-projected'),
   projection('c-claude-session', 'claude', 'synced', 'v2', daysAgo(1)),
   projection('c-cursor-review', 'cursor', 'synced', 'v2', daysAgo(4)),
   projection('c-release-checklist', 'windsurf', 'synced', 'v2', daysAgo(6)),
@@ -339,7 +339,7 @@ export const SEED_CONTRACT_PROJECTIONS: ContractProjection[] = [
   projection('c-legacy-cursor', 'cursor', 'synced', 'v1', daysAgo(30)),
 ]
 
-/* ---------------- Git 同步种子 ---------------- */
+/* ---------------- Git sync seeds ---------------- */
 
 const remoteContractFile = (seed: ContractSeed) =>
   serializeContractFile({
@@ -382,7 +382,7 @@ export const SEED_CONTRACT_SYNC_CHANGES: SyncChange[] = [
     path: contractFilePath(teamUiSeed),
     change: 'added',
     direction: 'incoming',
-    summary: '新增团队指令：组件命名、空状态与危险操作规范',
+    summary: 'New team instruction: component naming, empty states, and destructive action conventions',
     additions: 16,
     deletions: 0,
     risk: 'none',
@@ -398,7 +398,7 @@ export const SEED_CONTRACT_SYNC_CHANGES: SyncChange[] = [
     path: contractFilePath(baselineSeed),
     change: 'modified',
     direction: 'outgoing',
-    summary: '本地补充安全约束与测试要求，等待推送',
+    summary: 'Added security constraints and testing requirements locally; pending push',
     additions: 8,
     deletions: 2,
     risk: 'none',
@@ -420,7 +420,7 @@ export const SEED_CONTRACT_SYNC_CHANGES: SyncChange[] = [
     path: contractFilePath(frontendSeed),
     change: 'modified',
     direction: 'conflict',
-    summary: '仓库补充性能约束；本地补充可访问性约束，双方都改动了同一文件',
+    summary: 'The repo added performance constraints; the local copy added accessibility constraints. Both sides edited the same file.',
     additions: 12,
     deletions: 4,
     risk: 'none',

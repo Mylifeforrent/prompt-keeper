@@ -15,9 +15,9 @@ const SAMPLE_PATHS = [
 ]
 
 const PRECEDENCE_LABEL = {
-  nearest: '就近优先',
-  concat: '从根到具体拼接',
-  override: '就近覆盖',
+  nearest: 'Nearest wins',
+  concat: 'Concatenated (root to leaf)',
+  override: 'Nearest overrides',
 }
 
 export function ResolvedPreview() {
@@ -41,15 +41,15 @@ export function ResolvedPreview() {
         <div className="flex items-start gap-2 rounded-xl border border-info/30 bg-info-soft px-3.5 py-2.5 text-xs leading-5 text-info">
           <Icon name="eye" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            这是静态模拟：按目标工具的已知发现路径、激活方式与合并规则计算「当前路径实际会读到什么」，
-            不调用各工具 CLI。优先级与上下文预算以近似值提示，最终以工具实际行为为准。
+            This is a static simulation: it computes what the target tool would actually read for the current path,
+            using known discovery paths, activation modes, and merge rules. No tool CLI is invoked. Priority and context budget are approximations; actual tool behavior wins.
           </span>
         </div>
 
         <section className="rounded-xl border border-border bg-card p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="w-56">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">目标格式</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Target format</label>
               <Select value={targetId} onChange={(e) => setTargetId(e.target.value)}>
                 {CONTRACT_TARGETS.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -59,7 +59,7 @@ export function ResolvedPreview() {
               </Select>
             </div>
             <div className="min-w-64 flex-1">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">当前处理的文件路径</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">File path being handled</label>
               <Input
                 value={filePath}
                 onChange={(e) => setFilePath(e.target.value)}
@@ -96,9 +96,9 @@ export function ResolvedPreview() {
         </section>
 
         <section className="grid grid-cols-2 gap-3">
-          <SummaryCard label="命中的常驻契约" value={String(preview.included.length)} tone="primary" />
+          <SummaryCard label="Matched always-on contracts" value={String(preview.included.length)} tone="primary" />
           <SummaryCard
-            label="正文合计"
+            label="Total content"
             value={`${formatBytes(preview.totalBytes)}${preview.maxBytes ? ` / ${formatBytes(preview.maxBytes)}` : ''}`}
             tone={preview.maxBytes && preview.totalBytes > preview.maxBytes ? 'danger' : 'info'}
           />
@@ -119,19 +119,19 @@ export function ResolvedPreview() {
           <section className="rounded-xl border border-border bg-card">
             <div className="border-b border-border px-3.5 py-2.5">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold">按生效顺序合并</h3>
+                <h3 className="text-sm font-semibold">Merged in resolution order</h3>
                 <Badge variant="outline">
                   {target ? PRECEDENCE_LABEL[target.precedence] : '—'}
                 </Badge>
               </div>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                只统计会自动进入上下文的规则；模型判断与手动引用列在下方。
+                Only rules that enter context automatically are counted; model decision and manual activation are listed below.
               </p>
             </div>
             <div className="max-h-[460px] space-y-1.5 overflow-y-auto p-2.5">
               {preview.included.length === 0 ? (
                 <div className="px-3 py-8 text-center text-xs text-muted-foreground">
-                  当前路径没有命中的常驻契约。
+                  No always-on contracts match the current path.
                 </div>
               ) : (
                 preview.included.map((entry, index) => (
@@ -157,7 +157,7 @@ export function ResolvedPreview() {
             {preview.skipped.length > 0 && (
               <div className="border-t border-border px-2.5 py-2">
                 <div className="px-1 text-[11px] font-medium text-muted-foreground">
-                  未计入常驻上下文（{preview.skipped.length}）
+                  Excluded from always-on context ({preview.skipped.length})
                 </div>
                 <div className="mt-1 max-h-48 space-y-1 overflow-y-auto">
                   {preview.skipped.map((entry) => (
@@ -173,16 +173,16 @@ export function ResolvedPreview() {
 
           <section className="min-w-0 rounded-xl border border-border bg-card">
             <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
-              <h3 className="text-sm font-semibold">编译后的目标文件</h3>
-              <Badge variant="outline">{files.length} 个文件</Badge>
+              <h3 className="text-sm font-semibold">Compiled target files</h3>
+              <Badge variant="outline">{files.length} files</Badge>
               <span className="ml-auto text-[11px] text-muted-foreground">
-                生成标记用于漂移检测；手工修改不会被静默覆盖
+                Generated markers enable drift detection; manual edits are never silently overwritten
               </span>
             </div>
             <div className="max-h-[540px] space-y-3 overflow-y-auto p-3">
               {files.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-xs text-muted-foreground">
-                  当前路径没有需要写入的文件。
+                  No files need to be written for the current path.
                 </p>
               ) : (
                 files.map((file) => (

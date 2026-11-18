@@ -42,7 +42,7 @@ export function ContractDetail({
 
   const copyBody = async () => {
     const ok = await copyToClipboard(contract.body)
-    toast[ok ? 'success' : 'error'](ok ? `已复制「${contract.title}」正文` : '复制失败，请检查剪贴板权限')
+    toast[ok ? 'success' : 'error'](ok ? `Copied "${contract.title}" content` : 'Copy failed. Check clipboard permissions.')
   }
 
   return (
@@ -61,20 +61,20 @@ export function ContractDetail({
               />
             </div>
             <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
-              {contract.description || '（无描述）'}
+              {contract.description || '(No description)'}
             </p>
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-1">
             <span className="tabular whitespace-nowrap text-[10.5px] text-muted-foreground">
-              更新于 {formatDate(contract.updatedAt)}
+              Updated {formatDate(contract.updatedAt)}
             </span>
             <span className="mx-0.5 h-4 w-px bg-border/80" />
             <Button
               size="icon"
               variant="ghost"
               className="h-8 w-8 text-muted-foreground hover:bg-danger-soft hover:text-danger"
-              aria-label="删除契约"
-              title="删除"
+              aria-label="Delete contract"
+              title="Delete"
               onClick={onDelete}
             >
               <Icon name="trash" className="h-4 w-4" />
@@ -95,7 +95,7 @@ export function ContractDetail({
             <Icon name="file" className="h-3 w-3" />
             {activation.label}
           </Badge>
-          <Badge variant="outline" className="tabular font-normal">优先级 {contract.priority}</Badge>
+          <Badge variant="outline" className="tabular font-normal">Priority {contract.priority}</Badge>
           {contract.tags.map((t) => (
             <Badge key={t} variant="primary" className="font-normal">
               #{t}
@@ -106,39 +106,39 @@ export function ContractDetail({
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
           <Button onClick={copyBody} className="shadow-sm">
             <Icon name="copy" />
-            复制正文
+            Copy content
           </Button>
           <Button variant="outline" onClick={onEdit}>
             <Icon name="pencil" />
-            编辑
+            Edit
           </Button>
           <Button variant="outline" onClick={onPreview}>
             <Icon name="eye" />
-            生效预览
+            Resolution preview
           </Button>
           <Button variant="outline" onClick={onShowVersions}>
             <Icon name="history" />
-            版本
+            Versions
           </Button>
           <Button variant="outline" onClick={onSync}>
             <Icon name="gitBranch" />
-            同步
+            Sync
           </Button>
         </div>
       </div>
 
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
         <section className="grid grid-cols-2 gap-3">
-          <InfoCard label="生效范围" value={scope.desc} />
-          <InfoCard label="激活方式" value={`${activation.desc} 当前：${activationSummary(contract.activation)}`} />
+          <InfoCard label="Scope" value={scope.desc} />
+          <InfoCard label="Activation" value={`${activation.desc} Current: ${activationSummary(contract.activation)}`} />
           <InfoCard
-            label="仓库文件"
+            label="Repository file"
             value={contractFilePath(contract, state.repo.layout.contracts)}
             mono
-            hint={contract.syncPolicy === 'local' ? '仅本机：不写入仓库' : 'frontmatter 存文件夹 / 范围 / 激活 / 目标，正文即规范内容'}
+            hint={contract.syncPolicy === 'local' ? 'Local only: not written to the repo' : 'Frontmatter holds folder / scope / activation / targets; the body is the rule content'}
           />
           <InfoCard
-            label="全局目录投影"
+            label="Global directory projections"
             value={
               globalProjections.length
                 ? globalProjections
@@ -147,27 +147,27 @@ export function ContractDetail({
                         `${state.globalTargets.find((t) => t.id === p.targetId)?.label ?? p.targetId} · ${PROJECTION_META[p.status].label}`,
                     )
                     .join('\n')
-                : '尚未投影到本机 Agent 全局目录'
+                : 'Not projected to any local Agent global directory yet'
             }
-            hint="在「全局分发」中可勾选多条指令与多个工具，并修改工具全局目录路径"
+            hint="Select multiple instructions and tools in Global dispatch, then edit each tool's global directory path"
           />
           <InfoCard
             label="Claude @import"
-            value={contract.imports.length ? contract.imports.map((i) => `@${i}`).join('\n') : '未配置'}
+            value={contract.imports.length ? contract.imports.map((i) => `@${i}`).join('\n') : 'Not configured'}
             mono
-            hint="仅 CLAUDE.md 目标支持；其他目标会忽略导入行"
+            hint="Only the CLAUDE.md target supports imports; other targets ignore import lines"
           />
         </section>
 
         <section>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <h3 className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              目标与投影状态
+              Targets &amp; projection status
               <span className="h-px w-8 bg-border/70" />
             </h3>
-            <Badge variant="outline">{contract.targets.length} 个目标</Badge>
+            <Badge variant="outline">{contract.targets.length} targets</Badge>
             <span className="text-[10.5px] text-muted-foreground">
-              单文件目标会与其他契约合并写入；漂移不会被自动覆盖
+              Single-file targets merge with other contracts; drift is never overwritten automatically
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -196,9 +196,9 @@ export function ContractDetail({
                   </code>
                   <div className="mt-1 flex flex-wrap items-center gap-1">
                     <span className="text-[10px] text-muted-foreground">
-                      {target.merge === 'single-file' ? '合并写入' : '独立文件'}
+                      {target.merge === 'single-file' ? 'Merged' : 'Separate file'}
                     </span>
-                    {modeIncompatible && <Badge variant="warning">激活方式不兼容，投影时会跳过</Badge>}
+                    {modeIncompatible && <Badge variant="warning">Activation not supported; skipped on projection</Badge>}
                   </div>
                   {projection?.note && (
                     <p className="mt-1 text-[10px] leading-4 text-warning">{projection.note}</p>
@@ -212,10 +212,10 @@ export function ContractDetail({
         <section>
           <div className="mb-2 flex items-center gap-2">
             <h3 className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              契约正文
+              Contract content
               <span className="h-px w-8 bg-border/70" />
             </h3>
-            <Badge variant="outline">每次会话可能进入上下文</Badge>
+            <Badge variant="outline">May enter context every session</Badge>
           </div>
           <Markdown
             text={contract.body}
@@ -225,7 +225,7 @@ export function ContractDetail({
 
         <div className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2.5 text-[10.5px] leading-5 text-muted-foreground">
           <Icon name="shield" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          指令会被 Agent 自动读取。拉取、恢复与手动合并都必须逐条预览；推送前会扫描正文中的高置信度凭据。删除本地契约不会删除已投影的目标文件。
+          Agents read instructions automatically. Pulls, restores, and manual merges all require item-by-item preview; pushes scan the content for high-confidence credentials. Deleting a local contract does not delete files already projected to targets.
         </div>
       </div>
     </div>

@@ -49,44 +49,44 @@ export function ContractSyncModal({
       open={open}
       onClose={onClose}
       width="max-w-xl"
-      title={`同步设置 — ${contract.title}`}
-      subtitle="指令契约只通过 Git 在机器 / 团队之间流转；投影由「投影与漂移」单独控制"
+      title={`Sync settings — ${contract.title}`}
+      subtitle="Instruction contracts travel between machines and teams only through Git; projection is controlled separately in Project projections"
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            取消
+            Cancel
           </Button>
           <Button
             onClick={() => {
               setContractSyncPolicy(contract.id, policy)
               toast.success(
                 policy === 'local'
-                  ? '已设为仅本机；后续编辑不会产生待推送'
+                  ? 'Set to local only; future edits will not create outgoing changes'
                   : policy === 'sync'
-                    ? '已加入仓库同步；推送仍需在同步中心确认'
-                    : '已跟随仓库策略',
+                    ? 'Added to repo sync; pushes still require confirmation in Sync Center'
+                    : 'Following repo policy',
               )
               onClose()
             }}
           >
             <Icon name="check" />
-            保存范围
+            Save scope
           </Button>
         </>
       }
     >
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2.5">
-          <Badge variant={effective ? 'info' : 'outline'}>{effective ? '参与仓库同步' : '仅本机'}</Badge>
+          <Badge variant={effective ? 'info' : 'outline'}>{effective ? 'In repo sync' : 'Local only'}</Badge>
           <Badge variant={stateMeta.variant}>{stateMeta.label}</Badge>
           <span className="text-[11px] text-muted-foreground">
             {connected
               ? globalOn
-                ? '仓库已连接 · 指令同步已开启'
-                : '仓库已连接 · 指令同步未开启'
-              : '未连接仓库'}
+                ? 'Repo connected · instruction sync on'
+                : 'Repo connected · instruction sync off'
+              : 'No repo connected'}
           </span>
-          <span className="ml-auto text-[11px] text-muted-foreground">{pending} 条待处理变更</span>
+          <span className="ml-auto text-[11px] text-muted-foreground">{pending} pending changes</span>
         </div>
 
         <div className="space-y-2">
@@ -117,11 +117,11 @@ export function ContractSyncModal({
                 <span className="min-w-0">
                   <span className="flex items-center gap-1.5 text-sm font-medium">
                     {meta.label}
-                    {option === 'local' && <Badge variant="outline">推荐给个人上下文</Badge>}
+                    {option === 'local' && <Badge variant="outline">Recommended for personal context</Badge>}
                   </span>
                   <span className="mt-0.5 block text-[11px] leading-5 text-muted-foreground">
                     {meta.desc}
-                    {disabled ? ' 需先在同步中心开启 Agent 指令同步。' : ''}
+                    {disabled ? ' Enable Agent instruction sync in Sync Center first.' : ''}
                   </span>
                 </span>
               </button>
@@ -130,33 +130,33 @@ export function ContractSyncModal({
         </div>
 
         <div className="rounded-lg border border-border px-3 py-2">
-          <div className="text-[11px] text-muted-foreground">仓库文件</div>
+          <div className="text-[11px] text-muted-foreground">Repository file</div>
           <div className="mt-0.5 break-all font-mono text-xs">
             {contractFilePath(contract, state.repo.layout.contracts)}
           </div>
           <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
-            frontmatter 存 folder / scope / activation / priority / targets / imports，正文即规范内容；不把各工具生成物提交为第二个事实源。
+            Frontmatter holds folder / scope / activation / priority / targets / imports; the body is the rule content. Do not commit each tool's generated files as a second source of truth.
           </p>
         </div>
 
         {policy === 'local' && pending > 0 && (
           <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs leading-5 text-warning">
             <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            当前有 {pending} 条未处理变更。保存后会撤回这些待同步项，但不会删除仓库中已有的文件。
+            There are {pending} unresolved changes. Saving withdraws these pending items but does not delete existing files in the repo.
           </div>
         )}
 
         {!globalOn && (
           <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
             <Icon name="cloud" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            指令同步目前由仓库设置统一关闭；这里的选择只会保存为本机偏好。
+            Instruction sync is currently turned off in repo settings; this choice is saved as a local preference only.
           </div>
         )}
 
         <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
           <Icon name="shield" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          同步不等于投影：指令只在本地库与仓库之间流转；写入 AGENTS.md / CLAUDE.md / .cursor/rules 需要显式投影，
-          目标文件被手工修改时会标记漂移。
+          Sync is not projection: instructions only move between the local library and the repo. Writing to AGENTS.md / CLAUDE.md / .cursor/rules requires an explicit projection,
+          and hand edits to target files are marked as drift.
         </div>
       </div>
     </Modal>

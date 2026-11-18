@@ -4,12 +4,12 @@ import { assetRepoState, REPO_STATE_META, type AssetRepoState } from '../../lib/
 import { Badge } from '../ui/core'
 
 const SHORT_LABEL: Record<AssetRepoState, string> = {
-  'in-sync': '已同步',
-  'remote-ahead': '有更新',
-  'local-ahead': '未推送',
-  diverged: '冲突',
-  blocked: '已阻断',
-  ignored: '仅本机',
+  'in-sync': 'Synced',
+  'remote-ahead': 'Incoming',
+  'local-ahead': 'Unpushed',
+  diverged: 'Conflict',
+  blocked: 'Blocked',
+  ignored: 'Local only',
 }
 
 const DOT: Record<AssetRepoState, string> = {
@@ -21,7 +21,7 @@ const DOT: Record<AssetRepoState, string> = {
   ignored: 'bg-muted-foreground/50',
 }
 
-/** 资产详情 / 列表里的仓库同步状态徽标，避免用户为了看状态跳到同步中心 */
+/** Repo sync status badge for asset detail / list views, so users need not jump to Sync Center just to check status */
 export function AssetSyncBadge({
   kind,
   name,
@@ -31,16 +31,16 @@ export function AssetSyncBadge({
 }: {
   kind: AssetKind
   name: string
-  /** Prompt 等可重命名资产用稳定 id 匹配待同步变更 */
+  /** Renamable assets such as Prompts match pending sync changes by stable id */
   assetId?: string
-  /** Prompt 的同步范围；Skill / MCP 不传 */
+  /** Sync scope for Prompts; omitted for Skills / MCP */
   policy?: PromptSyncPolicy
   compact?: boolean
 }) {
   const { state } = useStore()
 
   if (!state.repo.connected) {
-    return compact ? null : <Badge variant="outline">未连接仓库</Badge>
+    return compact ? null : <Badge variant="outline">No repo connected</Badge>
   }
 
   const enabled =
@@ -54,7 +54,7 @@ export function AssetSyncBadge({
 
   const st = assetRepoState(state.syncChanges, kind, name, enabled, assetId)
   const meta = REPO_STATE_META[st]
-  const label = st === 'ignored' && (kind === 'prompt' || kind === 'contract') ? '仅本机' : meta.label
+  const label = st === 'ignored' && (kind === 'prompt' || kind === 'contract') ? 'Local only' : meta.label
 
   if (compact) {
     return (

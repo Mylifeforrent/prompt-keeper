@@ -121,23 +121,23 @@ export function ContractEditModal({
 
   const submit = () => {
     if (!draft.title.trim()) {
-      setError('标题必填')
+      setError('Title is required')
       return
     }
     if (!draft.body.trim()) {
-      setError('契约正文必填')
+      setError('Contract content is required')
       return
     }
     if (draft.targets.length === 0) {
-      setError('至少选择一个目标；否则契约无法投影')
+      setError('Select at least one target; otherwise the contract cannot be projected')
       return
     }
     if (draft.activation.mode === 'glob' && draft.activation.globs.length === 0) {
-      setError('按路径生效时必须填写至少一个 glob')
+      setError('By path (glob) activation requires at least one glob')
       return
     }
     if (draft.activation.mode === 'model' && !draft.activation.description?.trim()) {
-      setError('模型判断模式必须填写「何时应用」的描述')
+      setError('Model decision requires a "When to apply" description')
       return
     }
     const next: AgentContract = {
@@ -152,7 +152,7 @@ export function ContractEditModal({
       updatedAt: nowIso(),
     }
     saveContract(next)
-    toast.success(contract ? `已保存「${next.title}」，等待重新投影` : `已创建「${next.title}」`)
+    toast.success(contract ? `Saved "${next.title}". Reprojection pending.` : `Created "${next.title}"`)
     onClose()
   }
 
@@ -160,29 +160,29 @@ export function ContractEditModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={contract ? '编辑 Agent 指令契约' : '新建 Agent 指令契约'}
+      title={contract ? 'Edit Agent instruction contract' : 'New Agent instruction contract'}
       width="max-w-3xl"
-      subtitle="一份规范源，按目标工具编译为 AGENTS.md / CLAUDE.md / .cursor/rules 等原生格式"
+      subtitle="One source of rules, compiled per target tool into native formats such as AGENTS.md / CLAUDE.md / .cursor/rules"
       footer={
         <>
           {error && <span className="mr-auto text-xs text-danger">{error}</span>}
           <Button variant="outline" onClick={onClose}>
-            取消
+            Cancel
           </Button>
-          <Button onClick={submit}>保存（自动生成版本）</Button>
+          <Button onClick={submit}>Save (auto-version)</Button>
         </>
       }
     >
       <div className="space-y-4">
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">标题 *</label>
-            <Input aria-label="标题" value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="例如：前端代码规范" />
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Title *</label>
+            <Input aria-label="Title" value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. Frontend code standards" />
           </div>
           <div className="w-28">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">优先级</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Priority</label>
             <Input
-              aria-label="优先级"
+              aria-label="Priority"
               type="number"
               value={draft.priority}
               onChange={(e) => set({ priority: Number(e.target.value) || 0 })}
@@ -191,12 +191,12 @@ export function ContractEditModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">描述</label>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Description</label>
           <Input
-            aria-label="描述"
+            aria-label="Description"
             value={draft.description}
             onChange={(e) => set({ description: e.target.value })}
-            placeholder="一句话说明这条契约约束什么"
+            placeholder="One line on what this contract constrains"
           />
         </div>
 
@@ -208,13 +208,13 @@ export function ContractEditModal({
             { ...draft, title: draft.title || 'untitled', folder: draft.folder },
             state.repo.layout.contracts,
           )}
-          hint="一条契约一个 .contract.md，文件夹会原样成为仓库目录。"
+          hint="One .contract.md per contract; folders map directly to repo directories."
         />
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">生效范围</label>
-            <Select aria-label="生效范围" value={draft.scope} onChange={(e) => set({ scope: e.target.value as ContractScope })}>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Scope</label>
+            <Select aria-label="Scope" value={draft.scope} onChange={(e) => set({ scope: e.target.value as ContractScope })}>
               {(Object.keys(CONTRACT_SCOPE_META) as ContractScope[]).map((s) => (
                 <option key={s} value={s}>
                   {CONTRACT_SCOPE_META[s].label}
@@ -224,21 +224,21 @@ export function ContractEditModal({
             <p className="mt-1 text-[11px] text-muted-foreground">{CONTRACT_SCOPE_META[draft.scope].desc}</p>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">路径前缀</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Path prefix</label>
             <Input
-              aria-label="路径前缀"
+              aria-label="Path prefix"
               value={draft.path ?? ''}
               disabled={draft.scope !== 'path'}
               onChange={(e) => set({ path: e.target.value })}
               placeholder="src"
               className="font-mono text-xs disabled:opacity-50"
             />
-            <p className="mt-1 text-[11px] text-muted-foreground">仅「路径级」需要；只在该目录及子目录生效。</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Only needed for Path scope; applies within that directory and its subdirectories.</p>
           </div>
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">激活方式</label>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Activation</label>
           <div className="grid grid-cols-2 gap-2">
             {(Object.keys(ACTIVATION_META) as ContractActivationMode[]).map((mode) => {
               const meta = ACTIVATION_META[mode]
@@ -263,9 +263,9 @@ export function ContractEditModal({
 
         {draft.activation.mode === 'glob' && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">生效 glob *</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Glob patterns *</label>
             <Textarea
-              aria-label="生效 glob"
+              aria-label="Glob patterns"
               rows={3}
               value={globsText}
               onChange={(e) => setGlobs(e.target.value)}
@@ -273,29 +273,29 @@ export function ContractEditModal({
               placeholder={'src/**/*.{ts,tsx}\npackages/**'}
             />
             <p className="mt-1 text-[11px] text-muted-foreground">
-              每行一个，也支持逗号分隔；支持 ** / * / ? / {'{a,b}'}。当前：{activationSummary(draft.activation)}
+              One per line or comma-separated; supports ** / * / ? / {'{a,b}'}. Current: {activationSummary(draft.activation)}
             </p>
           </div>
         )}
 
         {draft.activation.mode === 'model' && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">何时应用（给模型判断）*</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">When to apply (for model decision) *</label>
             <Input
-              aria-label="何时应用"
+              aria-label="When to apply"
               value={draft.activation.description ?? ''}
               onChange={(e) =>
                 setDraft((d) => ({ ...d, activation: { ...d.activation, description: e.target.value } }))
               }
-              placeholder="例如：当用户要求代码评审、review 或检查改动时应用"
+              placeholder="e.g. When the user asks for a code review or to check changes"
             />
           </div>
         )}
 
         <div>
           <div className="mb-1.5 flex items-center gap-2">
-            <label className="text-xs font-medium text-muted-foreground">投影目标 *</label>
-            <span className="text-[11px] text-muted-foreground">选择多个目标时，按各自格式分别编译</span>
+            <label className="text-xs font-medium text-muted-foreground">Projection targets *</label>
+            <span className="text-[11px] text-muted-foreground">Multiple targets are compiled separately in each format</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {CONTRACT_TARGETS.map((target) => {
@@ -331,14 +331,14 @@ export function ContractEditModal({
                   </div>
                   <div className="mt-0.5 truncate text-[10px] text-muted-foreground">{target.agentName}</div>
                   <div className="mt-1 flex flex-wrap gap-1">
-                    <Badge variant="outline">{target.merge === 'single-file' ? '合并' : '独立文件'}</Badge>
+                    <Badge variant="outline">{target.merge === 'single-file' ? 'Merged' : 'Separate file'}</Badge>
                     {target.supports.globs && <Badge variant="outline">glob</Badge>}
-                    {target.supports.modelDecision && <Badge variant="outline">模型</Badge>}
-                    {target.supports.manual && <Badge variant="outline">手动</Badge>}
+                    {target.supports.modelDecision && <Badge variant="outline">Model</Badge>}
+                    {target.supports.manual && <Badge variant="outline">Manual</Badge>}
                     {target.supports.imports && <Badge variant="outline">@import</Badge>}
                   </div>
                   {active && unsupported && (
-                    <div className="mt-1 text-[10px] text-warning">不支持当前激活方式，投影时会跳过</div>
+                    <div className="mt-1 text-[10px] text-warning">Does not support this activation; skipped on projection</div>
                   )}
                 </button>
               )
@@ -347,7 +347,7 @@ export function ContractEditModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Claude @import（可选）</label>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Claude @import (optional)</label>
           <Textarea
             aria-label="Claude @import"
             rows={2}
@@ -356,33 +356,33 @@ export function ContractEditModal({
             className="font-mono text-xs"
             placeholder={'docs/interaction-design.md'}
           />
-          <p className="mt-1 text-[11px] text-muted-foreground">每行一个相对路径；只有 CLAUDE.md 目标会写入，最多 4 跳。</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">One relative path per line; only the CLAUDE.md target writes these, up to 4 hops.</p>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">契约正文 *</label>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Contract content *</label>
           <Textarea
-            aria-label="契约正文"
+            aria-label="Contract content"
             rows={12}
             value={draft.body}
             onChange={(e) => set({ body: e.target.value })}
             className="font-mono text-xs leading-5"
-            placeholder={'# 前端代码规范\n\n- 函数组件 + hooks\n- 使用 Tailwind token\n...'}
+            placeholder={'# Frontend code standards\n\n- Function components + hooks\n- Use Tailwind tokens\n...'}
           />
           <p className="mt-1 text-[11px] text-muted-foreground">
-            正文会原样写入单文件目标；per-contract 目标会自动加 frontmatter（applyTo / globs / trigger）。
+            The body is written verbatim into single-file targets; per-contract targets get frontmatter automatically (applyTo / globs / trigger).
           </p>
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">标签</label>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tags</label>
           <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-input bg-card px-2.5 py-2">
             {draft.tags.map((t) => (
               <Badge key={t} variant="primary" className="gap-1 py-1">
                 {t}
                 <button
                   type="button"
-                  aria-label={`移除标签 ${t}`}
+                  aria-label={`Remove tag ${t}`}
                   className="cursor-pointer"
                   onClick={() => set({ tags: draft.tags.filter((x) => x !== t) })}
                 >
@@ -391,10 +391,10 @@ export function ContractEditModal({
               </Badge>
             ))}
             <input
-              aria-label="添加标签"
+              aria-label="Add tag"
               className="min-w-24 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/80"
               value={tagInput}
-              placeholder={draft.tags.length ? '' : '仓库、前端、评审…'}
+              placeholder={draft.tags.length ? '' : 'repository, frontend, review...'}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && tagInput.trim()) {
@@ -409,8 +409,8 @@ export function ContractEditModal({
 
         <div>
           <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            同步范围
-            <span className="font-normal">指令会进入每次会话；私密内容建议仅本机</span>
+            Sync scope
+            <span className="font-normal">Instructions enter every session; keep private content local</span>
           </label>
           <div className="grid grid-cols-3 gap-2">
             {(Object.keys(CONTRACT_SYNC_POLICY_META) as PromptSyncPolicy[]).map((policy) => {
@@ -443,14 +443,14 @@ export function ContractEditModal({
             <div>
               {incompatible.length > 0 && (
                 <p>
-                  以下目标不支持「{ACTIVATION_META[draft.activation.mode].label}」：
-                  {incompatible.map((t) => t.label).join('、')}。保存不会静默丢弃，生效预览会显示为跳过。
+                  These targets do not support "{ACTIVATION_META[draft.activation.mode].label}":
+                  {incompatible.map((t) => t.label).join(', ')}. Saving does not drop them silently; the resolution preview shows them as skipped.
                 </p>
               )}
               {importIncompatible.length > 0 && (
                 <p>
-                  @import 只会写入 CLAUDE.md；以下目标会忽略：
-                  {importIncompatible.map((t) => t.label).join('、')}。
+                  @import is only written to CLAUDE.md; ignored by:
+                  {importIncompatible.map((t) => t.label).join(', ')}.
                 </p>
               )}
             </div>

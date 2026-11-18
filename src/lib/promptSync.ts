@@ -10,23 +10,23 @@ export const PROMPT_SYNC_POLICY_META: Record<
   { label: string; short: string; desc: string }
 > = {
   inherit: {
-    label: '跟随仓库策略',
-    short: '跟随策略',
-    desc: '仓库启用 Prompt 同步时参与；仓库关闭时自动退回仅本机。',
+    label: 'Follow repository policy',
+    short: 'Follow policy',
+    desc: 'Participates when the repository has Prompt sync enabled; falls back to local only when it is off.',
   },
   sync: {
-    label: '参与同步',
-    short: '参与同步',
-    desc: '把这一条推送到 Git 仓库，并在其他机器上可拉取；需要全局 Prompt 同步已开启。',
+    label: 'Participate in sync',
+    short: 'Sync',
+    desc: 'Pushes this Prompt to the Git repository so other machines can pull it; requires global Prompt sync to be enabled.',
   },
   local: {
-    label: '仅本机',
-    short: '仅本机',
-    desc: '不进入 Git，也不出现在待推送中；适合个人速记、含私密上下文的 Prompt。',
+    label: 'Local only',
+    short: 'Local',
+    desc: 'Never enters Git and never appears in pending pushes; good for personal notes or Prompts with private context.',
   },
 }
 
-/** Prompt 是否实际参与仓库同步；全局开关拥有最高优先级 */
+/** Whether the Prompt actually participates in repository sync; the global switch takes highest priority */
 export function promptEffectiveSync(
   repo: Pick<RepoConfig, 'connected' | 'policies'>,
   prompt: Pick<Prompt, 'syncPolicy'>,
@@ -44,9 +44,9 @@ export function promptSlug(prompt: Pick<Prompt, 'id' | 'title'>): string {
 }
 
 /**
- * 每个 Prompt 一个 Markdown 文件，目录直接复用库内文件夹：
+ * One Markdown file per Prompt; the directory reuses the library folder directly:
  * prompts/<folder>/<slug>.prompt.md
- * Git diff 可读，也能在不打开平台时按目录浏览。
+ * Reads well in Git diffs and can be browsed by directory without opening the app.
  */
 export function promptFilePath(
   prompt: Pick<Prompt, 'id' | 'title'> & { folder?: string | null },
@@ -94,7 +94,7 @@ export interface ParsedPromptFile {
   userPrompt: string
 }
 
-/** 解析 .prompt.md；结构不完整时返回 null，用于手动合并校验 */
+/** Parse .prompt.md; returns null when the structure is incomplete, used to validate manual merges */
 export function parsePromptFile(text: string): ParsedPromptFile | null {
   const normalized = text.replace(/\r\n/g, '\n')
   const frontmatter = normalized.match(/^---\n([\s\S]*?)\n---\n?/)
@@ -180,7 +180,7 @@ const SECRET_PATTERNS: RegExp[] = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g,
 ]
 
-/** 高置信度凭据模式；只用于推送前阻断，不做泛化内容审查 */
+/** High-confidence credential patterns; used only to block before pushing, not for general content review */
 export function containsLikelySecret(text: string): boolean {
   return SECRET_PATTERNS.some((re) => {
     re.lastIndex = 0
@@ -188,7 +188,7 @@ export function containsLikelySecret(text: string): boolean {
   })
 }
 
-/** 把 Prompt 中的疑似凭据替换为模板变量，真实值不落盘 */
+/** Replace suspected credentials in Prompts with template variables; real values are never persisted */
 export function maskSecretsInPrompt(text: string): string {
   let next = text
   for (const re of SECRET_PATTERNS) {

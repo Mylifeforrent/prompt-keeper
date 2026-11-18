@@ -76,8 +76,8 @@ export function Modal({
             variant="ghost"
             className="-mr-1.5 -mt-1 h-8 w-8 shrink-0 text-muted-foreground"
             onClick={onClose}
-            aria-label="关闭"
-            title="关闭（Esc）"
+            aria-label="Close"
+            title="Close (Esc)"
           >
             <Icon name="x" className="h-4 w-4" />
           </Button>
@@ -99,7 +99,7 @@ export function ConfirmDialog({
   onConfirm,
   title,
   message,
-  confirmText = '删除',
+  confirmText = 'Delete',
   danger = true,
 }: {
   open: boolean
@@ -119,7 +119,7 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            取消
+            Cancel
           </Button>
           <Button
             variant={danger ? 'danger' : 'default'}

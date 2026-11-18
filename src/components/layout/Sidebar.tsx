@@ -5,11 +5,11 @@ export type Page = 'prompts' | 'instructions' | 'skills' | 'mcp' | 'sync' | 'set
 
 const NAV: { id: Page; label: string; icon: IconName }[] = [
   { id: 'prompts', label: 'Prompts', icon: 'message' },
-  { id: 'instructions', label: 'Agent 指令', icon: 'file' },
+  { id: 'instructions', label: 'Agent Instructions', icon: 'file' },
   { id: 'skills', label: 'Skills', icon: 'grid' },
   { id: 'mcp', label: 'MCP', icon: 'zap' },
-  { id: 'sync', label: '同步', icon: 'gitBranch' },
-  { id: 'settings', label: '设置', icon: 'sliders' },
+  { id: 'sync', label: 'Sync', icon: 'gitBranch' },
+  { id: 'settings', label: 'Settings', icon: 'sliders' },
 ]
 
 export function Sidebar({
@@ -31,14 +31,14 @@ export function Sidebar({
           <div className="truncate text-[13px] font-semibold leading-4 tracking-tight">
             Prompt Keeper
           </div>
-          <div className="mt-0.5 text-[10px] leading-3 text-muted-foreground">本地优先资产库</div>
+          <div className="mt-0.5 text-[10px] leading-3 text-muted-foreground">Local-first asset library</div>
         </div>
       </div>
 
       <div className="hidden px-4 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/85 xl:block">
-        工作台
+        Workspace
       </div>
-      <nav className="flex-1 space-y-1 px-2 xl:px-2.5" aria-label="主导航">
+      <nav className="flex-1 space-y-1 px-2 xl:px-2.5" aria-label="Main navigation">
         {NAV.map((n) => {
           const active = page === n.id
           const count = counts[n.id as keyof typeof counts]
@@ -92,13 +92,13 @@ export function Sidebar({
         <div className="rounded-lg border border-border/70 bg-muted/40 px-2.5 py-2">
           <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
             <Icon name="layers" className="h-3 w-3" />
-            文件夹即 Git 目录
+            Folders are Git directories
           </div>
           <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
-            四类资产同构 · 审核后投影分发
+            Four asset types, one structure · review, project, dispatch
           </p>
           <div className="mt-1.5 flex items-center justify-between text-[10px] text-muted-foreground/85">
-            <span>原型</span>
+            <span>Prototype</span>
             <span className="tabular font-mono">v0.5.0</span>
           </div>
         </div>

@@ -87,7 +87,7 @@ export function InstructionsWorkspace({
         case 'priority':
           return b.priority - a.priority
         case 'title':
-          return a.title.localeCompare(b.title, 'zh')
+          return a.title.localeCompare(b.title, 'en')
         default:
           return b.updatedAt.localeCompare(a.updatedAt)
       }
@@ -106,19 +106,19 @@ export function InstructionsWorkspace({
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5">
         <Tabs
           tabs={[
-            { value: 'library', label: '契约库', count: state.contracts.length },
-            { value: 'preview', label: '生效预览' },
-            { value: 'projections', label: '项目投影', count: attention },
-            { value: 'global', label: '全局分发', count: globalAttention },
+            { value: 'library', label: 'Contracts', count: state.contracts.length },
+            { value: 'preview', label: 'Resolution preview' },
+            { value: 'projections', label: 'Project projections', count: attention },
+            { value: 'global', label: 'Global dispatch', count: globalAttention },
           ]}
           value={tab}
           onChange={(v) => setTab(v as InstructionTab)}
         />
         <span className="ml-auto hidden items-center gap-1.5 text-[11px] text-muted-foreground lg:flex">
           <Badge variant={state.repo.policies.contracts ? 'info' : 'outline'}>
-            {state.repo.policies.contracts ? 'Git 可选同步' : 'Git 未启用'}
+            {state.repo.policies.contracts ? 'Git sync optional' : 'Git sync off'}
           </Badge>
-          <span className="whitespace-nowrap">{localCount} 条仅本机 · 投影独立确认</span>
+          <span className="whitespace-nowrap">{localCount} local only · projection confirmed separately</span>
         </span>
       </div>
 
@@ -130,7 +130,7 @@ export function InstructionsWorkspace({
             selected={folderFilter}
             onSelect={setFolderFilter}
             className="hidden w-[176px] shrink-0 border-r border-border bg-card/40 xl:flex"
-            title="指令文件夹"
+            title="Instruction folders"
           />
           <div className="flex w-[360px] shrink-0 flex-col border-r border-border bg-background/40 xl:w-[400px]">
             {folderFilter && (
@@ -142,23 +142,23 @@ export function InstructionsWorkspace({
                   onClick={() => setFolderFilter('')}
                   className="ml-auto shrink-0 cursor-pointer rounded px-1.5 py-0.5 transition-colors hover:bg-muted hover:text-foreground"
                 >
-                  返回全部
+                  All folders
                 </button>
               </div>
             )}
             <div className="flex items-center gap-1.5 border-b border-border px-3.5 py-3">
               <Select className="h-8 flex-1 text-xs" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
-                <option value="updated">按更新时间</option>
-                <option value="priority">按优先级</option>
-                <option value="title">按标题</option>
+                <option value="updated">Last updated</option>
+                <option value="priority">By priority</option>
+                <option value="title">Title</option>
               </Select>
               <Select
                 className="h-8 w-[104px] text-xs"
                 value={scopeFilter}
                 onChange={(e) => setScopeFilter(e.target.value as typeof scopeFilter)}
-                aria-label="按范围筛选"
+                aria-label="Filter by scope"
               >
-                <option value="all">全部范围</option>
+                <option value="all">All scopes</option>
                 {(Object.keys(CONTRACT_SCOPE_META) as ContractScope[]).map((s) => (
                   <option key={s} value={s}>
                     {CONTRACT_SCOPE_META[s].short}
@@ -169,9 +169,9 @@ export function InstructionsWorkspace({
                 className="h-8 w-[116px] text-xs"
                 value={targetFilter}
                 onChange={(e) => setTargetFilter(e.target.value)}
-                aria-label="按目标筛选"
+                aria-label="Filter by target"
               >
-                <option value="all">全部目标</option>
+                <option value="all">All targets</option>
                 {CONTRACT_TARGETS.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.label}
@@ -196,7 +196,7 @@ export function InstructionsWorkspace({
             </div>
 
             <div className="flex items-center gap-2 border-t border-border px-3.5 py-2 text-[11px] text-muted-foreground">
-              <span className="tabular">{filtered.length} / {state.contracts.length} 条</span>
+              <span className="tabular">{filtered.length} / {state.contracts.length} contracts</span>
               {hasFilter && (
                 <button
                   type="button"
@@ -207,7 +207,7 @@ export function InstructionsWorkspace({
                   }}
                   className="cursor-pointer rounded px-1.5 py-0.5 text-primary transition-colors hover:bg-primary-soft"
                 >
-                  清除筛选
+                  Clear filters
                 </button>
               )}
               <Button
@@ -215,10 +215,10 @@ export function InstructionsWorkspace({
                 variant="outline"
                 className="ml-auto h-7"
                 onClick={() => setEditing({ open: true, contract: null })}
-                title="新建契约（快捷键 N）"
+                title="New contract (shortcut N)"
               >
                 <Icon name="plus" className="h-3.5 w-3.5" />
-                新建
+                New
               </Button>
             </div>
           </div>
@@ -236,7 +236,7 @@ export function InstructionsWorkspace({
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
                 <Icon name="file" className="h-6 w-6" />
-                左侧选择一条指令契约查看详情
+                Select a contract on the left to see details
               </div>
             )}
           </div>
@@ -273,21 +273,21 @@ export function InstructionsWorkspace({
         <VersionHistoryModal
           open
           onClose={() => setVersionOf(null)}
-          title={`版本历史 — ${versionOf.title}`}
+          title={`Version history — ${versionOf.title}`}
           versions={versionOf.versions.map((v) => ({
             ...v,
             data: { content: formatContractSnapshot(v.data.content) },
           }))}
-          fields={[{ key: 'content', label: '契约内容（元数据 + 正文）' }]}
+          fields={[{ key: 'content', label: 'Contract content (metadata + body)' }]}
           onRestore={(v) => {
             restoreContractVersion(versionOf.id, v.id)
-            toast.success(`已恢复 v${v.version}，当前内容已另存为新版本`)
+            toast.success(`Restored v${v.version}; current content was saved as a new version`)
           }}
           onDeleteVersion={(vid) => {
             deleteContractVersion(versionOf.id, vid)
-            toast.success('已删除该历史版本')
+            toast.success('Version deleted')
           }}
-          restoreHint="恢复后会写入本地库并标记待推送，同时把相关投影标记为「待更新」；不会自动覆盖 Agent 目录。"
+          restoreHint="Restoring writes to the local library and marks the change as outgoing, and marks affected projections as Stale; Agent directories are never overwritten automatically."
         />
       )}
 
@@ -298,21 +298,21 @@ export function InstructionsWorkspace({
           if (deleteOf) {
             deleteContract(deleteOf.id)
             setSelectedId(null)
-            toast.success(`已删除「${deleteOf.title}」`)
+            toast.success(`Deleted "${deleteOf.title}"`)
           }
         }}
-        title="删除指令契约？"
+        title="Delete instruction contract?"
         message={
           <>
-            将删除「<b className="text-foreground">{deleteOf?.title}</b>」及其全部 {deleteOf?.versions.length ?? 0} 个历史版本，此操作不可撤销。
+            Deletes "<b className="text-foreground">{deleteOf?.title}</b>" and all {deleteOf?.versions.length ?? 0} of its versions. This cannot be undone.
             {deleteOf && contractSyncEnabled(state.repo, deleteOf) && (
               <p className="mt-2 rounded-lg border border-warning/30 bg-warning-soft px-2.5 py-2 text-xs leading-5 text-warning">
-                该契约参与仓库同步。本次只删除本地副本，不会修改仓库文件；远端若仍保留该文件，下次拉取会重新出现。
+                This contract is part of repo sync. Only the local copy is deleted; repo files are untouched. If the remote still has the file, it will reappear on the next pull.
               </p>
             )}
             {deleteProjections > 0 && (
               <p className="mt-2 rounded-lg border border-warning/30 bg-warning-soft px-2.5 py-2 text-xs leading-5 text-warning">
-                已投影到 {deleteProjections} 个目标。删除本地契约不会自动删除 Agent 目录中已写入的文件；需要到「投影与漂移」逐项移除。
+                Projected to {deleteProjections} targets. Deleting the local contract does not delete files already written to Agent directories; remove them individually in Project projections.
               </p>
             )}
           </>

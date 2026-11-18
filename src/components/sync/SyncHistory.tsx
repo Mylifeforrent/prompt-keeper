@@ -10,10 +10,10 @@ import { useToast } from '../ui/toast'
 type Filter = 'all' | 'repo' | 'deploy' | 'security'
 
 const FILTERS: { v: Filter; label: string; types: SyncEventType[] }[] = [
-  { v: 'all', label: '全部', types: [] },
-  { v: 'repo', label: '仓库同步', types: ['fetch', 'pull', 'push', 'connect', 'conflict'] },
-  { v: 'deploy', label: 'Agent 分发', types: ['deploy', 'rollback'] },
-  { v: 'security', label: '安全与审核', types: ['blocked', 'review'] },
+  { v: 'all', label: 'All', types: [] },
+  { v: 'repo', label: 'Repo sync', types: ['fetch', 'pull', 'push', 'connect', 'conflict'] },
+  { v: 'deploy', label: 'Agent dispatch', types: ['deploy', 'rollback'] },
+  { v: 'security', label: 'Security & review', types: ['blocked', 'review'] },
 ]
 
 export function SyncHistory() {
@@ -28,8 +28,8 @@ export function SyncHistory() {
       <div className="flex items-start gap-2 rounded-xl border border-info/30 bg-info-soft px-3.5 py-2.5 text-xs leading-5 text-info">
         <Icon name="history" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
-          同步日志只保存在本机，用于追溯「哪个版本、什么时候、分发到了哪个 Agent」。
-          Git 的提交历史仍以仓库为准；回滚分发不会回滚仓库。
+          Sync logs are stored only on this machine to trace which version went to which Agent and when.
+          Git commit history remains the source of truth in the repo; rolling back a dispatch never rolls back the repo.
         </span>
       </div>
 
@@ -49,20 +49,20 @@ export function SyncHistory() {
             {f.label}
           </button>
         ))}
-        <span className="ml-auto text-[11px] text-muted-foreground">{events.length} 条记录</span>
+        <span className="ml-auto text-[11px] text-muted-foreground">{events.length} records</span>
         <Button
           size="sm"
           variant="outline"
-          onClick={() => toast.info('同步日志导出为 JSON（原型未真的下载文件）')}
+          onClick={() => toast.info('Sync log exported as JSON (prototype; no file is actually downloaded)')}
         >
           <Icon name="download" className="h-3.5 w-3.5" />
-          导出日志
+          Export log
         </Button>
       </div>
 
       <div className="rounded-xl border border-border bg-card">
         {events.length === 0 ? (
-          <p className="px-4 py-12 text-center text-xs text-muted-foreground">该分类下还没有记录。</p>
+          <p className="px-4 py-12 text-center text-xs text-muted-foreground">No records in this category yet.</p>
         ) : (
           <div className="px-4 py-2">
             {events.map((ev, idx) => {
@@ -84,7 +84,7 @@ export function SyncHistory() {
                           ev.result === 'success' ? 'success' : ev.result === 'warning' ? 'warning' : 'danger'
                         }
                       >
-                        {ev.result === 'success' ? '成功' : ev.result === 'warning' ? '需关注' : '失败'}
+                        {ev.result === 'success' ? 'Success' : ev.result === 'warning' ? 'Attention' : 'Failed'}
                       </Badge>
                     </div>
                     {ev.detail && <p className="mt-1 text-xs leading-5 text-muted-foreground">{ev.detail}</p>}

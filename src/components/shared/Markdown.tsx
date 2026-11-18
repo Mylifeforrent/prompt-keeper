@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-/** 原型用迷你 Markdown 渲染：标题 / 列表 / 代码块 / 行内加粗与代码 / 引用 / 分隔线 */
+/** Minimal Markdown renderer for the prototype: headings / lists / code blocks / inline bold and code / quotes / dividers */
 function inline(text: string, keyBase: string): ReactNode[] {
   const nodes: ReactNode[] = []
   const re = /(\*\*[^*]+\*\*|`[^`]+`)/g
@@ -46,7 +46,7 @@ export function Markdown({ text, className }: { text: string; className?: string
       const body: string[] = []
       i++
       while (i < lines.length && !lines[i].startsWith('```')) body.push(lines[i++])
-      i++ // 跳过结束 ```
+      i++ // skip closing ```
       blocks.push(
         <pre
           key={key++}

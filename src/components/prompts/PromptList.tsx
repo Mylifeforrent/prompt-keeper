@@ -28,23 +28,23 @@ export function PromptList({
     return hasFilter ? (
       <EmptyState
         icon="search"
-        title="未找到匹配结果"
-        description="搜索词、标签、收藏或文件夹筛选可能过窄"
+        title="No matching results"
+        description="Your search, tags, favorites, or folder filter may be too narrow"
         action={
           <Button variant="outline" size="sm" onClick={onClearFilter}>
-            清除全部筛选
+            Clear all filters
           </Button>
         }
       />
     ) : (
       <EmptyState
         icon="message"
-        title="还没有 Prompt"
-        description="新建第一个 Prompt，用 {{变量名}} 定义模板变量"
+        title="No prompts yet"
+        description="Create your first Prompt and use {{variable}} for template variables"
         action={
           <Button onClick={onCreate}>
             <Icon name="plus" />
-            新建 Prompt
+            New Prompt
           </Button>
         }
       />
@@ -63,10 +63,10 @@ export function PromptList({
           </colgroup>
           <thead className="sticky top-0 z-10 bg-background/95 text-[10.5px] text-muted-foreground backdrop-blur">
             <tr className="border-b border-border">
-              <th className="py-2.5 pl-1 pr-2 font-medium">标题</th>
-              <th className="py-2.5 pr-2 font-medium">文件夹</th>
-              <th className="py-2.5 pr-2 font-medium">同步</th>
-              <th className="py-2.5 font-medium">更新</th>
+              <th className="py-2.5 pl-1 pr-2 font-medium">Title</th>
+              <th className="py-2.5 pr-2 font-medium">Folder</th>
+              <th className="py-2.5 pr-2 font-medium">Sync</th>
+              <th className="py-2.5 font-medium">Updated</th>
             </tr>
           </thead>
           <tbody>
@@ -158,7 +158,7 @@ export function PromptList({
                         {p.isFavorite && <Icon name="star" className="h-3.5 w-3.5 shrink-0 text-warning" />}
                       </div>
                       <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                        {p.description || '（无描述）'}
+                        {p.description || '(No description)'}
                       </p>
                     </div>
                     <span className="tabular mt-0.5 shrink-0 text-[10px] text-muted-foreground">
@@ -197,9 +197,9 @@ export function PromptList({
                     </div>
                     <span
                       className="tabular ml-auto shrink-0 whitespace-nowrap text-[10px] text-muted-foreground"
-                      title={`使用 ${p.usageCount} 次 · ${p.versions.length} 个版本`}
+                      title={`Used ${p.usageCount} times · ${p.versions.length} versions`}
                     >
-                      用 {p.usageCount} · v{p.versions[0]?.version ?? 1}
+                      Used {p.usageCount} · v{p.versions[0]?.version ?? 1}
                     </span>
                   </div>
                 </button>
@@ -223,6 +223,6 @@ function groupPromptsByFolder(prompts: Prompt[]): { folder: string | null; promp
   return [...groups.values()].sort((a, b) => {
     if (a.folder === null) return 1
     if (b.folder === null) return -1
-    return a.folder.localeCompare(b.folder, 'zh')
+    return a.folder.localeCompare(b.folder, 'en')
   })
 }

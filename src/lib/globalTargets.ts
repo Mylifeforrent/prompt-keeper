@@ -20,7 +20,7 @@ export function globalPathIsValid(path: string): boolean {
   return true
 }
 
-/** dir 模式：目录 + slug + 扩展名；file 模式：直接使用完整文件路径 */
+/** dir mode: directory + slug + extension; file mode: the full file path is used directly */
 export function resolveGlobalPath(contract: AgentContract, target: AgentGlobalTarget): string {
   if (target.pathMode === 'file') return target.path
   const dir = target.path.replace(/\/+$/, '')
@@ -47,7 +47,7 @@ function cursorFrontmatter(contract: AgentContract): string[] {
   return lines
 }
 
-/** 单契约在全局目标中的原生内容 */
+/** Native content of a single contract in a global target */
 export function compileGlobalContract(target: AgentGlobalTarget, contract: AgentContract): string {
   const body = contract.body.trim()
   if (target.format === 'cursor-mdc') {
@@ -74,8 +74,8 @@ function mergedBlock(target: AgentGlobalTarget, contract: AgentContract): string
 }
 
 /**
- * 生成写入全局目录的文件清单。
- * single-file 目标把多条契约合并进同一个文件；per-contract 目标一契约一文件。
+ * Build the list of files to write into global directories.
+ * single-file targets merge multiple contracts into one file; per-contract targets produce one file per contract.
  */
 export function compileGlobalFiles(
   target: AgentGlobalTarget,
@@ -91,12 +91,12 @@ export function compileGlobalFiles(
   const blocks = contracts.map((contract) => mergedBlock(target, contract))
   const content = blocks.length
     ? `${GENERATED_HEADER}\n\n${blocks.join('\n\n')}\n`
-    : `${GENERATED_HEADER}\n\n<!-- 当前没有投影到该全局目标的指令。 -->\n`
+    : `${GENERATED_HEADER}\n\n<!-- No instructions are currently projected to this global target. -->\n`
   return [{ path: target.path, content }]
 }
 
 export function globalPathHint(target: AgentGlobalTarget): string {
   return target.pathMode === 'file'
-    ? `这里填写完整文件路径；例如 ${target.defaultPath}。`
-    : `这里填写目录；每个契约会生成 <slug>${target.fileExt ?? '.md'}。`
+    ? `Enter a full file path here; for example ${target.defaultPath}.`
+    : `Enter a directory here; each contract produces <slug>${target.fileExt ?? '.md'}.`
 }

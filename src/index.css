@@ -144,7 +144,7 @@
     font-variant-ligatures: none;
   }
 
-  /* 细滚动条：默认近乎隐形，悬停才明显 */
+  /* Thin scrollbars: nearly invisible by default, visible on hover */
   * {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklab, var(--border-strong) 75%, transparent) transparent;

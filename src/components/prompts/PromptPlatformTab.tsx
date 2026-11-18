@@ -31,12 +31,12 @@ export function PromptPlatformTab({ query }: { query: string }) {
     const system = values ? renderTemplate(item.systemPrompt, values) : item.systemPrompt
     const user = values ? renderTemplate(item.userPrompt, values) : item.userPrompt
     const ok = await copyToClipboard(`${system}\n\n${user}`.trim())
-    toast[ok ? 'success' : 'error'](ok ? `已复制「${item.title}」到剪贴板` : '复制失败，请检查剪贴板权限')
+    toast[ok ? 'success' : 'error'](ok ? `Copied "${item.title}" to clipboard` : 'Copy failed; check clipboard permissions')
   }
 
   const saveLocal = (item: PromptPlatformItem) => {
     if (localTitles.has(item.title)) {
-      toast.warning('本地已有同名 Prompt；请先在本地重命名，或直接复制使用')
+      toast.warning('A local Prompt with this title exists; rename the local one first, or just copy and use it')
       return
     }
     savePrompt({
@@ -45,7 +45,7 @@ export function PromptPlatformTab({ query }: { query: string }) {
       description: item.description,
       systemPrompt: item.systemPrompt,
       userPrompt: item.userPrompt,
-      folder: `平台/${item.category}`,
+      folder: `platform/${item.category}`,
       tags: item.tags,
       isFavorite: false,
       isPinned: false,
@@ -57,7 +57,7 @@ export function PromptPlatformTab({ query }: { query: string }) {
         {
           id: uid(),
           version: 1,
-          note: `来自平台 · ${item.author}`,
+          note: `From platform · ${item.author}`,
           createdAt: nowIso(),
           data: {
             title: item.title,
@@ -70,7 +70,7 @@ export function PromptPlatformTab({ query }: { query: string }) {
       createdAt: nowIso(),
       updatedAt: nowIso(),
     })
-    toast.success('已保存到我的 Prompt；默认跟随仓库策略，可在详情页改为仅本机')
+    toast.success('Saved to My Prompts; follows repo policy by default — switch to local only on the detail page')
     setDetailOf(null)
   }
 
@@ -79,8 +79,8 @@ export function PromptPlatformTab({ query }: { query: string }) {
       <div className="mb-4 flex items-start gap-2 rounded-xl border border-info/30 bg-info-soft px-3.5 py-2.5 text-xs leading-5 text-info">
         <Icon name="sparkles" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
-          <b>平台发现</b>是 Prompt 的主要复用入口：搜索、预览、填变量后直接复制。
-          保存到本地后，是否参与 Git 同步由该 Prompt 的同步范围决定；平台来源本身不进仓库，也不写入 Agent 目录。
+          <b>Platform Discovery</b> is the main entry point for reusing Prompts: search, preview, fill in variables, and copy.
+          After saving locally, whether a Prompt joins Git sync depends on its sync scope; platform sources themselves never enter your repo or the Agent directories.
         </span>
       </div>
 
@@ -95,7 +95,7 @@ export function PromptPlatformTab({ query }: { query: string }) {
               : 'border-border text-muted-foreground hover:border-border-strong hover:bg-muted'
           }`}
         >
-          全部分类
+          All categories
         </button>
         {categories.map((c) => (
           <button
@@ -113,12 +113,12 @@ export function PromptPlatformTab({ query }: { query: string }) {
           </button>
         ))}
         <span className="ml-auto text-[11px] text-muted-foreground">
-          平台收录 {SEED_PLATFORM_PROMPTS.length} 条 · 本地已存 {localTitles.size} 条
+          {SEED_PLATFORM_PROMPTS.length} platform prompts · {localTitles.size} saved locally
         </span>
       </div>
 
       {list.length === 0 ? (
-        <EmptyState icon="search" title="未找到匹配 Prompt" description="换个关键词或分类；平台搜索只匹配标题、描述与标签" />
+        <EmptyState icon="search" title="No matching prompts" description="Try another keyword or category; platform search matches titles, descriptions, and tags only" />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((p) => (
@@ -140,7 +140,7 @@ export function PromptPlatformTab({ query }: { query: string }) {
                 </div>
                 {localTitles.has(p.title) && (
                   <Badge variant="success" className="ml-auto shrink-0">
-                    已在本地
+                    In library
                   </Badge>
                 )}
               </div>
@@ -152,7 +152,7 @@ export function PromptPlatformTab({ query }: { query: string }) {
                   </Badge>
                 ))}
                 {p.variables.length > 0 && <Badge variant="info">{`{{}} × ${p.variables.length}`}</Badge>}
-                <span className="tabular ml-auto text-[10.5px] text-muted-foreground">用 {p.uses.toLocaleString()} 次</span>
+                <span className="tabular ml-auto text-[10.5px] text-muted-foreground">{p.uses.toLocaleString('en-US')} uses</span>
               </div>
             </button>
           ))}
@@ -165,12 +165,12 @@ export function PromptPlatformTab({ query }: { query: string }) {
           onClose={() => setDetailOf(null)}
           width="max-w-3xl"
           title={detailOf.title}
-          subtitle={`${detailOf.author} · ${detailOf.category} · 更新于 ${formatDate(detailOf.updatedAt, false)} · ${detailOf.uses.toLocaleString()} 次使用`}
+          subtitle={`${detailOf.author} · ${detailOf.category} · Updated ${formatDate(detailOf.updatedAt, false)} · ${detailOf.uses.toLocaleString('en-US')} uses`}
           footer={
             <>
-              <span className="mr-auto text-[11px] text-muted-foreground">平台来源可直接用，不必先保存</span>
+              <span className="mr-auto text-[11px] text-muted-foreground">Platform items are ready to use; saving is optional</span>
               <Button variant="outline" onClick={() => setDetailOf(null)}>
-                关闭
+                Close
               </Button>
               <Button
                 variant="outline"
@@ -180,11 +180,11 @@ export function PromptPlatformTab({ query }: { query: string }) {
                 }}
               >
                 <Icon name="copy" />
-                复制使用
+                Copy to use
               </Button>
               <Button disabled={localTitles.has(detailOf.title)} onClick={() => saveLocal(detailOf)}>
                 <Icon name="download" />
-                {localTitles.has(detailOf.title) ? '本地已存在' : '保存到本地'}
+                {localTitles.has(detailOf.title) ? 'Already saved locally' : 'Save locally'}
               </Button>
             </>
           }
@@ -211,7 +211,7 @@ export function PromptPlatformTab({ query }: { query: string }) {
               <Markdown text={detailOf.userPrompt} className="rounded-lg border border-border bg-card px-3.5 py-3 text-[13px] shadow-sm" />
             </section>
             <p className="rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
-              平台 Prompt 不会写入你的 Git 仓库；保存到本地后仅在本机「我的 Prompt」可见，也不会自动分发到 Agent。
+              Platform prompts never write to your Git repo; once saved locally they appear only in My Prompts on this machine and are not dispatched to Agents automatically.
             </p>
           </div>
         </Modal>
@@ -220,10 +220,10 @@ export function PromptPlatformTab({ query }: { query: string }) {
       {copyOf && (
         <VariableFormModal
           open
-          title={`复制「${copyOf.title}」— 填写变量`}
+          title={`Copy "${copyOf.title}" — Fill variables`}
           vars={copyOf.variables}
           promptId={`platform-${copyOf.id}`}
-          submitText="复制到剪贴板"
+          submitText="Copy to clipboard"
           onClose={() => setCopyOf(null)}
           onSubmit={(values) => {
             void doCopy(copyOf, values)

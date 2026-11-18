@@ -41,7 +41,7 @@ export function SyncChanges() {
       return
     }
     pullIncoming([change.id])
-    toast.success(`已接受 ${change.kind}:${change.assetName}，本地库已生成新版本`)
+    toast.success(`Accepted ${change.kind}:${change.assetName}; a new version was created in the local library`)
   }
 
   const batchAccept = () => {
@@ -52,7 +52,7 @@ export function SyncChanges() {
     )
     if (ids.length === 0) return
     pullIncoming(ids)
-    toast.success(`已接受 ${ids.length} 项低风险变更并生成版本；Prompt 与指令需逐条预览`)
+    toast.success(`Accepted ${ids.length} low-risk changes and created versions; Prompts and instructions require individual preview`)
     setSelected([])
   }
 
@@ -61,31 +61,31 @@ export function SyncChanges() {
       <div className="flex items-start gap-2 rounded-xl border border-info/30 bg-info-soft px-3.5 py-2.5 text-xs leading-5 text-info">
         <Icon name="shield" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
-          仓库与本地库之间是三方合并：<b>远端（仓库）</b>、<b>本地（本机库）</b>、<b>基线（上次同步）</b>。
-          任何一方单独修改都能自动前进；双方都改时进入「冲突」，禁止静默覆盖。
+          Sync between the repo and the local library is a three-way merge: <b>remote (repo)</b>, <b>local (local library)</b>, and <b>base (last sync)</b>.
+          Changes from either side alone advance automatically; when both sides change, it becomes a "conflict" and silent overwrite is never allowed.
         </span>
       </div>
 
       <div className="flex items-center gap-3">
         <Tabs
           tabs={[
-            { value: 'incoming', label: '待拉取', count: incoming.length },
-            { value: 'outgoing', label: '待推送', count: outgoing.length },
-            { value: 'conflict', label: '冲突', count: conflicts.length },
+            { value: 'incoming', label: 'Incoming', count: incoming.length },
+            { value: 'outgoing', label: 'Outgoing', count: outgoing.length },
+            { value: 'conflict', label: 'Conflicts', count: conflicts.length },
           ]}
           value={tab}
           onChange={(v) => setTab(v as ChangeTab)}
         />
         <span className="text-[11px] text-muted-foreground">
-          {tab === 'incoming' && 'Prompt 与 Agent 指令必须预览全文后逐条接受；含脚本 / 新增技能也必须审核'}
-          {tab === 'outgoing' && '推送前会再次扫描 Prompt / 指令正文与 MCP env / headers；被阻断的条目不会进入提交'}
-          {tab === 'conflict' && '可以选择采用仓库、保留本地，或手动合并后写入'}
+          {tab === 'incoming' && 'Prompts and Agent Instructions must be fully previewed and accepted one by one; assets with scripts or new Skills also need review'}
+          {tab === 'outgoing' && 'Push rescans Prompt / instruction content and MCP env / headers; blocked items never enter the commit'}
+          {tab === 'conflict' && 'Choose the repo version, keep local, or merge manually before writing'}
         </span>
         <div className="ml-auto flex items-center gap-2">
           {tab === 'incoming' && (
             <Button size="sm" disabled={selected.length === 0} onClick={batchAccept}>
               <Icon name="check" className="h-3.5 w-3.5" />
-              接受所选（{selected.length}）
+              Accept selected ({selected.length})
             </Button>
           )}
           {tab === 'outgoing' && (
@@ -95,7 +95,7 @@ export function SyncChanges() {
               onClick={() => setPushIds(selected)}
             >
               <Icon name="arrowUp" className="h-3.5 w-3.5" />
-              推送所选（{selected.length}）
+              Push selected ({selected.length})
             </Button>
           )}
         </div>
@@ -107,10 +107,10 @@ export function SyncChanges() {
             <Icon name={tab === 'conflict' ? 'check' : tab === 'incoming' ? 'arrowDown' : 'arrowUp'} className="h-5 w-5" />
           </div>
           <p className="mt-2 text-sm font-medium">
-            {tab === 'incoming' ? '没有待拉取的变更' : tab === 'outgoing' ? '没有待推送的本地改动' : '没有冲突'}
+            {tab === 'incoming' ? 'No incoming changes' : tab === 'outgoing' ? 'No local changes to push' : 'No conflicts'}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {tab === 'conflict' ? '同步状态良好；下次双方改动同一文件时会在这里提示。' : 'fetch 后新的远端差异会出现在这里。'}
+            {tab === 'conflict' ? 'Sync is healthy; conflicts appear here when both sides change the same file.' : 'New remote differences appear here after a fetch.'}
           </p>
         </div>
       ) : (
@@ -139,10 +139,10 @@ export function SyncChanges() {
             pullIncoming([reviewOf.id])
             toast.success(
               reviewOf.kind === 'prompt'
-                ? `已接受 Prompt「${reviewOf.assetName}」，本地库已生成新版本`
+                ? `Accepted Prompt "${reviewOf.assetName}"; a new version was created in the local library`
                 : reviewOf.kind === 'contract'
-                  ? `已接受指令「${reviewOf.assetName}」，本地库已生成新版本；相关投影标记为待更新`
-                  : `已审核并接受 ${reviewOf.assetName}，脚本将随技能一起写入`,
+                  ? `Accepted instruction "${reviewOf.assetName}"; a new version was created and related projections are marked stale`
+                  : `Reviewed and accepted ${reviewOf.assetName}; scripts will be written along with the Skill`,
             )
             setReviewOf(null)
             setSelected([])
@@ -196,7 +196,7 @@ function ChangeRow({
 
   const versionLine =
     change.direction === 'conflict'
-      ? `仓库 ${change.remoteVersion ?? '—'} / 本地 ${change.localVersion ?? '—'} / 基线 ${change.baseVersion ?? '—'}`
+      ? `Repo ${change.remoteVersion ?? '—'} / Local ${change.localVersion ?? '—'} / Base ${change.baseVersion ?? '—'}`
       : change.direction === 'incoming'
         ? change.localVersion && change.remoteVersion
           ? `${change.localVersion} → ${change.remoteVersion}`
@@ -247,24 +247,24 @@ function ChangeRow({
                 {risk.label}
               </Badge>
             )}
-            {change.blocked && <Badge variant="danger">已阻止推送</Badge>}
+            {change.blocked && <Badge variant="danger">Push blocked</Badge>}
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">{change.summary}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono">{change.path}</code>
             <span className="text-success">+{change.additions}</span>
             <span className="text-danger">−{change.deletions}</span>
-            {change.files && <span>· {change.files.length} 个文件</span>}
+            {change.files && <span>· {change.files.length} files</span>}
           </div>
         </div>
         <div className="ml-2 shrink-0">
           {change.direction === 'incoming' && (
             <Button size="sm" variant={needsReview ? 'outline' : 'default'} onClick={needsReview ? onReview : onAccept}>
               {change.kind === 'prompt' || change.kind === 'contract'
-                ? '预览并接受'
+                ? 'Preview & accept'
                 : needsReview
-                  ? '审核并接受'
-                  : '接受'}
+                  ? 'Review & accept'
+                  : 'Accept'}
               <Icon name="chevronRight" className="h-3.5 w-3.5" />
             </Button>
           )}
@@ -272,18 +272,18 @@ function ChangeRow({
             (change.blocked ? (
               <Button size="sm" variant="danger" onClick={onSecret}>
                 <Icon name="lock" className="h-3.5 w-3.5" />
-                处理密钥
+                Fix secret
               </Button>
             ) : (
               <Button size="sm" variant="outline" onClick={onPush}>
                 <Icon name="arrowUp" className="h-3.5 w-3.5" />
-                推送
+                Push
               </Button>
             ))}
           {change.direction === 'conflict' && (
             <Button size="sm" variant="danger" onClick={onConflict}>
               <Icon name="alert" className="h-3.5 w-3.5" />
-              解决冲突
+              Resolve conflict
             </Button>
           )}
         </div>
@@ -292,7 +292,7 @@ function ChangeRow({
   )
 }
 
-/* ---------------- 审核新技能 ---------------- */
+/* ---------------- Review incoming asset ---------------- */
 
 function ReviewIncomingModal({
   change,
@@ -315,21 +315,21 @@ function ReviewIncomingModal({
       open
       onClose={onClose}
       width="max-w-2xl"
-      title={`${isInstruction ? '预览并接受' : '审核并接受'} — ${ASSET_META[change.kind].label} ${change.assetName}`}
+      title={`${isInstruction ? 'Preview & accept' : 'Review & accept'} — ${ASSET_META[change.kind].label} ${change.assetName}`}
       subtitle={
         isPrompt
-          ? 'Prompt 会成为指令输入；请确认内容、来源与是否包含你的私密信息'
+          ? 'Prompts become instruction input; confirm the content, source, and that it contains no private information of yours'
           : isContract
-            ? 'Agent 指令会在每次会话自动进入上下文；请确认内容、来源与是否包含你的私密信息'
-            : '仓库内容会原样写入本机库；技能中的脚本可能被执行，请先读完'
+            ? 'Agent Instructions enter the context of every session automatically; confirm the content, source, and that it contains no private information of yours'
+            : 'Repo content is written verbatim into the local library; scripts in Skills may be executed, so read everything first'
       }
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            拒绝
+            Reject
           </Button>
           <Button disabled={!trusted} onClick={onAccepted}>
-            {isPrompt ? '接受 Prompt' : isContract ? '接受指令' : '信任并接受'}
+            {isPrompt ? 'Accept Prompt' : isContract ? 'Accept instruction' : 'Trust & accept'}
           </Button>
         </>
       }
@@ -339,11 +339,11 @@ function ReviewIncomingModal({
           <div className="flex items-start gap-2 rounded-lg border border-info/30 bg-info-soft px-3 py-2.5 text-xs text-info">
             <Icon name="eye" className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <b>{isPrompt ? 'Prompt 必须逐条预览' : 'Agent 指令必须逐条预览'}</b>
+              <b>{isPrompt ? 'Prompts must be previewed individually' : 'Agent Instructions must be previewed individually'}</b>
               <p className="mt-0.5 leading-5">
                 {isPrompt
-                  ? 'Prompt 会影响后续 AI 的输出。即使没有脚本，也不会进入批量接受；接受后只写入本机库，不会自动分发到 Agent。'
-                  : '指令会被 Agent 自动读取，影响每次会话。即使没有脚本，也不会进入批量接受；接受后只写入本机库，不会自动投影到 Agent 目录。'}
+                  ? 'Prompts shape the output of later AI requests. Even without scripts they are excluded from batch accept; accepting writes only to the local library and never dispatches to Agents automatically.'
+                  : 'Instructions are read automatically by Agents and affect every session. Even without scripts they are excluded from batch accept; accepting writes only to the local library and never projects into Agent directories automatically.'}
               </p>
             </div>
           </div>
@@ -353,7 +353,7 @@ function ReviewIncomingModal({
             <div>
               <b>{risk.label}</b>
               <p className="mt-0.5 leading-5">
-                该条目包含可执行内容。接受后只会写入本机资产库，不会自动分发到 Agent；分发时还会再次确认目标路径与模式。
+                This item contains executable content. Accepting writes only to the local asset library and never dispatches to Agents automatically; dispatch confirms the target path and mode again.
               </p>
             </div>
           </div>
@@ -361,7 +361,7 @@ function ReviewIncomingModal({
 
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{change.versionLabel ?? change.remoteVersion ?? '—'}</Badge>
-          <Badge variant="outline">{change.files?.length ?? 1} 个文件</Badge>
+          <Badge variant="outline">{change.files?.length ?? 1} files</Badge>
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{change.path}</code>
         </div>
 
@@ -379,7 +379,7 @@ function ReviewIncomingModal({
 
         {showDiff ? (
           <div className="rounded-lg border border-border p-3">
-            <div className="mb-1.5 text-xs font-medium text-muted-foreground">本地版本 → 仓库版本</div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Local version → repo version</div>
             <DiffView before={change.localContent ?? ''} after={change.remoteContent ?? ''} />
           </div>
         ) : change.remoteContent ? (
@@ -388,7 +388,7 @@ function ReviewIncomingModal({
           </div>
         ) : (
           <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-            该条目没有可预览的正文；接受前请先在仓库中查看完整文件。
+            This item has no previewable content; inspect the full file in the repo before accepting.
           </p>
         )}
 
@@ -398,8 +398,8 @@ function ReviewIncomingModal({
           label={
             <span className="text-xs">
               {isInstruction
-                ? '我已预览全文，确认内容安全且不含我的私密信息'
-                : '我已阅读上述内容，并确认来源可信'}
+                ? 'I have previewed the full content and confirmed it is safe and contains no private information of mine'
+                : 'I have read the above and confirm the source is trustworthy'}
             </span>
           }
         />
@@ -408,7 +408,7 @@ function ReviewIncomingModal({
   )
 }
 
-/* ---------------- 推送 ---------------- */
+/* ---------------- Push ---------------- */
 
 function PushModal({ ids, onClose, onDone }: { ids: string[]; onClose: () => void; onDone: () => void }) {
   const { state, pushOutgoing } = useStore()
@@ -424,12 +424,12 @@ function PushModal({ ids, onClose, onDone }: { ids: string[]; onClose: () => voi
       open
       onClose={onClose}
       width="max-w-xl"
-      title={`推送到仓库 — ${rows.length} 项`}
+      title={`Push to repo — ${rows.length} items`}
       subtitle={`${state.repo.url} · ${state.repo.branch}`}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            取消
+            Cancel
           </Button>
           <Button
             disabled={!message.trim() || rows.length === 0}
@@ -441,15 +441,15 @@ function PushModal({ ids, onClose, onDone }: { ids: string[]; onClose: () => voi
               )
               toast.success(
                 createPr
-                  ? `已推送 ${rows.length} 项到独立分支并创建 PR（原型模拟）`
-                  : `已推送 ${rows.length} 项到 ${state.repo.branch}（原型模拟）`,
+                  ? `Pushed ${rows.length} items to a separate branch and created a PR (prototype simulation)`
+                  : `Pushed ${rows.length} items to ${state.repo.branch} (prototype simulation)`,
               )
               onDone()
               onClose()
             }}
           >
             <Icon name="arrowUp" />
-            推送
+            Push
           </Button>
         </>
       }
@@ -467,16 +467,16 @@ function PushModal({ ids, onClose, onDone }: { ids: string[]; onClose: () => voi
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">提交信息 *</label>
-          <Input aria-label="提交信息" value={message} onChange={(e) => setMessage(e.target.value)} />
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Commit message *</label>
+          <Input aria-label="Commit message" value={message} onChange={(e) => setMessage(e.target.value)} />
         </div>
 
         <div className="space-y-2">
-          <div className="text-xs font-medium text-muted-foreground">推送方式</div>
+          <div className="text-xs font-medium text-muted-foreground">Push method</div>
           {(
             [
-              { v: true, title: '独立分支 + PR（推荐）', desc: '可评审、可回滚；不会直接改动主分支' },
-              { v: false, title: '直接推送到当前分支', desc: '适合个人仓库；失败不会改写远端' },
+              { v: true, title: 'Separate branch + PR (recommended)', desc: 'Reviewable and revertible; the main branch is never modified directly' },
+              { v: false, title: 'Push directly to the current branch', desc: 'Best for personal repos; a failure never rewrites the remote' },
             ] as const
           ).map((o) => (
             <button
@@ -499,15 +499,15 @@ function PushModal({ ids, onClose, onDone }: { ids: string[]; onClose: () => voi
 
         <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
           <Icon name="lock" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          推送前会再次扫描 Prompt / 指令正文与 MCP env / headers；发现明文凭据会阻断整个提交。凭据只允许以
-          {` {{变量}} `}或 ${'{'}VAR{'}'} 形式进入仓库。
+          Push rescans Prompt / instruction content and MCP env / headers and blocks the entire commit on plaintext credentials. Credentials may only enter the repo as
+          {` {{variable}} `}or ${'{'}VAR{'}'} placeholders.
         </div>
       </div>
     </Modal>
   )
 }
 
-/* ---------------- 明文密钥处理 ---------------- */
+/* ---------------- Plaintext secret handling ---------------- */
 
 function SecretFixModal({ change, onClose }: { change: SyncChange; onClose: () => void }) {
   const { convertSecretToVar } = useStore()
@@ -523,30 +523,30 @@ function SecretFixModal({ change, onClose }: { change: SyncChange; onClose: () =
       width="max-w-lg"
       title={
         isPrompt
-          ? 'Prompt 正文含疑似明文凭据'
+          ? 'Prompt content may contain a plaintext credential'
           : isContract
-            ? '指令正文含疑似明文凭据'
-            : '明文密钥阻断推送'
+            ? 'Instruction content may contain a plaintext credential'
+            : 'Plaintext secret blocks push'
       }
       subtitle={`${ASSET_META[change.kind].label} · ${change.assetName}`}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            取消
+            Cancel
           </Button>
           <Button
             onClick={() => {
               convertSecretToVar(change.id)
               toast.success(
                 isInstruction
-                  ? '已替换为 {{api_key}} 变量；复制或投影时再填值，真实值未落盘'
-                  : '已转换为 ${AMAP_API_KEY} 占位；真实值仍只在本机钥匙串',
+                  ? 'Replaced with the {{api_key}} variable; fill in the value when copying or projecting — the real value is never written to disk'
+                  : 'Converted to a ${AMAP_API_KEY} placeholder; the real value remains only in the local keychain',
               )
               onClose()
             }}
           >
             <Icon name="lock" />
-            {isInstruction ? '替换为模板变量' : '转换为变量引用'}
+            {isInstruction ? 'Replace with template variable' : 'Convert to variable reference'}
           </Button>
         </>
       }
@@ -555,34 +555,34 @@ function SecretFixModal({ change, onClose }: { change: SyncChange; onClose: () =
         <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2.5 text-xs leading-5 text-danger">
           <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
           {isPrompt
-            ? '检测到 Prompt 正文中的疑似 Token。提交会把凭据永久写入 Git 历史，任何能读仓库的人都能看到。'
+            ? 'A possible token was detected in the Prompt content. Committing it would write the credential permanently into Git history for anyone with repo access to see.'
             : isContract
-              ? '检测到 Agent 指令正文中的疑似 Token。提交会把凭据永久写入 Git 历史，且该指令会在每次会话中被读取。'
-              : '检测到 env 字段中的明文凭据。提交会把密钥永久写入 Git 历史，即使后续删除也能被检出。'}
+              ? 'A possible token was detected in the Agent Instructions content. Committing it would write the credential permanently into Git history, and the instruction is read in every session.'
+              : 'A plaintext credential was detected in an env field. Committing it would write the secret permanently into Git history, where it stays recoverable even after deletion.'}
         </div>
         <pre className="overflow-x-auto rounded-lg border border-border bg-muted/60 p-3 font-mono text-xs leading-5">
 {isPrompt
   ? `userPrompt:
-  "测试 Token：{{api_key}}"   ← 原始值将被变量替换`
+  "Test token: {{api_key}}"   ← raw value will be replaced by a variable`
   : isContract
-    ? `## 前端代码规范
-- 请求头：Authorization: Bearer {{api_key}}   ← 原始值将被变量替换`
+    ? `## Frontend code standards
+- Headers: Authorization: Bearer {{api_key}}   ← raw value will be replaced by a variable`
     : `"env": {
-  "AMAP_API_KEY": "***"   ← 将替换为 "\${AMAP_API_KEY}"
+  "AMAP_API_KEY": "***"   ← will be replaced with "\${AMAP_API_KEY}"
 }`}
         </pre>
         <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
           {isInstruction ? (
             <>
-              <li>正文中的原始 Token 会替换为 {`{{api_key}}`} 模板变量，变量定义随文件同步。</li>
-              <li>真实值不写入 Prompt / 指令、版本快照或仓库；复制或投影时由你临时填写。</li>
-              <li>替换后可正常推送，本次提交仍会记录「曾发现明文」的审计事件。</li>
+              <li>The raw token in the content is replaced with the {`{{api_key}}`} template variable, and the variable definition syncs with the file.</li>
+              <li>The real value is never written into Prompts / instructions, version snapshots, or the repo; you fill it in temporarily when copying or projecting.</li>
+              <li>After replacement you can push normally; this commit still records a "plaintext found" audit event.</li>
             </>
           ) : (
             <>
-              <li>仓库中的配置只保留变量名，任何机器拉取时都不会拿到真实值。</li>
-              <li>真实值继续存在本机钥匙串；分发到 Agent 时按目标工具注入。</li>
-              <li>转换后可正常推送，但本次提交仍会记录「曾发现明文」的审计事件。</li>
+              <li>Only variable names remain in the repo config, so no machine gets the real value when pulling.</li>
+              <li>The real value stays in the local keychain and is injected per target tool at dispatch.</li>
+              <li>After conversion you can push normally, but this commit still records a "plaintext found" audit event.</li>
             </>
           )}
         </ul>
@@ -591,7 +591,7 @@ function SecretFixModal({ change, onClose }: { change: SyncChange; onClose: () =
   )
 }
 
-/* ---------------- 冲突解决 ---------------- */
+/* ---------------- Conflict resolution ---------------- */
 
 function ConflictModal({ change, onClose }: { change: SyncChange; onClose: () => void }) {
   const { resolveConflict } = useStore()
@@ -609,12 +609,12 @@ function ConflictModal({ change, onClose }: { change: SyncChange; onClose: () =>
       open
       onClose={onClose}
       width="max-w-4xl"
-      title={`解决冲突 — ${change.assetName}`}
-      subtitle={`${ASSET_META[change.kind].label} · 仓库与本地都修改了同一个文件`}
+      title={`Resolve conflict — ${change.assetName}`}
+      subtitle={`${ASSET_META[change.kind].label} · Repo and local both modified the same file`}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            稍后处理
+            Later
           </Button>
           <Button
             disabled={strategy === 'manual' && (!merged.trim() || manualInvalid)}
@@ -622,16 +622,16 @@ function ConflictModal({ change, onClose }: { change: SyncChange; onClose: () =>
               resolveConflict(change.id, strategy, merged)
               toast.success(
                 strategy === 'remote'
-                  ? '已采用仓库版本；本地库已更新'
+                  ? 'Took the repo version; local library updated'
                   : strategy === 'local'
-                    ? '已保留本地版本；合并结果已加入待推送'
-                    : '已写入手动合并结果，并加入待推送',
+                    ? 'Kept the local version; the result was added to outgoing changes'
+                    : 'Wrote the manual merge result and added it to outgoing changes',
               )
               onClose()
             }}
           >
             <Icon name="check" />
-            应用并标记已解决
+            Apply and mark resolved
           </Button>
         </>
       }
@@ -640,9 +640,9 @@ function ConflictModal({ change, onClose }: { change: SyncChange; onClose: () =>
         <div className="grid grid-cols-3 gap-2">
           {(
             [
-              { label: '基线（上次同步）', value: change.baseVersion ?? '—', tone: 'text-muted-foreground' },
-              { label: '仓库版本', value: change.remoteVersion ?? '—', tone: 'text-info' },
-              { label: '本地版本', value: change.localVersion ?? '—', tone: 'text-warning' },
+              { label: 'Base (last sync)', value: change.baseVersion ?? '—', tone: 'text-muted-foreground' },
+              { label: 'Repo version', value: change.remoteVersion ?? '—', tone: 'text-info' },
+              { label: 'Local version', value: change.localVersion ?? '—', tone: 'text-warning' },
             ] as const
           ).map((v) => (
             <div key={v.label} className="rounded-lg border border-border px-3 py-2">
@@ -655,9 +655,9 @@ function ConflictModal({ change, onClose }: { change: SyncChange; onClose: () =>
         <div className="grid grid-cols-3 gap-2">
           {(
             [
-              { v: 'remote', title: '采用仓库', desc: '丢弃本地改动，仓库成为新基线' },
-              { v: 'local', title: '保留本地', desc: '保留本地内容，合并结果进入待推送' },
-              { v: 'manual', title: '手动合并', desc: '逐段编辑，最安全但耗时' },
+              { v: 'remote', title: 'Take repo', desc: 'Discard local changes; the repo becomes the new base' },
+              { v: 'local', title: 'Keep local', desc: 'Keep local content; the result goes to outgoing changes' },
+              { v: 'manual', title: 'Merge manually', desc: 'Edit section by section; safest but slower' },
             ] as const
           ).map((o) => (
             <button
@@ -678,20 +678,20 @@ function ConflictModal({ change, onClose }: { change: SyncChange; onClose: () =>
         <div className="rounded-lg border border-border p-3">
           {strategy === 'remote' && (
             <>
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">仓库相对基线的改动</div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Repo changes vs base</div>
               <DiffView before={change.baseContent ?? ''} after={change.remoteContent ?? ''} />
             </>
           )}
           {strategy === 'local' && (
             <>
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">本地相对基线的改动</div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Local changes vs base</div>
               <DiffView before={change.baseContent ?? ''} after={change.localContent ?? ''} />
             </>
           )}
           {strategy === 'manual' && (
             <>
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">合并结果（可编辑）</div>
-              <Textarea aria-label="手动合并结果" rows={14} value={merged} onChange={(e) => setMerged(e.target.value)} className="font-mono text-xs leading-5" />
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Merge result (editable)</div>
+              <Textarea aria-label="Manual merge result" rows={14} value={merged} onChange={(e) => setMerged(e.target.value)} className="font-mono text-xs leading-5" />
               <p
                 className={cn(
                   'mt-1 text-[11px]',
@@ -700,9 +700,9 @@ function ConflictModal({ change, onClose }: { change: SyncChange; onClose: () =>
               >
                 {manualInvalid
                   ? isContract
-                    ? '结构不完整：必须保留 frontmatter 与契约正文，且标题、正文不能为空。'
-                    : '结构不完整：必须保留 frontmatter 与「## System Prompt」/「## User Prompt」两段标题。'
-                  : '以本地版本为起点。应用后写入本地库并生成新版本，随后可在「待推送」把结果推回仓库。'}
+                    ? 'Incomplete structure: keep the frontmatter and contract body, and title and content must not be empty.'
+                    : 'Incomplete structure: keep the frontmatter and both "## System Prompt" / "## User Prompt" headings.'
+                  : 'Starts from the local version. Applying writes it to the local library and creates a new version; you can then push the result back from "Outgoing".'}
               </p>
             </>
           )}

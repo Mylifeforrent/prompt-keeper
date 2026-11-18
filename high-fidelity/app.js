@@ -6,21 +6,21 @@
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
   const PAGES = {
-    prompts: { title: 'Prompts', subtitle: '本地资产库 · Git 可选同步', placeholder: '搜索 Prompt 标题、正文、标签…' },
-    instructions: { title: 'Agent 指令', subtitle: '仓库契约 · 项目投影 · 全局分发', placeholder: '搜索契约标题、正文、标签…' },
-    skills: { title: 'Skills', subtitle: 'SKILL.md · 多平台分发', placeholder: '搜索技能名称、描述、文件夹…' },
-    mcp: { title: 'MCP', subtitle: '服务模板 · 密钥仅本机', placeholder: '搜索 MCP 服务、文件夹…' },
-    sync: { title: '同步中心', subtitle: '拉取 · 推送 · 冲突 · 分发', placeholder: '搜索变更、历史事件…' },
-    settings: { title: '设置', subtitle: '外观 · 同步策略 · 数据', placeholder: '搜索设置…' },
+    prompts: { title: 'Prompts', subtitle: 'Local asset library · Optional Git sync', placeholder: 'Search Prompt titles, content, tags…' },
+    instructions: { title: 'Agent Instructions', subtitle: 'Repository contracts · Project projection · Global dispatch', placeholder: 'Search contract titles, content, tags…' },
+    skills: { title: 'Skills', subtitle: 'SKILL.md · Multi-platform dispatch', placeholder: 'Search skill names, descriptions, folders…' },
+    mcp: { title: 'MCP', subtitle: 'Service templates · Secrets stay local', placeholder: 'Search MCP servers, folders…' },
+    sync: { title: 'Sync Center', subtitle: 'Pull · Push · Conflict · Dispatch', placeholder: 'Search changes, history events…' },
+    settings: { title: 'Settings', subtitle: 'Appearance · Sync policy · Data', placeholder: 'Search settings…' },
   };
 
   const NAV = [
     { id: 'prompts', label: 'Prompts', icon: 'message' },
-    { id: 'instructions', label: 'Agent 指令', icon: 'file' },
+    { id: 'instructions', label: 'Agent Instructions', icon: 'file' },
     { id: 'skills', label: 'Skills', icon: 'grid' },
     { id: 'mcp', label: 'MCP', icon: 'zap' },
-    { id: 'sync', label: '同步', icon: 'git-branch' },
-    { id: 'settings', label: '设置', icon: 'sliders' },
+    { id: 'sync', label: 'Sync', icon: 'git-branch' },
+    { id: 'settings', label: 'Settings', icon: 'sliders' },
   ];
 
   const SKILL_PLATFORMS = [
@@ -35,15 +35,15 @@
   ];
 
   const STATUS_META = {
-    synced: { label: '已同步', badge: 'success', icon: 'check' },
-    pending: { label: '待推送', badge: 'warning', icon: 'arrow-up' },
-    incoming: { label: '待拉取', badge: 'info', icon: 'arrow-down' },
-    conflict: { label: '冲突', badge: 'danger', icon: 'alert' },
-    blocked: { label: '凭据阻断', badge: 'danger', icon: 'lock' },
-    local: { label: '仅本机', badge: 'neutral', icon: 'file' },
-    stale: { label: '待更新', badge: 'warning', icon: 'refresh' },
-    drifted: { label: '漂移', badge: 'danger', icon: 'alert' },
-    missing: { label: '未投影', badge: 'neutral', icon: 'circle-check' },
+    synced: { label: 'Synced', badge: 'success', icon: 'check' },
+    pending: { label: 'Pending push', badge: 'warning', icon: 'arrow-up' },
+    incoming: { label: 'Pending pull', badge: 'info', icon: 'arrow-down' },
+    conflict: { label: 'Conflict', badge: 'danger', icon: 'alert' },
+    blocked: { label: 'Secrets blocked', badge: 'danger', icon: 'lock' },
+    local: { label: 'Local only', badge: 'neutral', icon: 'file' },
+    stale: { label: 'Stale', badge: 'warning', icon: 'refresh' },
+    drifted: { label: 'Drifted', badge: 'danger', icon: 'alert' },
+    missing: { label: 'Not projected', badge: 'neutral', icon: 'circle-check' },
   };
 
   const initialTheme = new URLSearchParams(location.search).get('theme');
@@ -66,7 +66,7 @@
     tagFilters: [],
     favOnly: false,
     promptSort: 'updated',
-    platformCategory: '全部',
+    platformCategory: 'All',
 
     instructionTab: 'library',
     contracts: D.contracts.map((c) => ({ ...c })),
@@ -83,7 +83,7 @@
     skills: D.skills.map((s) => ({ ...s, installs: { ...s.installs } })),
     skillFolder: '',
     storeSource: 'all',
-    storeCategory: '全部',
+    storeCategory: 'All',
     skillModalId: null,
     skillModalTab: 'content',
     wizard: null,
@@ -242,11 +242,11 @@
   }
 
   function num(value) {
-    return Number(value).toLocaleString('zh-CN');
+    return Number(value).toLocaleString('en-US');
   }
 
   function folderLabel(folder) {
-    return folder || '未分类';
+    return folder || 'Uncategorized';
   }
 
   function folderMatches(folder, selected) {
@@ -256,7 +256,7 @@
   }
 
   function repoFolderPath(prefix, folder) {
-    return `${prefix}/${folder || '未分类'}`;
+    return `${prefix}/${folder || 'Uncategorized'}`;
   }
 
   function ensureExpanded(path) {
@@ -288,7 +288,7 @@
     const assign = (node, parent) => {
       node.path = parent ? `${parent}/${node.name}` : node.name;
       node.children = new Map(
-        [...node.children.entries()].sort((a, b) => a[0].localeCompare(b[0], 'zh')),
+        [...node.children.entries()].sort((a, b) => a[0].localeCompare(b[0], 'en')),
       );
       node.children.forEach((child) => assign(child, node.path));
       return node;
@@ -301,12 +301,12 @@
   }
 
   function allTags(prompts) {
-    return [...new Set(prompts.flatMap((p) => p.tags))].sort((a, b) => a.localeCompare(b, 'zh'));
+    return [...new Set(prompts.flatMap((p) => p.tags))].sort((a, b) => a.localeCompare(b, 'en'));
   }
 
   function toast(message, options = {}) {
     const tone = options.tone || 'success';
-    const title = options.title || { success: '操作完成', warning: '需要注意', danger: '已被拦截', info: '提示' }[tone];
+    const title = options.title || { success: 'Done', warning: 'Heads up', danger: 'Blocked', info: 'Info' }[tone];
     const root = $('#toast-root');
     const node = document.createElement('div');
     node.className = `toast ${tone}`;
@@ -350,9 +350,9 @@
     }
 
     if (copied) {
-      toast(successMessage || '已复制到剪贴板');
+      toast(successMessage || 'Copied to clipboard');
     } else {
-      toast('复制失败，请检查浏览器剪贴板权限', { tone: 'danger' });
+      toast('Copy failed. Check browser clipboard permission.', { tone: 'danger' });
     }
     return copied;
   }
@@ -374,8 +374,8 @@
     const button = $('#theme-toggle');
     if (button) {
       button.innerHTML = icon(resolved === 'dark' ? 'sun' : 'moon');
-      const next = state.theme === 'light' ? '暗色' : state.theme === 'dark' ? '跟随系统' : '亮色';
-      button.title = `当前：${state.theme === 'system' ? '跟随系统' : state.theme === 'dark' ? '暗色' : '亮色'} · 切换到${next}`;
+      const next = state.theme === 'light' ? 'Dark' : state.theme === 'dark' ? 'System' : 'Light';
+      button.title = `Current: ${state.theme === 'system' ? 'System' : state.theme === 'dark' ? 'Dark' : 'Light'} · Switch to ${next}`;
       button.setAttribute('aria-label', button.title);
     }
     localStorage.setItem('pk_hifi_theme', state.theme);
@@ -507,7 +507,7 @@
             <div class="tree-row ${active ? 'active' : ''}" style="--d:${depth}">
               <button type="button" class="tree-caret ${node.children.size ? '' : 'invisible'}"
                 data-action="toggle-folder" data-folder="${esc(node.path)}"
-                aria-label="${open ? '收起' : '展开'} ${esc(node.name)}">
+                aria-label="${open ? 'Collapse' : 'Expand'} ${esc(node.name)}">
                 ${icon(open ? 'chevron-down' : 'chevron-right')}
               </button>
               <button type="button" class="tree-target" data-action="${action}" data-folder="${esc(node.path)}" title="${esc(node.path)}">
@@ -527,7 +527,7 @@
           <span class="tree-caret invisible"></span>
           <button type="button" class="tree-target" data-action="${action}" data-folder="">
             ${icon('grid')}
-            <span class="tree-name">全部</span>
+            <span class="tree-name">All</span>
             <span class="tree-count">${items.length}</span>
           </button>
         </div>
@@ -540,7 +540,7 @@
             <span class="tree-caret invisible"></span>
             <button type="button" class="tree-target" data-action="${action}" data-folder="__unfiled__">
               ${icon('file')}
-              <span class="tree-name">未分类</span>
+              <span class="tree-name">Uncategorized</span>
               <span class="tree-count">${unfiled}</span>
             </button>
           </div>`
@@ -578,7 +578,7 @@
 
     list = list.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      if (state.promptSort === 'title') return a.title.localeCompare(b.title, 'zh');
+      if (state.promptSort === 'title') return a.title.localeCompare(b.title, 'en');
       if (state.promptSort === 'usage') return b.usage - a.usage;
       return b.updatedAt - a.updatedAt;
     });
@@ -595,7 +595,7 @@
     return [...groups.values()].sort((a, b) => {
       if (a.folder === null) return 1;
       if (b.folder === null) return -1;
-      return a.folder.localeCompare(b.folder, 'zh');
+      return a.folder.localeCompare(b.folder, 'en');
     });
   }
 
@@ -604,8 +604,8 @@
       <div class="subnav">
         ${tabsHtml(
           [
-            { value: 'mine', label: '我的 Prompt', count: state.prompts.length },
-            { value: 'platform', label: '平台发现' },
+            { value: 'mine', label: 'My Prompts', count: state.prompts.length },
+            { value: 'platform', label: 'Platform Discovery' },
           ],
           state.promptTab,
           'set-prompt-tab',
@@ -613,9 +613,9 @@
         <div class="subnav-right">
           ${
             state.promptTab === 'mine'
-              ? `<span class="badge badge-info badge-tight">Git 可选同步</span>
-                 <span>${state.prompts.filter((p) => p.sync === 'local').length} 条仅本机 · 不写入 Agent 目录</span>`
-              : `<span class="badge badge-info badge-tight">平台来源</span><span>按需搜索、复制或保存到本地</span>`
+              ? `<span class="badge badge-info badge-tight">Optional Git sync</span>
+                 <span>${state.prompts.filter((p) => p.sync === 'local').length} local only · not written to Agent directories</span>`
+              : `<span class="badge badge-info badge-tight">Platform source</span><span>Search, copy, or save locally as needed</span>`
           }
         </div>
       </div>
@@ -636,39 +636,39 @@
       <div class="page">
         ${listSubnav}
         <div class="workspace-body">
-          <aside class="folders-pane" aria-label="Prompt 文件夹">
-            <div class="pane-head">${icon('folder')}Prompt 文件夹</div>
+          <aside class="folders-pane" aria-label="Prompt folders">
+            <div class="pane-head">${icon('folder')}Prompt folders</div>
             ${renderTree(state.prompts, (p) => p.folder, state.promptFolder, 'select-prompt-folder')}
-            <div class="tree-foot">${icon('git-branch')}文件夹会原样映射为仓库目录</div>
+            <div class="tree-foot">${icon('git-branch')}Folders map 1:1 to repository directories</div>
           </aside>
 
           <div class="list-pane">
             <div class="list-toolbar">
               <div class="toolbar-row">
                 <div class="select">
-                  <select data-change="prompt-sort" aria-label="排序方式">
-                    <option value="updated" ${state.promptSort === 'updated' ? 'selected' : ''}>按更新时间</option>
-                    <option value="title" ${state.promptSort === 'title' ? 'selected' : ''}>按标题</option>
-                    <option value="usage" ${state.promptSort === 'usage' ? 'selected' : ''}>按使用次数</option>
+                  <select data-change="prompt-sort" aria-label="Sort order">
+                    <option value="updated" ${state.promptSort === 'updated' ? 'selected' : ''}>Last updated</option>
+                    <option value="title" ${state.promptSort === 'title' ? 'selected' : ''}>Title</option>
+                    <option value="usage" ${state.promptSort === 'usage' ? 'selected' : ''}>Usage count</option>
                   </select>
                   ${icon('chevron-down')}
                 </div>
                 <button type="button" class="toggle-square ${state.favOnly ? 'active' : ''}"
-                  data-action="toggle-fav-filter" aria-pressed="${state.favOnly}" title="只看收藏" aria-label="只看收藏">
+                  data-action="toggle-fav-filter" aria-pressed="${state.favOnly}" title="Favorites only" aria-label="Favorites only">
                   ${icon('star', 'icon-sm')}
                 </button>
-                <div class="segmented" role="group" aria-label="视图切换">
+                <div class="segmented" role="group" aria-label="View switcher">
                   <button type="button" data-action="set-prompt-view" data-view="card"
-                    class="${state.promptView === 'card' ? 'active' : ''}" title="卡片视图" aria-label="卡片视图" aria-pressed="${state.promptView === 'card'}">
+                    class="${state.promptView === 'card' ? 'active' : ''}" title="Card view" aria-label="Card view" aria-pressed="${state.promptView === 'card'}">
                     ${icon('grid', 'icon-sm')}
                   </button>
                   <button type="button" data-action="set-prompt-view" data-view="table"
-                    class="${state.promptView === 'table' ? 'active' : ''}" title="表格视图" aria-label="表格视图" aria-pressed="${state.promptView === 'table'}">
+                    class="${state.promptView === 'table' ? 'active' : ''}" title="Table view" aria-label="Table view" aria-pressed="${state.promptView === 'table'}">
                     ${icon('sliders', 'icon-sm')}
                   </button>
                 </div>
               </div>
-              <div class="tag-scroll" role="group" aria-label="标签筛选">
+              <div class="tag-scroll" role="group" aria-label="Tag filter">
                 ${
                   tags.length
                     ? tags
@@ -679,7 +679,7 @@
                           `,
                         )
                         .join('')
-                    : '<span class="empty-hint">暂无标签</span>'
+                    : '<span class="empty-hint">No tags</span>'
                 }
               </div>
             </div>
@@ -687,7 +687,7 @@
             ${
               state.promptFolder
                 ? `<div class="active-filter">${icon('folder')}<strong>${esc(folderLabel(state.promptFolder === '__unfiled__' ? null : state.promptFolder))}</strong>
-                    <button type="button" data-action="clear-prompt-folder">返回全部</button></div>`
+                    <button type="button" data-action="clear-prompt-folder">Back to all</button></div>`
                 : ''
             }
 
@@ -696,15 +696,15 @@
             </div>
 
             <div class="list-foot">
-              <span class="tabular">${prompts.length} / ${state.prompts.length} 条</span>
-              ${hasFilter ? '<button type="button" class="link" data-action="clear-prompt-filters">清除筛选</button>' : ''}
-              <button type="button" class="btn btn-outline btn-sm" data-action="new-prompt" title="新建 Prompt（快捷键 N）">
-                ${icon('plus', 'icon-sm')}新建
+              <span class="tabular">${prompts.length} / ${state.prompts.length} items</span>
+              ${hasFilter ? '<button type="button" class="link" data-action="clear-prompt-filters">Clear filters</button>' : ''}
+              <button type="button" class="btn btn-outline btn-sm" data-action="new-prompt" title="New Prompt (shortcut N)">
+                ${icon('plus', 'icon-sm')}New
               </button>
             </div>
           </div>
 
-          <section class="detail-pane ${state.mobileDetail ? 'mobile-open' : ''}" id="detail-pane" aria-label="Prompt 详情">
+          <section class="detail-pane ${state.mobileDetail ? 'mobile-open' : ''}" id="detail-pane" aria-label="Prompt details">
             ${selected ? renderPromptDetail(selected) : renderPromptDetailEmpty(state.prompts.length > 0)}
           </section>
         </div>
@@ -717,24 +717,24 @@
       return hasFilter
         ? emptyState({
             iconName: 'search',
-            title: '未找到匹配结果',
-            description: '搜索词、标签、收藏或文件夹筛选可能过窄',
+            title: 'No matching results',
+            description: 'Your search, tags, favorites, or folder filter may be too narrow',
             action:
-              '<button type="button" class="btn btn-outline btn-sm" data-action="clear-prompt-filters">清除全部筛选</button>',
+              '<button type="button" class="btn btn-outline btn-sm" data-action="clear-prompt-filters">Clear all filters</button>',
           })
         : emptyState({
             iconName: 'message',
-            title: '还没有 Prompt',
-            description: '新建第一个 Prompt，用 {{变量名}} 定义模板变量',
+            title: 'No Prompts yet',
+            description: 'Create your first Prompt and define template variables with {{variable_name}}',
             action:
-              '<button type="button" class="btn btn-primary btn-sm" data-action="new-prompt">新建 Prompt</button>',
+              '<button type="button" class="btn btn-primary btn-sm" data-action="new-prompt">New Prompt</button>',
           });
     }
 
     if (state.promptView === 'table') {
       return `
         <table class="prompt-table">
-          <thead><tr><th>标题</th><th style="width:88px">文件夹</th><th style="width:64px">版本</th><th style="width:52px">更新</th></tr></thead>
+          <thead><tr><th>Title</th><th style="width:88px">Folder</th><th style="width:64px">Version</th><th style="width:52px">Updated</th></tr></thead>
           <tbody>
             ${prompts
               .map(
@@ -767,7 +767,7 @@
           ${icon('folder')}
           <strong>${esc(folderLabel(group.folder))}</strong>
           <span class="count">${group.prompts.length}</span>
-          <span class="path">prompts/${esc(group.folder || '未分类')}</span>
+          <span class="path">prompts/${esc(group.folder || 'Uncategorized')}</span>
         </div>
         <div class="card-stack">
           ${group.prompts
@@ -784,7 +784,7 @@
                         ${prompt.pinned ? icon('pin', 'icon-xs pin') : ''}
                         ${prompt.favorite ? icon('star', 'icon-xs star') : ''}
                       </div>
-                      <div class="card-desc">${esc(prompt.description || '（无描述）')}</div>
+                      <div class="card-desc">${esc(prompt.description || '(No description)')}</div>
                     </div>
                     <span class="card-time tabular">${esc(prompt.updatedLabel)}</span>
                   </div>
@@ -796,7 +796,7 @@
                       ${prompt.variables.length ? `<span class="badge badge-info">{ }×${prompt.variables.length}</span>` : ''}
                       ${statusBadge(prompt.sync, prompt.syncLabel)}
                     </div>
-                    <span class="usage">用 ${prompt.usage} · v${prompt.version}</span>
+                    <span class="usage">Used ${prompt.usage} · v${prompt.version}</span>
                   </div>
                 </button>
               `;
@@ -813,44 +813,44 @@
     return `
       <div class="detail-header">
         <div class="detail-title-row">
-          <button type="button" class="mobile-back" data-action="close-mobile-detail" aria-label="返回列表">${icon('chevron-left', 'icon-lg')}</button>
+          <button type="button" class="mobile-back" data-action="close-mobile-detail" aria-label="Back to list">${icon('chevron-left', 'icon-lg')}</button>
           <div class="detail-title-main">
-            <div class="detail-eyebrow">${icon('message')}Prompt · ${esc(prompt.folder || '未分类')}</div>
+            <div class="detail-eyebrow">${icon('message')}Prompt · ${esc(prompt.folder || 'Uncategorized')}</div>
             <h2 class="detail-title">${esc(prompt.title)}${prompt.pinned ? icon('pin', 'pin') : ''}</h2>
-            <p class="detail-desc">${esc(prompt.description || '（无描述）')}</p>
+            <p class="detail-desc">${esc(prompt.description || '(No description)')}</p>
           </div>
           <div class="detail-actions">
             <button type="button" class="btn btn-ghost btn-icon" data-action="toggle-prompt-favorite" data-id="${prompt.id}"
-              title="${prompt.favorite ? '取消收藏' : '收藏'}" aria-label="${prompt.favorite ? '取消收藏' : '收藏'}" aria-pressed="${prompt.favorite}">
+              title="${prompt.favorite ? 'Remove from favorites' : 'Favorite'}" aria-label="${prompt.favorite ? 'Remove from favorites' : 'Favorite'}" aria-pressed="${prompt.favorite}">
               ${icon('star', prompt.favorite ? 'star-fill' : '')}
             </button>
             <button type="button" class="btn btn-ghost btn-icon" data-action="toggle-prompt-pin" data-id="${prompt.id}"
-              title="${prompt.pinned ? '取消置顶' : '置顶'}" aria-label="${prompt.pinned ? '取消置顶' : '置顶'}" aria-pressed="${prompt.pinned}">
+              title="${prompt.pinned ? 'Unpin' : 'Pin'}" aria-label="${prompt.pinned ? 'Unpin' : 'Pin'}" aria-pressed="${prompt.pinned}">
               ${icon('pin', prompt.pinned ? 'pin-on' : '')}
             </button>
             <span class="divider"></span>
             <button type="button" class="btn btn-ghost btn-icon btn-ghost-danger" data-action="delete-prompt" data-id="${prompt.id}"
-              title="删除" aria-label="删除 Prompt">${icon('trash')}</button>
+              title="Delete" aria-label="Delete Prompt">${icon('trash')}</button>
           </div>
         </div>
         <div class="detail-chips">
           <span class="badge badge-neutral badge-tight">${icon('folder')}${esc(folderLabel(prompt.folder))}</span>
           ${prompt.tags.map((tag) => `<span class="badge badge-primary badge-tight">#${esc(tag)}</span>`).join('')}
           <span class="badge badge-outline badge-tight tabular">v${prompt.version}</span>
-          <span class="badge badge-outline badge-tight tabular">用 ${prompt.usage} 次</span>
+          <span class="badge badge-outline badge-tight tabular">Used ${prompt.usage}×</span>
           ${statusBadge(prompt.sync, prompt.syncLabel)}
-          <span class="detail-updated tabular">更新于 ${esc(prompt.updatedLabel)}</span>
+          <span class="detail-updated tabular">Updated ${esc(prompt.updatedLabel)}</span>
         </div>
         <div class="repo-path">
-          ${icon('git-branch')}<span>仓库文件</span>
+          ${icon('git-branch')}<span>Repository file</span>
           <code>${esc(prompt.repoPath)}</code>
         </div>
         <div class="detail-buttons">
-          <button type="button" class="btn btn-primary" data-action="copy-prompt" data-id="${prompt.id}">${icon('copy')}复制 Prompt</button>
-          <button type="button" class="btn btn-outline" data-action="test-prompt" data-id="${prompt.id}">${icon('flask')}AI 测试</button>
-          <button type="button" class="btn btn-outline" data-action="edit-prompt" data-id="${prompt.id}">${icon('pencil')}编辑</button>
-          <button type="button" class="btn btn-outline" data-action="sync-prompt" data-id="${prompt.id}">${icon('git-branch')}同步</button>
-          <button type="button" class="btn btn-outline" data-action="prompt-versions" data-id="${prompt.id}">${icon('history')}版本</button>
+          <button type="button" class="btn btn-primary" data-action="copy-prompt" data-id="${prompt.id}">${icon('copy')}Copy Prompt</button>
+          <button type="button" class="btn btn-outline" data-action="test-prompt" data-id="${prompt.id}">${icon('flask')}AI test</button>
+          <button type="button" class="btn btn-outline" data-action="edit-prompt" data-id="${prompt.id}">${icon('pencil')}Edit</button>
+          <button type="button" class="btn btn-outline" data-action="sync-prompt" data-id="${prompt.id}">${icon('git-branch')}Sync</button>
+          <button type="button" class="btn btn-outline" data-action="prompt-versions" data-id="${prompt.id}">${icon('history')}Versions</button>
         </div>
       </div>
 
@@ -861,7 +861,7 @@
                 <div class="section-head">System Prompt</div>
                 <div class="md-block">
                   <div class="md-card md">${md(prompt.system)}</div>
-                  <button type="button" class="inline-edit" data-action="edit-prompt" data-id="${prompt.id}">${icon('pencil', 'icon-xs')}编辑</button>
+                  <button type="button" class="inline-edit" data-action="edit-prompt" data-id="${prompt.id}">${icon('pencil', 'icon-xs')}Edit</button>
                 </div>
               </section>`
             : ''
@@ -870,13 +870,13 @@
           <div class="section-head">User Prompt</div>
           <div class="md-block">
             <div class="md-card md">${md(prompt.user)}</div>
-            <button type="button" class="inline-edit" data-action="edit-prompt" data-id="${prompt.id}">${icon('pencil', 'icon-xs')}编辑</button>
+            <button type="button" class="inline-edit" data-action="edit-prompt" data-id="${prompt.id}">${icon('pencil', 'icon-xs')}Edit</button>
           </div>
         </section>
         ${
           prompt.variables.length
             ? `<section>
-                <div class="section-head">模板变量 <span class="badge badge-outline badge-tight">${prompt.variables.length}</span></div>
+                <div class="section-head">Template variables <span class="badge badge-outline badge-tight">${prompt.variables.length}</span></div>
                 <div class="var-list">
                   ${prompt.variables
                     .map(
@@ -886,13 +886,13 @@
                     )
                     .join('')}
                 </div>
-                <p class="hint-text">复制或测试时会弹表单填值；值保留 30 天自动记忆，不写入仓库。</p>
+                <p class="hint-text">Copying or testing opens a form for values; values are remembered for 30 days and never written to the repo.</p>
               </section>`
             : ''
         }
         <div class="note-strip">
           ${icon('shield')}
-          <span>Prompt 正文会进入 AI 上下文。推送前会扫描高置信度凭据；含明文 Token 的版本会被阻断，必须替换为 <code>{{变量}}</code>。</span>
+          <span>Prompt content enters the AI context. High-confidence credentials are scanned before push; versions containing plaintext tokens are blocked and must use <code>{{variable}}</code> instead.</span>
         </div>
       </div>
     `;
@@ -901,19 +901,19 @@
   function renderPromptDetailEmpty(hasPrompts) {
     return emptyState({
       iconName: hasPrompts ? 'search' : 'message',
-      title: hasPrompts ? '没有可显示的 Prompt' : '左侧选择一个 Prompt',
-      description: hasPrompts ? '调整搜索或筛选条件后再试' : '新建后即可查看 System / User 正文与变量',
+      title: hasPrompts ? 'No Prompt to display' : 'Select a Prompt on the left',
+      description: hasPrompts ? 'Adjust search or filters and try again' : 'Create one to see System / User content and variables',
       action: hasPrompts
-        ? '<button type="button" class="btn btn-outline btn-sm" data-action="clear-prompt-filters">清除筛选</button>'
-        : '<button type="button" class="btn btn-primary btn-sm" data-action="new-prompt">新建 Prompt</button>',
+        ? '<button type="button" class="btn btn-outline btn-sm" data-action="clear-prompt-filters">Clear filters</button>'
+        : '<button type="button" class="btn btn-primary btn-sm" data-action="new-prompt">New Prompt</button>',
     });
   }
 
   function renderPlatformPrompts() {
     const query = state.search.trim().toLowerCase();
-    const categories = ['全部', ...new Set(D.platformPrompts.map((p) => p.category))];
+    const categories = ['All', ...new Set(D.platformPrompts.map((p) => p.category))];
     const items = D.platformPrompts.filter((item) => {
-      if (state.platformCategory !== '全部' && item.category !== state.platformCategory) return false;
+      if (state.platformCategory !== 'All' && item.category !== state.platformCategory) return false;
       if (query && ![item.title, item.description, item.tags.join(' ')].join(' ').toLowerCase().includes(query)) return false;
       return true;
     });
@@ -921,7 +921,7 @@
     return `
       <div class="store-toolbar">
         <div class="skills-head" style="margin:0">
-          ${icon('layers')}<span>平台精选 <strong>${items.length}</strong> 条</span>
+          ${icon('layers')}<span>Platform picks · <strong>${items.length}</strong> items</span>
         </div>
         <div class="store-cats">
           ${categories
@@ -944,7 +944,7 @@
                       <span class="skill-emoji">${icon('message', 'icon-lg')}</span>
                       <div style="min-width:0;flex:1">
                         <div class="skill-name">${esc(item.title)}</div>
-                        <div class="skill-sub">${esc(item.author)} · 使用 ${num(item.uses)} 次</div>
+                        <div class="skill-sub">${esc(item.author)} · used ${num(item.uses)}×</div>
                       </div>
                       <span class="badge badge-primary badge-tight">${esc(item.category)}</span>
                     </div>
@@ -953,8 +953,8 @@
                   <div class="skill-foot">
                     <span class="skill-folder">${icon('clock', 'icon-xs')}<span>${esc(item.updatedLabel)}</span></span>
                     <div class="right">
-                      <button type="button" class="btn btn-outline btn-xs" data-action="copy-platform-prompt" data-id="${item.id}">${icon('copy', 'icon-xs')}复制</button>
-                      <button type="button" class="btn btn-soft btn-xs" data-action="save-platform-prompt" data-id="${item.id}">保存</button>
+                      <button type="button" class="btn btn-outline btn-xs" data-action="copy-platform-prompt" data-id="${item.id}">${icon('copy', 'icon-xs')}Copy</button>
+                      <button type="button" class="btn btn-soft btn-xs" data-action="save-platform-prompt" data-id="${item.id}">Save</button>
                     </div>
                   </div>
                 </article>
@@ -964,9 +964,9 @@
             </div>`
           : emptyState({
               iconName: 'search',
-              title: '没有匹配的平台 Prompt',
-              description: '换一个分类或关键词试试',
-              action: '<button type="button" class="btn btn-outline btn-sm" data-action="set-platform-category" data-category="全部">全部分类</button>',
+              title: 'No matching platform Prompts',
+              description: 'Try another category or keyword',
+              action: '<button type="button" class="btn btn-outline btn-sm" data-action="set-platform-category" data-category="All">All categories</button>',
             })
       }
     `;
@@ -1021,17 +1021,17 @@
       <div class="subnav">
         ${tabsHtml(
           [
-            { value: 'library', label: '契约库', count: state.contracts.length },
-            { value: 'preview', label: '生效预览' },
-            { value: 'projections', label: '项目投影', count: attention },
-            { value: 'global', label: '全局分发', count: 2 },
+            { value: 'library', label: 'Contract library', count: state.contracts.length },
+            { value: 'preview', label: 'Resolution preview' },
+            { value: 'projections', label: 'Project projections', count: attention },
+            { value: 'global', label: 'Global dispatch', count: 2 },
           ],
           state.instructionTab,
           'set-instruction-tab',
         )}
         <div class="subnav-right">
-          <span class="badge badge-info badge-tight">Git 可选同步</span>
-          <span>1 条仅本机 · 投影独立确认</span>
+          <span class="badge badge-info badge-tight">Optional Git sync</span>
+          <span>1 local only · projections confirmed separately</span>
         </div>
       </div>
     `;
@@ -1057,24 +1057,24 @@
 
     return `
       <div class="workspace-body">
-        <aside class="folders-pane" aria-label="指令文件夹">
-          <div class="pane-head">${icon('folder')}指令文件夹</div>
+        <aside class="folders-pane" aria-label="Instruction folders">
+          <div class="pane-head">${icon('folder')}Instruction folders</div>
           ${renderTree(state.contracts, (c) => c.folder, state.contractFolder, 'select-contract-folder')}
-          <div class="tree-foot">${icon('git-branch')}仓库契约与项目投影分开管理</div>
+          <div class="tree-foot">${icon('git-branch')}Repository contracts and project projections are managed separately</div>
         </aside>
 
         <div class="list-pane">
           <div class="list-toolbar">
             <div class="toolbar-row">
               <div class="select" style="flex:1">
-                <select data-change="contract-scope" aria-label="按范围筛选">
-                  <option value="all" ${state.contractScope === 'all' ? 'selected' : ''}>全部范围</option>
-                  <option value="项目级" ${state.contractScope === '项目级' ? 'selected' : ''}>项目级</option>
-                  <option value="路径级" ${state.contractScope === '路径级' ? 'selected' : ''}>路径级</option>
+                <select data-change="contract-scope" aria-label="Filter by scope">
+                  <option value="all" ${state.contractScope === 'all' ? 'selected' : ''}>All scopes</option>
+                  <option value="Project" ${state.contractScope === 'Project' ? 'selected' : ''}>Project</option>
+                  <option value="Path" ${state.contractScope === 'Path' ? 'selected' : ''}>Path</option>
                 </select>
                 ${icon('chevron-down')}
               </div>
-              <span class="badge badge-outline badge-tight tabular">${contracts.length} 条</span>
+              <span class="badge badge-outline badge-tight tabular">${contracts.length} items</span>
             </div>
           </div>
 
@@ -1082,7 +1082,7 @@
             state.contractFolder
               ? `<div class="active-filter">${icon('folder')}<strong>${esc(
                   folderLabel(state.contractFolder === '__unfiled__' ? null : state.contractFolder),
-                )}</strong><button type="button" data-action="clear-contract-folder">返回全部</button></div>`
+                )}</strong><button type="button" data-action="clear-contract-folder">Back to all</button></div>`
               : ''
           }
 
@@ -1109,14 +1109,14 @@
                             <div class="card-meta" style="margin-top:7px">
                               <div class="tags">
                                 <span class="badge badge-neutral">${icon('folder')}${esc(folderLabel(contract.folder))}</span>
-                                <span class="badge badge-${contract.scope === '项目级' ? 'primary' : 'info'}">${esc(contract.scope)}</span>
-                                <span class="badge badge-outline">优先级 ${contract.priority}</span>
+                                <span class="badge badge-${contract.scope === 'Project' ? 'primary' : 'info'}">${esc(contract.scope)}</span>
+                                <span class="badge badge-outline">Priority ${contract.priority}</span>
                                 ${statusBadge(contract.sync, contract.syncLabel)}
                               </div>
                             </div>
                             <div class="card-meta" style="margin-top:6px">
-                              <span class="card-time" style="margin:0">${contract.targets.length} 个投影目标</span>
-                              <span class="usage">仓库契约</span>
+                              <span class="card-time" style="margin:0">Projection targets: ${contract.targets.length}</span>
+                              <span class="usage">Repository contract</span>
                             </div>
                           </button>
                         `;
@@ -1125,32 +1125,32 @@
                   </div>`
                 : emptyState({
                     iconName: 'search',
-                    title: hasFilter ? '未找到匹配契约' : '还没有 Agent 指令',
-                    description: hasFilter ? '搜索词、文件夹或范围筛选可能过窄' : '新建一条 canonical 契约，再编译到各 Agent 原生格式',
+                    title: hasFilter ? 'No matching contracts' : 'No Agent Instructions yet',
+                    description: hasFilter ? 'Search, folder, or scope filter may be too narrow' : 'Create a canonical contract, then compile it to each Agent\'s native format',
                     action: hasFilter
-                      ? '<button type="button" class="btn btn-outline btn-sm" data-action="clear-contract-filters">清除筛选</button>'
-                      : '<button type="button" class="btn btn-primary btn-sm" data-action="new-contract">新建契约</button>',
+                      ? '<button type="button" class="btn btn-outline btn-sm" data-action="clear-contract-filters">Clear filters</button>'
+                      : '<button type="button" class="btn btn-primary btn-sm" data-action="new-contract">New contract</button>',
                   })
             }
           </div>
 
           <div class="list-foot">
-            <span class="tabular">${contracts.length} / ${state.contracts.length} 条</span>
-            ${hasFilter ? '<button type="button" class="link" data-action="clear-contract-filters">清除筛选</button>' : ''}
-            <button type="button" class="btn btn-outline btn-sm" data-action="new-contract" title="新建契约（快捷键 N）">
-              ${icon('plus', 'icon-sm')}新建
+            <span class="tabular">${contracts.length} / ${state.contracts.length} items</span>
+            ${hasFilter ? '<button type="button" class="link" data-action="clear-contract-filters">Clear filters</button>' : ''}
+            <button type="button" class="btn btn-outline btn-sm" data-action="new-contract" title="New contract (shortcut N)">
+              ${icon('plus', 'icon-sm')}New
             </button>
           </div>
         </div>
 
-        <section class="detail-pane ${state.mobileDetail ? 'mobile-open' : ''}" aria-label="契约详情">
+        <section class="detail-pane ${state.mobileDetail ? 'mobile-open' : ''}" aria-label="Contract details">
           ${
             selected
               ? renderContractDetail(selected)
               : emptyState({
                   iconName: 'file',
-                  title: '左侧选择一条指令契约',
-                  description: '查看生效范围、激活方式、目标投影与契约正文',
+                  title: 'Select an instruction contract on the left',
+                  description: 'See scope, activation, target projections, and contract body',
                 })
           }
         </section>
@@ -1160,14 +1160,14 @@
 
   function renderContractDetail(contract) {
     const targets = contract.targets.map((targetId) => projectTarget(contract, targetId)).filter(Boolean);
-    const scopeBadge = contract.scope === '项目级' ? 'primary' : 'info';
+    const scopeBadge = contract.scope === 'Project' ? 'primary' : 'info';
 
     return `
       <div class="detail-header">
         <div class="detail-title-row">
-          <button type="button" class="mobile-back" data-action="close-mobile-detail" aria-label="返回列表">${icon('chevron-left', 'icon-lg')}</button>
+          <button type="button" class="mobile-back" data-action="close-mobile-detail" aria-label="Back to list">${icon('chevron-left', 'icon-lg')}</button>
           <div class="detail-title-main">
-            <div class="detail-eyebrow">${icon('file')}Agent 指令 · ${esc(contract.folder)}</div>
+            <div class="detail-eyebrow">${icon('file')}Agent Instructions · ${esc(contract.folder)}</div>
             <h2 class="detail-title">${esc(contract.title)}
               <span class="badge badge-outline badge-tight tabular">v${contract.version}</span>
               ${statusBadge(contract.sync, contract.syncLabel)}
@@ -1175,41 +1175,41 @@
             <p class="detail-desc">${esc(contract.description)}</p>
           </div>
           <div class="detail-actions">
-            <span class="detail-updated">更新于 ${esc(contract.updatedLabel)}</span>
+            <span class="detail-updated">Updated ${esc(contract.updatedLabel)}</span>
             <span class="divider"></span>
             <button type="button" class="btn btn-ghost btn-icon btn-ghost-danger" data-action="delete-contract" data-id="${contract.id}"
-              title="删除" aria-label="删除契约">${icon('trash')}</button>
+              title="Delete" aria-label="Delete contract">${icon('trash')}</button>
           </div>
         </div>
         <div class="detail-chips">
           <span class="badge badge-neutral badge-tight">${icon('folder')}${esc(folderLabel(contract.folder))}</span>
-          <span class="badge badge-${scopeBadge} badge-tight">${esc(contract.scope)}${contract.scope === '路径级' ? ' · src/' : ''}</span>
-          <span class="badge badge-${contract.activation === '常驻' ? 'primary' : 'info'} badge-tight">${icon('file')}${esc(contract.activation)}</span>
-          <span class="badge badge-outline badge-tight tabular">优先级 ${contract.priority}</span>
+          <span class="badge badge-${scopeBadge} badge-tight">${esc(contract.scope)}${contract.scope === 'Path' ? ' · src/' : ''}</span>
+          <span class="badge badge-${contract.activation === 'Always on' ? 'primary' : 'info'} badge-tight">${icon('file')}${esc(contract.activation)}</span>
+          <span class="badge badge-outline badge-tight tabular">Priority ${contract.priority}</span>
           ${contract.tags.map((tag) => `<span class="badge badge-primary badge-tight">#${esc(tag)}</span>`).join('')}
         </div>
-        <div class="repo-path">${icon('git-branch')}<span>仓库文件</span><code>${esc(contract.repoPath)}</code></div>
+        <div class="repo-path">${icon('git-branch')}<span>Repository file</span><code>${esc(contract.repoPath)}</code></div>
         <div class="detail-buttons">
-          <button type="button" class="btn btn-primary" data-action="copy-contract" data-id="${contract.id}">${icon('copy')}复制正文</button>
-          <button type="button" class="btn btn-outline" data-action="edit-contract" data-id="${contract.id}">${icon('pencil')}编辑</button>
-          <button type="button" class="btn btn-outline" data-action="contract-preview" data-id="${contract.id}">${icon('eye')}生效预览</button>
-          <button type="button" class="btn btn-outline" data-action="contract-versions" data-id="${contract.id}">${icon('history')}版本</button>
-          <button type="button" class="btn btn-outline" data-action="contract-sync" data-id="${contract.id}">${icon('git-branch')}同步</button>
+          <button type="button" class="btn btn-primary" data-action="copy-contract" data-id="${contract.id}">${icon('copy')}Copy body</button>
+          <button type="button" class="btn btn-outline" data-action="edit-contract" data-id="${contract.id}">${icon('pencil')}Edit</button>
+          <button type="button" class="btn btn-outline" data-action="contract-preview" data-id="${contract.id}">${icon('eye')}Resolution preview</button>
+          <button type="button" class="btn btn-outline" data-action="contract-versions" data-id="${contract.id}">${icon('history')}Versions</button>
+          <button type="button" class="btn btn-outline" data-action="contract-sync" data-id="${contract.id}">${icon('git-branch')}Sync</button>
         </div>
       </div>
 
       <div class="detail-body">
         <section class="info-grid">
-          <div class="info-card"><div class="label">生效范围</div><div class="value">${esc(contract.scopeDesc)}</div></div>
-          <div class="info-card"><div class="label">激活方式</div><div class="value">${esc(contract.activationDesc)}</div></div>
-          <div class="info-card"><div class="label">仓库文件</div><div class="value mono">${esc(contract.repoPath)}</div><div class="hint">frontmatter 存文件夹 / 范围 / 激活 / 目标；正文即规范内容</div></div>
-          <div class="info-card"><div class="label">全局目录投影</div><div class="value">${esc(contract.globalStatus)}</div><div class="hint">在「全局分发」中勾选多条指令与多个工具，路径可改写</div></div>
-          <div class="info-card"><div class="label">Claude @import</div><div class="value mono">${contract.imports.length ? contract.imports.map((item) => '@' + item).join('\n') : '未配置'}</div><div class="hint">仅 CLAUDE.md 目标支持；其他目标忽略导入行</div></div>
-          <div class="info-card"><div class="label">同步状态</div><div class="value">${statusBadge(contract.sync, contract.syncLabel)}</div><div class="hint">拉取、恢复与手动合并都必须逐条预览</div></div>
+          <div class="info-card"><div class="label">Scope</div><div class="value">${esc(contract.scopeDesc)}</div></div>
+          <div class="info-card"><div class="label">Activation</div><div class="value">${esc(contract.activationDesc)}</div></div>
+          <div class="info-card"><div class="label">Repository file</div><div class="value mono">${esc(contract.repoPath)}</div><div class="hint">Frontmatter stores folder / scope / activation / targets; the body is the spec itself</div></div>
+          <div class="info-card"><div class="label">Global directory projection</div><div class="value">${esc(contract.globalStatus)}</div><div class="hint">Select multiple instructions and tools in Global dispatch; paths can be overridden</div></div>
+          <div class="info-card"><div class="label">Claude @import</div><div class="value mono">${contract.imports.length ? contract.imports.map((item) => '@' + item).join('\n') : 'Not configured'}</div><div class="hint">Only supported for the CLAUDE.md target; other targets ignore import lines</div></div>
+          <div class="info-card"><div class="label">Sync status</div><div class="value">${statusBadge(contract.sync, contract.syncLabel)}</div><div class="hint">Pull, restore, and manual merges must all be previewed item by item</div></div>
         </section>
 
         <section>
-          <div class="section-head">目标与投影状态 <span class="badge badge-outline badge-tight">${targets.length} 个目标</span></div>
+          <div class="section-head">Targets and projection status <span class="badge badge-outline badge-tight">Targets: ${targets.length}</span></div>
           <div class="target-grid">
             ${targets
               .map(
@@ -1219,9 +1219,9 @@
                   <div class="target-agent">${esc(target.agentName)}</div>
                   <code>${esc(target.path)}</code>
                   <div class="target-foot">
-                    <span>${target.merge === 'single-file' ? '合并写入' : '独立文件'}</span>
-                    ${target.status === 'stale' ? '<span class="warn">· 本地已更新，等待重新投影</span>' : ''}
-                    ${target.status === 'drifted' ? '<span class="warn">· Agent 侧被手工修改</span>' : ''}
+                    <span>${target.merge === 'single-file' ? 'Merged into one file' : 'Separate file'}</span>
+                    ${target.status === 'stale' ? '<span class="warn">· Local updated, awaiting re-projection</span>' : ''}
+                    ${target.status === 'drifted' ? '<span class="warn">· Modified manually on the Agent side</span>' : ''}
                   </div>
                 </div>
               `,
@@ -1231,13 +1231,13 @@
         </section>
 
         <section>
-          <div class="section-head">契约正文 <span class="badge badge-outline badge-tight">每次会话可能进入上下文</span></div>
+          <div class="section-head">Contract body <span class="badge badge-outline badge-tight">May enter context every session</span></div>
           <div class="md-card md">${md(contract.body)}</div>
         </section>
 
         <div class="note-strip">
           ${icon('shield')}
-          <span>指令会被 Agent 自动读取。拉取、恢复与手动合并都必须逐条预览；推送前会扫描正文中的高置信度凭据。删除本地契约不会删除已投影的目标文件。</span>
+          <span>Instructions are read automatically by agents. Pull, restore, and manual merges must be previewed item by item; high-confidence credentials in the body are scanned before push. Deleting a local contract does not delete already projected target files.</span>
         </div>
       </div>
     `;
@@ -1252,24 +1252,24 @@
     state.contracts.forEach((contract) => {
       if (!contract.targets.includes(target.id)) {
         if (contract.activation === 'Glob' && globCompatible) {
-          skipped.push({ contract, reason: '目标不包含该契约，未写入此文件' });
+          skipped.push({ contract, reason: 'Target does not include this contract; not written to this file' });
         }
         return;
       }
-      if (contract.activation === '常驻') {
-        included.push({ contract, reason: '常驻指令，按优先级合并' });
+      if (contract.activation === 'Always on') {
+        included.push({ contract, reason: 'Always-on instruction, merged by priority' });
       } else if (contract.activation === 'Glob') {
         if (!globCompatible) {
-          skipped.push({ contract, reason: `目标 ${target.label} 不支持 Glob 激活，投影时跳过` });
+          skipped.push({ contract, reason: `Target ${target.label} does not support Glob activation; skipped during projection` });
         } else if (/^src\//.test(path)) {
-          included.push({ contract, reason: `路径 ${path} 命中 src/**/*.{ts,tsx}` });
+          included.push({ contract, reason: `Path ${path} matches src/**/*.{ts,tsx}` });
         } else {
-          skipped.push({ contract, reason: `路径 ${path} 未命中 src/**/*.{ts,tsx}` });
+          skipped.push({ contract, reason: `Path ${path} does not match src/**/*.{ts,tsx}` });
         }
-      } else if (contract.activation === '模型判断') {
-        skipped.push({ contract, reason: '由 Agent 根据 description 判断是否引用，不计入常驻上下文' });
+      } else if (contract.activation === 'Model decision') {
+        skipped.push({ contract, reason: 'The agent decides from the description whether to reference it; not part of always-on context' });
       } else {
-        skipped.push({ contract, reason: '手动引用，不计入常驻上下文' });
+        skipped.push({ contract, reason: 'Manual reference; not part of always-on context' });
       }
     });
 
@@ -1309,12 +1309,12 @@
       <div class="page-wrap" style="padding:0">
         <div class="banner" style="margin-bottom:12px">
           ${icon('eye')}
-          <span>这是静态模拟：按目标工具的已知发现路径、激活方式与合并规则计算「当前路径实际会读到什么」，不调用各工具 CLI。优先级与上下文预算为近似值，最终以工具实际行为为准。</span>
+          <span>This is a static simulation: it computes what the current path would actually read, using each target tool's known discovery paths, activation rules, and merge rules, without invoking any tool CLI. Priority and context budget are approximations; the tool's actual behavior wins.</span>
         </div>
 
         <section class="preview-filter">
           <div class="field">
-            <label class="field-label">目标格式</label>
+            <label class="field-label">Target format</label>
             <div class="select">
               <select data-change="preview-target">
                 ${D.contractTargets
@@ -1327,8 +1327,8 @@
             </div>
           </div>
           <div class="field grow">
-            <label class="field-label">当前处理的文件路径</label>
-            <input class="input mono" value="${esc(state.previewPath)}" data-change="preview-path" aria-label="当前处理的文件路径" />
+            <label class="field-label">Current file path</label>
+            <input class="input mono" value="${esc(state.previewPath)}" data-change="preview-path" aria-label="Current file path" />
             <div class="sample-paths" style="margin-top:5px">
               ${samples
                 .slice(0, 3)
@@ -1343,30 +1343,30 @@
 
         <div class="preview-meta" style="margin-top:8px">
           <span class="badge badge-primary badge-tight">${esc(target.label)}</span>
-          <span class="badge badge-outline badge-tight">${target.merge === 'single-file' ? '合并写入' : '独立文件'}</span>
-          <span>${esc(target.agentName)}；优先级按最近目录优先合并。</span>
+          <span class="badge badge-outline badge-tight">${target.merge === 'single-file' ? 'Merged into one file' : 'Separate file'}</span>
+          <span>${esc(target.agentName)}; merged with nearest directory taking priority.</span>
         </div>
 
         <div class="preview-summary" style="margin-top:12px">
           <div class="summary-card">
             <span class="num" style="background:var(--primary-soft);color:var(--primary)">${included.length}</span>
-            <div><div class="label">命中的常驻契约</div><div class="sub">按优先级顺序合并</div></div>
+            <div><div class="label">Always-on contracts matched</div><div class="sub">Merged in priority order</div></div>
           </div>
           <div class="summary-card">
             <span class="num" style="background:var(--info-soft);color:var(--info)">${(bytes / 1024).toFixed(1)} KB</span>
-            <div><div class="label">正文合计 / 预算</div><div class="sub">${(maxBytes / 1024).toFixed(0)} KB 上下文预算</div></div>
+            <div><div class="label">Total body / budget</div><div class="sub">${(maxBytes / 1024).toFixed(0)} KB context budget</div></div>
           </div>
           <div class="summary-card">
             <span class="num" style="background:var(--warning-soft);color:var(--warning)">${skipped.length}</span>
-            <div><div class="label">未进入常驻上下文</div><div class="sub">模型判断 / 手动 / 不兼容</div></div>
+            <div><div class="label">Not in always-on context</div><div class="sub">Model decision / Manual / Incompatible</div></div>
           </div>
         </div>
 
         <div class="preview-grid" style="margin-top:12px">
           <section class="panel" style="align-self:start">
             <div class="panel-head">
-              <h3>${icon('layers')}按生效顺序合并</h3>
-              <span class="badge badge-outline badge-tight">${target.merge === 'single-file' ? '单文件合并' : '逐契约生成'}</span>
+              <h3>${icon('layers')}Merged in resolution order</h3>
+              <span class="badge badge-outline badge-tight">${target.merge === 'single-file' ? 'Single-file merge' : 'One file per contract'}</span>
             </div>
             <div class="chain">
               ${
@@ -1386,13 +1386,13 @@
                   `,
                       )
                       .join('')
-                  : '<p style="padding:20px;text-align:center;color:var(--muted-fg);font-size:10px">当前路径没有命中的常驻契约。</p>'
+                  : '<p style="padding:20px;text-align:center;color:var(--muted-fg);font-size:10px">No always-on contracts match the current path.</p>'
               }
             </div>
             ${
               skipped.length
                 ? `<div class="skipped">
-                    <h4>未计入常驻上下文（${skipped.length}）</h4>
+                    <h4>Excluded from always-on context (${skipped.length})</h4>
                     ${skipped
                       .slice(0, 4)
                       .map(
@@ -1411,9 +1411,9 @@
 
           <section class="panel">
             <div class="panel-head">
-              <h3>${icon('file')}编译后的目标文件</h3>
-              <span class="badge badge-outline badge-tight">${compiledFiles.length} 个文件</span>
-              <span class="sub" style="margin-left:auto">生成标记用于漂移检测；手工修改不会被静默覆盖</span>
+              <h3>${icon('file')}Compiled target files</h3>
+              <span class="badge badge-outline badge-tight">Files: ${compiledFiles.length}</span>
+              <span class="sub" style="margin-left:auto">Generated markers enable drift detection; manual edits are never silently overwritten</span>
             </div>
             <div class="panel-body">
               ${
@@ -1437,8 +1437,8 @@
                   `,
                       )
                       .join('') +
-                    '<p class="hint-text">真实产品会按目标格式写入 frontmatter 或 managed block；手工修改会被标记为漂移，批量同步不会覆盖。</p>'
-                  : '<p style="padding:28px;text-align:center;color:var(--muted-fg);font-size:10px">当前路径没有需要写入的文件。</p>'
+                    '<p class="hint-text">The real product writes frontmatter or a managed block in the target format; manual edits are flagged as drift and never overwritten by bulk sync.</p>'
+                  : '<p style="padding:28px;text-align:center;color:var(--muted-fg);font-size:10px">No files need to be written for the current path.</p>'
               }
             </div>
           </section>
@@ -1470,22 +1470,22 @@
     return `
       <div class="banner" style="margin-bottom:12px">
         ${icon('folder')}
-        <span>项目投影写入<b>项目根目录</b>，与「全局分发」写入<b>用户级目录</b>分开确认。单文件目标会与其他契约合并写入；目标文件被手工修改时标记漂移，禁止批量覆盖。</span>
+        <span>Project projections write into the <b>project root</b> and are confirmed separately from Global dispatch, which writes into <b>user-level directories</b>. Single-file targets merge multiple contracts; manually modified target files are flagged as drift and can never be bulk-overwritten.</span>
       </div>
 
       <div class="preview-summary" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px">
-        <div class="summary-card"><span class="num" style="background:var(--success-soft);color:var(--success)">${counts.synced}</span><div><div class="label">已同步</div><div class="sub">目标文件与契约一致</div></div></div>
-        <div class="summary-card"><span class="num" style="background:var(--warning-soft);color:var(--warning)">${counts.stale}</span><div><div class="label">待更新</div><div class="sub">契约已更新，等待重新投影</div></div></div>
-        <div class="summary-card"><span class="num" style="background:var(--danger-soft);color:var(--danger)">${counts.drifted}</span><div><div class="label">漂移</div><div class="sub">Agent 侧被手工修改</div></div></div>
-        <div class="summary-card"><span class="num" style="background:var(--muted);color:var(--muted-fg)">${counts.missing}</span><div><div class="label">未投影</div><div class="sub">尚未生成目标文件</div></div></div>
+        <div class="summary-card"><span class="num" style="background:var(--success-soft);color:var(--success)">${counts.synced}</span><div><div class="label">Synced</div><div class="sub">Target files match the contract</div></div></div>
+        <div class="summary-card"><span class="num" style="background:var(--warning-soft);color:var(--warning)">${counts.stale}</span><div><div class="label">Stale</div><div class="sub">Contract updated, awaiting re-projection</div></div></div>
+        <div class="summary-card"><span class="num" style="background:var(--danger-soft);color:var(--danger)">${counts.drifted}</span><div><div class="label">Drifted</div><div class="sub">Edited manually on the Agent side</div></div></div>
+        <div class="summary-card"><span class="num" style="background:var(--muted);color:var(--muted-fg)">${counts.missing}</span><div><div class="label">Not projected</div><div class="sub">Target file not generated yet</div></div></div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
-          <h3>${icon('send')}项目投影记录</h3>
-          <span class="badge badge-outline badge-tight">${rows.length} 条</span>
-          <span class="sub">覆盖漂移项需要逐项确认</span>
-          <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto" data-action="reproject-all">${icon('refresh', 'icon-sm')}刷新投影状态</button>
+          <h3>${icon('send')}Project projection records</h3>
+          <span class="badge badge-outline badge-tight">${rows.length} items</span>
+          <span class="sub">Overwriting drifted items requires individual confirmation</span>
+          <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto" data-action="reproject-all">${icon('refresh', 'icon-sm')}Refresh projection status</button>
         </div>
         <div class="panel-body" style="display:flex;flex-direction:column;gap:6px">
           ${rows
@@ -1499,18 +1499,18 @@
                     ${statusBadge(target.status)}
                     <span class="badge badge-outline badge-tight tabular">v${contract.version}</span>
                   </div>
-                  <p>${esc(contract.activation)} · 优先级 ${contract.priority} · ${esc(target.agentName)}</p>
+                  <p>${esc(contract.activation)} · Priority ${contract.priority} · ${esc(target.agentName)}</p>
                   <code class="projection-path">${esc(target.path)}</code>
                 </div>
                 <div class="projection-actions">
                   ${
                     target.status === 'drifted'
-                      ? '<button type="button" class="btn btn-danger btn-xs" data-action="projection-action" data-status="drifted">覆盖</button>'
+                      ? '<button type="button" class="btn btn-danger btn-xs" data-action="projection-action" data-status="drifted">Overwrite</button>'
                       : `<button type="button" class="btn btn-outline btn-xs" data-action="projection-action" data-status="${target.status}">${
-                          target.status === 'synced' ? '重新投影' : '投影'
+                          target.status === 'synced' ? 'Re-project' : 'Project'
                         }</button>`
                   }
-                  <button type="button" class="btn btn-ghost btn-xs btn-ghost-danger" data-action="projection-action" data-status="remove">移除</button>
+                  <button type="button" class="btn btn-ghost btn-xs btn-ghost-danger" data-action="projection-action" data-status="remove">Remove</button>
                 </div>
               </div>
             `,
@@ -1532,14 +1532,14 @@
     return `
       <div class="banner" style="margin-bottom:12px">
         ${icon('send')}
-        <span>全局分发是<b>从本地库到本机 Agent 全局目录的单向写出</b>，不经过 Git，也不回写仓库。勾选多条指令与多个工具后一次性投影；每个工具的全局目录都可以改成你本机的真实路径。</span>
+        <span>Global dispatch is a <b>one-way write from the local library into Agent global directories on this machine</b>. It does not go through Git and never writes back to the repo. Select multiple instructions and tools to project them in one pass; each tool's global directory can be changed to the real path on your machine.</span>
       </div>
 
       <section style="margin-bottom:12px">
         <div class="panel-head" style="padding:0 0 7px;border:0">
-          <h3>${icon('server')}全局目录（可改写）</h3>
-          <span class="badge badge-outline badge-tight">${targets.length} 个 Agent</span>
-          <span class="sub">路径修改后，相关投影会标记为「待更新」</span>
+          <h3>${icon('server')}Global directories (editable)</h3>
+          <span class="badge badge-outline badge-tight">${targets.length} agents</span>
+          <span class="sub">After a path change, related projections are marked Stale</span>
         </div>
         <div class="global-grid">
           ${targets
@@ -1549,18 +1549,18 @@
                 <div class="global-card ${selected ? 'selected' : ''}">
                   <div class="global-card-top">
                     <button type="button" class="checkbox ${selected ? 'checked' : ''}" data-action="toggle-global-target" data-id="${target.id}"
-                      role="checkbox" aria-checked="${selected}" aria-label="选择 ${esc(target.label)}">${selected ? icon('check') : ''}</button>
+                      role="checkbox" aria-checked="${selected}" aria-label="Select ${esc(target.label)}">${selected ? icon('check') : ''}</button>
                     <strong>${esc(target.label)}</strong>
-                    <span class="badge badge-${target.detected ? 'success' : 'outline'} badge-tight">${target.detected ? '已检测' : '未检测'}</span>
+                    <span class="badge badge-${target.detected ? 'success' : 'outline'} badge-tight">${target.detected ? 'Detected' : 'Not detected'}</span>
                   </div>
-                  <div class="global-sub">${esc(target.agentName)} · ${target.pathMode === 'file' ? '单文件' : '独立文件'} · 已投影 ${target.projected}</div>
+                  <div class="global-sub">${esc(target.agentName)} · ${target.pathMode === 'file' ? 'Single file' : 'Separate files'} · Projected ${target.projected}</div>
                   <div class="global-path">
                     <input class="input" style="height:27px;font-family:var(--font-mono);font-size:9px"
-                      value="${esc(state.globalPaths[target.id])}" data-change="global-path" data-id="${target.id}" aria-label="${esc(target.label)} 路径" />
+                      value="${esc(state.globalPaths[target.id])}" data-change="global-path" data-id="${target.id}" aria-label="${esc(target.label)} path" />
                     <button type="button" class="btn btn-ghost btn-xs" data-action="reset-global-path" data-id="${target.id}"
-                      ${state.globalPaths[target.id] === target.defaultPath ? 'disabled' : ''} title="恢复默认路径">默认</button>
+                      ${state.globalPaths[target.id] === target.defaultPath ? 'disabled' : ''} title="Restore default path">Default</button>
                   </div>
-                  <p class="global-note">${esc(target.pathMode === 'file' ? '多条契约用 managed block 合并写入。' : '每个契约生成一个独立文件。')}</p>
+                  <p class="global-note">${esc(target.pathMode === 'file' ? 'Multiple contracts are merged into a managed block.' : 'Each contract gets its own file.')}</p>
                 </div>
               `;
             })
@@ -1570,10 +1570,10 @@
 
       <section class="panel" style="margin-bottom:10px">
         <div class="panel-head">
-          <h3>${icon('file')}选择要同步的指令</h3>
-          <span class="badge badge-outline badge-tight">${state.contracts.length} 条可选</span>
+          <h3>${icon('file')}Select instructions to sync</h3>
+          <span class="badge badge-outline badge-tight">${state.contracts.length} available</span>
           <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto" data-action="toggle-all-global-contracts">
-            ${allSelected ? '取消全选' : '全选当前'}
+            ${allSelected ? 'Deselect all' : 'Select all'}
           </button>
         </div>
         <div class="select-list">
@@ -1582,13 +1582,13 @@
               const active = state.selectedGlobalContracts.has(contract.id);
               return `
                 <div class="select-row ${active ? 'active' : ''}" data-action="toggle-global-contract" data-id="${contract.id}" role="button" tabindex="0">
-                  <button type="button" class="checkbox ${active ? 'checked' : ''}" role="checkbox" aria-checked="${active}" aria-label="选择 ${esc(contract.title)}">${active ? icon('check') : ''}</button>
+                  <button type="button" class="checkbox ${active ? 'checked' : ''}" role="checkbox" aria-checked="${active}" aria-label="Select ${esc(contract.title)}">${active ? icon('check') : ''}</button>
                   <div class="select-main">
                     <strong>${esc(contract.title)}</strong>
                     <p>${esc(contract.description)}</p>
                     <div style="display:flex;gap:4px;margin-top:3px">
                       <span class="badge badge-neutral badge-tight">${icon('folder')}${esc(folderLabel(contract.folder))}</span>
-                      <span class="badge badge-${contract.activation === '常驻' ? 'primary' : 'info'} badge-tight">${esc(contract.activation)}</span>
+                      <span class="badge badge-${contract.activation === 'Always on' ? 'primary' : 'info'} badge-tight">${esc(contract.activation)}</span>
                       <span class="badge badge-outline badge-tight tabular">v${contract.version}</span>
                     </div>
                   </div>
@@ -1600,21 +1600,21 @@
       </section>
 
       <div class="action-bar" style="margin-bottom:12px">
-        <span class="summary">已选 <strong>${selectedContracts.length}</strong> 条指令 × <strong>${selectedTargets.length}</strong> 个全局目录</span>
-        <span class="badge badge-warning badge-tight">1 个组合漂移，批量不会覆盖</span>
+        <span class="summary">Instructions: <strong>${selectedContracts.length}</strong> · Global directories: <strong>${selectedTargets.length}</strong></span>
+        <span class="badge badge-warning badge-tight">1 combination drifted; bulk actions will not overwrite</span>
         <div class="right">
-          <button type="button" class="btn btn-outline btn-sm" data-action="global-preview">${icon('eye', 'icon-sm')}预览写入内容</button>
+          <button type="button" class="btn btn-outline btn-sm" data-action="global-preview">${icon('eye', 'icon-sm')}Preview writes</button>
           <button type="button" class="btn btn-primary btn-sm" data-action="global-project" ${selectedContracts.length && selectedTargets.length ? '' : 'disabled'}>
-            ${icon('send', 'icon-sm')}投影所选
+            ${icon('send', 'icon-sm')}Project selected
           </button>
         </div>
       </div>
 
       <section class="panel">
         <div class="panel-head">
-          <h3>${icon('layers')}全局投影记录</h3>
-          <span class="badge badge-outline badge-tight">${D.globalProjections.length} 条</span>
-          <span class="sub">漂移项只能逐条覆盖；移除只影响本机文件</span>
+          <h3>${icon('layers')}Global projection records</h3>
+          <span class="badge badge-outline badge-tight">${D.globalProjections.length} records</span>
+          <span class="sub">Drifted items can only be overwritten one at a time; removal only affects local files</span>
         </div>
         <div class="panel-body" style="display:flex;flex-direction:column;gap:6px">
           ${D.globalProjections
@@ -1628,14 +1628,14 @@
                     ${statusBadge(projection.status, projection.statusLabel)}
                     <span class="badge badge-outline badge-tight tabular">${projection.version}</span>
                   </div>
-                  <p>${esc(projection.at)} · ${esc(projection.note || '全局目录与本机库一致')}</p>
+                  <p>${esc(projection.at)} · ${esc(projection.note || 'Global directory matches the local library')}</p>
                   <code class="projection-path">${esc(projection.path)}</code>
                 </div>
                 <div class="projection-actions">
                   <button type="button" class="btn btn-outline btn-xs" data-action="global-projection-action" data-status="${projection.status}">
-                    ${projection.status === 'drifted' ? '覆盖' : '重新投影'}
+                    ${projection.status === 'drifted' ? 'Overwrite' : 'Re-project'}
                   </button>
-                  <button type="button" class="btn btn-ghost btn-xs btn-ghost-danger" data-action="global-projection-action" data-status="remove">移除</button>
+                  <button type="button" class="btn btn-ghost btn-xs btn-ghost-danger" data-action="global-projection-action" data-status="remove">Remove</button>
                 </div>
               </div>
             `,
@@ -1664,16 +1664,16 @@
       .sort((a, b) => {
         const fa = a.folder || '\uffff';
         const fb = b.folder || '\uffff';
-        return fa === fb ? a.name.localeCompare(b.name) : fa.localeCompare(fb, 'zh');
+        return fa === fb ? a.name.localeCompare(b.name) : fa.localeCompare(fb, 'en');
       });
   }
 
   function sourceBadge(source) {
     const map = {
-      official: ['官方精选', 'primary'],
-      community: ['社区', 'info'],
-      import: ['导入', 'neutral'],
-      scan: ['本地扫描', 'warning'],
+      official: ['Official picks', 'primary'],
+      community: ['Community', 'info'],
+      import: ['Imported', 'neutral'],
+      scan: ['Local scan', 'warning'],
     };
     const [label, variant] = map[source] || map.import;
     return `<span class="badge badge-${variant} badge-tight">${label}</span>`;
@@ -1685,24 +1685,24 @@
       <div class="subnav">
         ${tabsHtml(
           [
-            { value: 'mine', label: '我的技能', count: state.skills.length },
-            { value: 'store', label: '技能商店' },
+            { value: 'mine', label: 'My Skills', count: state.skills.length },
+            { value: 'store', label: 'Skill Store' },
           ],
           state.skillTab,
           'set-skill-tab',
         )}
         <div class="subnav-right">
-          <span class="badge badge-info badge-tight">Git 可选同步</span>
-          <span>一个技能一个目录 · skills/&lt;folder&gt;/&lt;name&gt;/</span>
+          <span class="badge badge-info badge-tight">Optional Git sync</span>
+          <span>One directory per skill · skills/&lt;folder&gt;/&lt;name&gt;/</span>
         </div>
       </div>
     `;
 
     if (state.skillTab === 'store') {
-      const categories = ['全部', ...new Set(D.storeSkills.map((skill) => skill.category))];
+      const categories = ['All', ...new Set(D.storeSkills.map((skill) => skill.category))];
       const list = D.storeSkills.filter((skill) => {
         if (state.storeSource !== 'all' && skill.source !== state.storeSource) return false;
-        if (state.storeCategory !== '全部' && skill.category !== state.storeCategory) return false;
+        if (state.storeCategory !== 'All' && skill.category !== state.storeCategory) return false;
         const query = state.search.trim().toLowerCase();
         if (query && ![skill.name, skill.description].join(' ').toLowerCase().includes(query)) return false;
         return true;
@@ -1713,9 +1713,9 @@
             <div class="store-toolbar">
               <div class="filter-pills">
                 ${[
-                  ['all', '全部'],
-                  ['official', '官方精选'],
-                  ['community', '社区'],
+                  ['all', 'All'],
+                  ['official', 'Official picks'],
+                  ['community', 'Community'],
                 ]
                   .map(
                     ([value, label]) => `<button type="button" class="${state.storeSource === value ? 'active' : ''}"
@@ -1744,16 +1744,16 @@
                             <span class="skill-emoji">${skill.emoji}</span>
                             <div style="min-width:0;flex:1">
                               <div class="skill-name">${esc(skill.name)}</div>
-                              <div class="skill-sub tabular">${esc(skill.author)} · ${num(skill.downloads)} 次下载</div>
+                              <div class="skill-sub tabular">${esc(skill.author)} · ${num(skill.downloads)} downloads</div>
                             </div>
-                            <span class="badge badge-${skill.source === 'official' ? 'primary' : 'info'} badge-tight">${skill.source === 'official' ? '官方' : '社区'}</span>
+                            <span class="badge badge-${skill.source === 'official' ? 'primary' : 'info'} badge-tight">${skill.source === 'official' ? 'Official' : 'Community'}</span>
                           </div>
                           <p class="skill-desc">${esc(skill.description)}</p>
                           <div class="skill-foot">
                             ${
                               installed
-                                ? '<span class="badge badge-success badge-tight">' + icon('check', 'icon-xs') + '已在我的技能</span>'
-                                : `<button type="button" class="btn btn-outline btn-xs" data-action="open-install-wizard" data-id="${skill.id}">${icon('download', 'icon-xs')}安装</button>`
+                                ? '<span class="badge badge-success badge-tight">' + icon('check', 'icon-xs') + 'In My Skills</span>'
+                                : `<button type="button" class="btn btn-outline btn-xs" data-action="open-install-wizard" data-id="${skill.id}">${icon('download', 'icon-xs')}Install</button>`
                             }
                             <span class="badge badge-neutral badge-tight" style="margin-left:auto">${esc(skill.category)}</span>
                           </div>
@@ -1762,7 +1762,7 @@
                       })
                       .join('')}
                   </div>`
-                : emptyState({ iconName: 'search', title: '未找到匹配技能', description: '换个关键词或来源筛选' })
+                : emptyState({ iconName: 'search', title: 'No matching skills', description: 'Try another keyword or source filter' })
             }
           </div></div>
         </div>
@@ -1773,22 +1773,22 @@
     return `
       <div class="page">${subnav}
         <div class="workspace-body">
-          <aside class="folders-pane" aria-label="技能文件夹">
-            <div class="pane-head">${icon('folder')}技能文件夹</div>
+          <aside class="folders-pane" aria-label="Skill folders">
+            <div class="pane-head">${icon('folder')}Skill folders</div>
             ${renderTree(state.skills, (s) => s.folder, state.skillFolder, 'select-skill-folder')}
-            <div class="tree-foot">${icon('git-branch')}一个技能一个目录，脚本随技能同步</div>
+            <div class="tree-foot">${icon('git-branch')}One directory per skill; scripts sync with the skill</div>
           </aside>
           <div style="min-width:0;flex:1;display:flex;flex-direction:column">
             <div style="min-height:0;flex:1;overflow-y:auto;padding:14px 16px 18px">
               <div class="skills-head">
-                ${icon('grid')}<span>共 <strong>${skills.length}</strong> 个技能</span>
+                ${icon('grid')}<span>Total <strong>${skills.length}</strong> skills</span>
                 ${
                   state.skillFolder
                     ? `<span class="badge badge-neutral badge-tight">${icon('folder')}${esc(folderLabel(state.skillFolder === '__unfiled__' ? null : state.skillFolder))}</span>
-                       <button type="button" class="btn btn-ghost btn-xs" data-action="clear-skill-folder">返回全部</button>`
+                       <button type="button" class="btn btn-ghost btn-xs" data-action="clear-skill-folder">Back to all</button>`
                     : ''
                 }
-                <span class="right">${icon('layers')}文件夹即仓库目录 · 安装后可编辑并进入待推送</span>
+                <span class="right">${icon('layers')}Folders are repository directories · installed skills can be edited and become pending push</span>
               </div>
               ${
                 skills.length
@@ -1813,10 +1813,10 @@
                             <div class="skill-foot">
                               <span class="skill-folder">${icon('folder', 'icon-xs')}<span>${esc(folderLabel(skill.folder))}</span></span>
                               <div class="right">
-                                ${installed ? `<span class="badge badge-success badge-tight">${icon('check', 'icon-xs')}${installed} 平台</span>` : '<span class="badge badge-outline badge-tight">未分发</span>'}
-                                ${external ? `<span class="badge badge-warning badge-tight">外部 ${external}</span>` : ''}
-                                ${skill.pending ? '<span class="badge badge-warning badge-tight">待推送</span>' : ''}
-                                <button type="button" class="skill-edit" data-action="open-skill" data-id="${skill.id}" title="查看 / 编辑" aria-label="编辑 ${esc(skill.name)}">${icon('pencil', 'icon-xs')}</button>
+                                ${installed ? `<span class="badge badge-success badge-tight">${icon('check', 'icon-xs')}Platforms: ${installed}</span>` : '<span class="badge badge-outline badge-tight">Not dispatched</span>'}
+                                ${external ? `<span class="badge badge-warning badge-tight">External ${external}</span>` : ''}
+                                ${skill.pending ? '<span class="badge badge-warning badge-tight">Pending push</span>' : ''}
+                                <button type="button" class="skill-edit" data-action="open-skill" data-id="${skill.id}" title="View / edit" aria-label="Edit ${esc(skill.name)}">${icon('pencil', 'icon-xs')}</button>
                               </div>
                             </div>
                           </article>
@@ -1826,11 +1826,11 @@
                     </div>`
                   : emptyState({
                       iconName: 'grid',
-                      title: hasFilter ? '未找到匹配技能' : '还没有技能',
-                      description: hasFilter ? '换个关键词或文件夹试试' : '去技能商店安装，或从本地扫描导入',
+                      title: hasFilter ? 'No matching skills' : 'No skills yet',
+                      description: hasFilter ? 'Try another keyword or folder' : 'Install from the Skill Store, or import from a local scan',
                       action: hasFilter
-                        ? '<button type="button" class="btn btn-outline btn-sm" data-action="clear-skill-filters">清除筛选</button>'
-                        : '<button type="button" class="btn btn-primary btn-sm" data-action="set-skill-tab" data-value="store">去技能商店</button>',
+                        ? '<button type="button" class="btn btn-outline btn-sm" data-action="clear-skill-filters">Clear filters</button>'
+                        : '<button type="button" class="btn btn-primary btn-sm" data-action="set-skill-tab" data-value="store">Go to Skill Store</button>',
                     })
               }
             </div>
@@ -1872,16 +1872,16 @@
       <div class="subnav">
         ${tabsHtml(
           [
-            { value: 'mine', label: '我的库', count: state.mcps.length },
+            { value: 'mine', label: 'My Library', count: state.mcps.length },
             { value: 'agents', label: 'Agent MCP' },
-            { value: 'store', label: 'MCP 商店', count: D.mcpStore.length },
+            { value: 'store', label: 'MCP Store', count: D.mcpStore.length },
           ],
           state.mcpSection,
           'set-mcp-section',
         )}
         <div class="subnav-right">
-          <span class="badge badge-info badge-tight">密钥仅本机</span>
-          <span>一个 server 一个 JSON · 明文凭据禁止进 Git</span>
+          <span class="badge badge-info badge-tight">Secrets stay local</span>
+          <span>One JSON per server · Plaintext credentials never enter Git</span>
         </div>
       </div>
     `;
@@ -1898,20 +1898,20 @@
       <div class="page">
         ${subnav}
         <div class="workspace-body">
-          <aside class="folders-pane" aria-label="MCP 文件夹">
-            <div class="pane-head">${icon('folder')}MCP 文件夹</div>
+          <aside class="folders-pane" aria-label="MCP folders">
+            <div class="pane-head">${icon('folder')}MCP folders</div>
             ${renderTree(state.mcps, (m) => m.folder, state.mcpFolder, 'select-mcp-folder')}
-            <div class="tree-foot">${icon('lock')}env / headers 只同步占位符，密钥留在钥匙串</div>
+            <div class="tree-foot">${icon('lock')}Only placeholders sync for env / headers; secrets stay in the keychain</div>
           </aside>
 
           <div class="list-pane" style="width:370px">
             <div class="list-toolbar">
               <div class="toolbar-row">
                 <button type="button" class="toggle-square ${state.mcpFav ? 'active' : ''}" data-action="toggle-mcp-fav-filter"
-                  aria-pressed="${state.mcpFav}" title="只看收藏" aria-label="只看收藏">${icon('star', 'icon-sm')}</button>
-                <span class="badge badge-outline badge-tight tabular">${servers.length} / ${state.mcps.length} 个服务</span>
+                  aria-pressed="${state.mcpFav}" title="Favorites only" aria-label="Favorites only">${icon('star', 'icon-sm')}</button>
+                <span class="badge badge-outline badge-tight tabular">${servers.length} / ${state.mcps.length} servers</span>
                 <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto" data-action="new-mcp">
-                  ${icon('plus', 'icon-sm')}新建
+                  ${icon('plus', 'icon-sm')}New
                 </button>
               </div>
             </div>
@@ -1931,27 +1931,27 @@
                               ${server.favorite ? icon('star', 'icon-xs star') : ''}
                               <span class="row-tools">
                                 <button type="button" class="switch" role="switch" aria-checked="${server.enabled}"
-                                  data-action="toggle-mcp" data-id="${server.id}" aria-label="${server.enabled ? '停用' : '启用'} ${esc(server.name)}"></button>
+                                  data-action="toggle-mcp" data-id="${server.id}" aria-label="${server.enabled ? 'Disable' : 'Enable'} ${esc(server.name)}"></button>
                               </span>
                             </div>
                             <p>${esc(server.description)}</p>
                             <div class="mcp-row-meta">
                               <span class="folder">${icon('folder', 'icon-xs')}<span>${esc(folderLabel(server.folder))}</span></span>
-                              ${distributed ? `<span class="badge badge-success badge-tight">已分发 ${distributed}</span>` : ''}
-                              ${!server.enabled ? '<span class="badge badge-warning badge-tight">已停用</span>' : ''}
+                              ${distributed ? `<span class="badge badge-success badge-tight">Dispatched ${distributed}</span>` : ''}
+                              ${!server.enabled ? '<span class="badge badge-warning badge-tight">Disabled</span>' : ''}
                               <span class="time">${esc(server.updatedLabel)}</span>
                             </div>
                           </div>
                         `;
                       })
                       .join('')
-                  : `<p style="padding:34px 14px;text-align:center;color:var(--muted-fg);font-size:10px">没有匹配的服务</p>`
+                  : `<p style="padding:34px 14px;text-align:center;color:var(--muted-fg);font-size:10px">No matching servers</p>`
               }
             </div>
           </div>
 
-          <section class="detail-pane ${state.mobileDetail ? 'mobile-open' : ''}" aria-label="MCP 详情">
-            ${selected ? renderMcpDetail(selected) : emptyState({ iconName: 'server', title: '左侧选择一个 MCP 服务', description: '查看脱敏配置、健康检查与分发状态' })}
+          <section class="detail-pane ${state.mobileDetail ? 'mobile-open' : ''}" aria-label="MCP details">
+            ${selected ? renderMcpDetail(selected) : emptyState({ iconName: 'server', title: 'Select an MCP server on the left', description: 'See redacted config, health check, and dispatch status' })}
           </section>
         </div>
       </div>
@@ -1963,7 +1963,7 @@
     return `
       <div class="banner" style="margin-bottom:12px">
         ${icon('server')}
-        <span>这里展示各 Agent 已读取的 MCP 配置文件，包含本应用写入的条目与外部安装条目。反向导入会把外部条目纳入「我的库」，之后即可纳入版本与 Git 模板同步。</span>
+        <span>These are the MCP config files each Agent reads, including entries written by this app and externally installed entries. Reverse import brings external entries into My Library, where they gain versions and Git template sync.</span>
       </div>
       <div class="global-grid">
         ${agents
@@ -1978,7 +1978,7 @@
                     <h3 style="display:block">${esc(agent.name)}</h3>
                     <span class="sub" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-mono)">${esc(agent.mcpFile)}</span>
                   </div>
-                  <span class="badge badge-success badge-tight" style="margin-left:auto">${managed.length} 个托管</span>
+                  <span class="badge badge-success badge-tight" style="margin-left:auto">Managed: ${managed.length}</span>
                 </div>
                 <div class="panel-body" style="display:flex;flex-direction:column;gap:5px">
                   ${
@@ -1988,13 +1988,13 @@
                             (server) => `
                             <div class="target-row" style="padding:6px 8px">
                               ${icon('server')}
-                              <div class="info"><strong>${esc(server.name)}</strong><span>${server.transport} · 由 Prompt Keeper 写入</span></div>
-                              <span class="badge badge-${server.enabled ? 'success' : 'warning'} badge-tight">${server.enabled ? '启用' : '停用'}</span>
+                              <div class="info"><strong>${esc(server.name)}</strong><span>${server.transport} · written by Prompt Keeper</span></div>
+                              <span class="badge badge-${server.enabled ? 'success' : 'warning'} badge-tight">${server.enabled ? 'Enabled' : 'Disabled'}</span>
                             </div>
                           `,
                           )
                           .join('')
-                      : '<p class="hint-text" style="margin:0">还没有本应用管理的 MCP 条目。</p>'
+                      : '<p class="hint-text" style="margin:0">No MCP entries managed by this app yet.</p>'
                   }
                   ${external
                     .map(
@@ -2002,7 +2002,7 @@
                       <div class="target-row" style="padding:6px 8px;border-style:dashed">
                         ${icon('server')}
                         <div class="info"><strong>${esc(entry.name)}</strong><span>${esc(entry.hint)}</span></div>
-                        <button type="button" class="btn btn-outline btn-xs" data-action="import-external-mcp" data-agent="${agent.id}" data-name="${esc(entry.name)}">反向导入</button>
+                        <button type="button" class="btn btn-outline btn-xs" data-action="import-external-mcp" data-agent="${agent.id}" data-name="${esc(entry.name)}">Reverse import</button>
                       </div>
                     `,
                     )
@@ -2010,7 +2010,7 @@
                 </div>
                 <div class="panel-foot">
                   <span class="sub" style="font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(agent.mcpFile)}</span>
-                  <button type="button" class="btn btn-ghost btn-xs" style="margin-left:auto" data-action="open-agent-mcp-config" data-agent="${agent.id}">打开配置</button>
+                  <button type="button" class="btn btn-ghost btn-xs" style="margin-left:auto" data-action="open-agent-mcp-config" data-agent="${agent.id}">Open config</button>
                 </div>
               </section>
             `;
@@ -2029,11 +2029,11 @@
     return `
       <div class="banner" style="margin-bottom:12px">
         ${icon('zap')}
-        <span>从商店安装 MCP 会先展示完整配置与凭据字段；安装后只写入本机库，真实 Token 需要你填写并加密存储，仓库仍只同步 <code>${'${VAR}'}</code> 占位。</span>
+        <span>Installing an MCP from the store first shows the full config and credential fields. Installation only writes to the local library; you fill in real tokens, which are stored encrypted. The repo still syncs only the <code>${'${VAR}'}</code> placeholder.</span>
       </div>
       <div class="store-toolbar">
-        <div class="skills-head" style="margin:0">${icon('server')}<span>MCP 商店 <strong>${list.length}</strong> 个服务</span></div>
-        <div class="store-cats"><span class="chip active">全部</span></div>
+        <div class="skills-head" style="margin:0">${icon('server')}<span>MCP Store · <strong>${list.length}</strong> servers</span></div>
+        <div class="store-cats"><span class="chip active">All</span></div>
       </div>
       ${
         list.length
@@ -2046,15 +2046,15 @@
                       <span class="skill-emoji">${icon('server', 'icon-lg')}</span>
                       <div style="min-width:0;flex:1">
                         <div class="skill-name">${esc(item.name)}</div>
-                        <div class="skill-sub tabular">商店 · ${num(item.downloads)} 次安装</div>
+                        <div class="skill-sub tabular">Store · ${num(item.downloads)} installs</div>
                       </div>
                       <span class="badge badge-info badge-tight">${item.transport}</span>
                     </div>
                     <p class="skill-desc">${esc(item.description)}</p>
                     <div class="skill-foot">
-                      <span class="skill-folder">${icon('key', 'icon-xs')}<span>${item.envDocs.length ? `${item.envDocs.length} 个凭据字段` : '无需凭据'}</span></span>
+                      <span class="skill-folder">${icon('key', 'icon-xs')}<span>${item.envDocs.length ? `Credential fields: ${item.envDocs.length}` : 'No credentials needed'}</span></span>
                       <div class="right">
-                        <button type="button" class="btn btn-outline btn-xs" data-action="install-mcp-store" data-id="${item.id}">${icon('download', 'icon-xs')}安装</button>
+                        <button type="button" class="btn btn-outline btn-xs" data-action="install-mcp-store" data-id="${item.id}">${icon('download', 'icon-xs')}Install</button>
                       </div>
                     </div>
                   </article>
@@ -2062,7 +2062,7 @@
                 )
                 .join('')}
             </div>`
-          : emptyState({ iconName: 'search', title: '没有匹配的 MCP 服务', description: '换个关键词试试' })
+          : emptyState({ iconName: 'search', title: 'No matching MCP servers', description: 'Try another keyword' })
       }
     `;
   }
@@ -2080,12 +2080,12 @@
             <div style="display:flex;align-items:center;gap:7px">
               ${
                 hasError
-                  ? `<span class="badge badge-danger badge-tight">${icon('alert', 'icon-xs')}${errorCount} 个错误 · ${issues.length - errorCount} 个警告</span>`
+                  ? `<span class="badge badge-danger badge-tight">${icon('alert', 'icon-xs')}${errorCount} errors · ${issues.length - errorCount} warnings</span>`
                   : issues.length
-                    ? `<span class="badge badge-warning badge-tight">${icon('alert', 'icon-xs')}${issues.length} 个警告</span>`
-                    : `<span class="badge badge-success badge-tight">${icon('check', 'icon-xs')}全部通过</span>`
+                    ? `<span class="badge badge-warning badge-tight">${icon('alert', 'icon-xs')}${issues.length} warnings</span>`
+                    : `<span class="badge badge-success badge-tight">${icon('check', 'icon-xs')}All checks passed</span>`
               }
-              <span style="color:var(--muted-fg);font-size:9.5px">检查项：命令存在性 / URL 合法性 / 必填 env / 凭据格式</span>
+              <span style="color:var(--muted-fg);font-size:9.5px">Checks: command exists / valid URL / required env / credential format</span>
             </div>
             ${issues
               .map(
@@ -2097,13 +2097,13 @@
               `,
               )
               .join('')}
-            ${!issues.length ? '<p class="hint-text">未发现静态问题。真实产品还会在 PATH 中探测命令、对远端 URL 做连通性探测。</p>' : ''}
+            ${!issues.length ? '<p class="hint-text">No static issues found. The real product also probes commands on PATH and tests remote URL connectivity.</p>' : ''}
           </div>
         `
         : state.mcpTab === 'deploy'
           ? `
             <div style="display:flex;flex-direction:column;gap:6px">
-              <p class="hint-text" style="margin:0 0 3px">各平台配置文件中该服务的当前状态。真实产品基于 SHA-256 entry digest 识别「外部修改 / 双向冲突」。</p>
+              <p class="hint-text" style="margin:0 0 3px">Current status of this server in each platform config file. The real product uses a SHA-256 entry digest to detect external modifications and two-way conflicts.</p>
               ${D.mcpTargets
                 .map(
                   (target) => `
@@ -2112,8 +2112,8 @@
                     <div class="info"><strong>${esc(target.name)}</strong><span>${esc(target.file)}</span></div>
                     ${
                       server.installs[target.id]
-                        ? '<span class="badge badge-success badge-tight">已写入 · 本应用管理</span>'
-                        : '<span class="badge badge-outline badge-tight">未创建</span>'
+                        ? '<span class="badge badge-success badge-tight">Written · managed by this app</span>'
+                        : '<span class="badge badge-outline badge-tight">Not created</span>'
                     }
                   </div>
                 `,
@@ -2124,8 +2124,8 @@
           : `
             <div style="display:flex;flex-direction:column;gap:9px">
               <div style="display:flex;flex-wrap:wrap;gap:6px">
-                <button type="button" class="btn btn-outline btn-sm" data-action="copy-mcp-config" data-id="${server.id}">${icon('copy', 'icon-sm')}复制配置</button>
-                <button type="button" class="btn btn-outline btn-sm" data-action="edit-mcp" data-id="${server.id}">${icon('pencil', 'icon-sm')}JSON / 表单编辑</button>
+                <button type="button" class="btn btn-outline btn-sm" data-action="copy-mcp-config" data-id="${server.id}">${icon('copy', 'icon-sm')}Copy config</button>
+                <button type="button" class="btn btn-outline btn-sm" data-action="edit-mcp" data-id="${server.id}">${icon('pencil', 'icon-sm')}JSON / form editing</button>
               </div>
               <div class="code-panel">
                 <div class="code-panel-head">${icon('terminal')}${esc(server.repoPath)}</div>
@@ -2133,11 +2133,11 @@
               </div>
               <div class="note-strip">
                 ${icon('shield')}
-                <span>凭据字段（KEY / TOKEN / SECRET / PASSWORD / Authorization）以 AES-256-GCM 加密存于本机 SQLite，主密钥在系统钥匙串；界面回显一律 <code>[REDACTED]</code>，编辑时未改动的脱敏值沿用原值。</span>
+                <span>Credential fields (KEY / TOKEN / SECRET / PASSWORD / Authorization) are encrypted with AES-256-GCM in local SQLite, with the master key in the system keychain. The UI always shows <code>[REDACTED]</code>; unchanged redacted values keep their original value on edit.</span>
               </div>
               <div>
-                <label class="field-label" for="mcp-notes">个人备注（不产生版本）</label>
-                <textarea class="textarea" id="mcp-notes" rows="2" data-change="mcp-notes" data-id="${server.id}" placeholder="记录 Token 轮换时间、使用注意事项…">${esc(server.notes || '')}</textarea>
+                <label class="field-label" for="mcp-notes">Personal notes (no version created)</label>
+                <textarea class="textarea" id="mcp-notes" rows="2" data-change="mcp-notes" data-id="${server.id}" placeholder="Note token rotation dates and usage caveats…">${esc(server.notes || '')}</textarea>
               </div>
             </div>
           `;
@@ -2145,49 +2145,49 @@
     return `
       <div class="detail-header">
         <div class="detail-title-row">
-          <button type="button" class="mobile-back" data-action="close-mobile-detail" aria-label="返回列表">${icon('chevron-left', 'icon-lg')}</button>
+          <button type="button" class="mobile-back" data-action="close-mobile-detail" aria-label="Back to list">${icon('chevron-left', 'icon-lg')}</button>
           <div class="detail-title-main">
             <div class="detail-eyebrow">${icon('server')}MCP Server · ${esc(server.folder)}</div>
             <h2 class="detail-title">${esc(server.name)}
               <span class="badge badge-${server.transport === 'stdio' ? 'neutral' : 'info'} badge-tight">${server.transport}</span>
-              ${hasError ? `<span class="badge badge-danger badge-tight">${icon('alert', 'icon-xs')}健康检查 ${issues.length}</span>` : ''}
+              ${hasError ? `<span class="badge badge-danger badge-tight">${icon('alert', 'icon-xs')}Health ${issues.length}</span>` : ''}
             </h2>
             <p class="detail-desc">${esc(server.description)}</p>
           </div>
           <div class="detail-actions">
             <button type="button" class="btn btn-ghost btn-icon" data-action="toggle-mcp-favorite" data-id="${server.id}"
-              title="${server.favorite ? '取消收藏' : '收藏'}" aria-label="${server.favorite ? '取消收藏' : '收藏'}" aria-pressed="${server.favorite}">
+              title="${server.favorite ? 'Remove from favorites' : 'Favorite'}" aria-label="${server.favorite ? 'Remove from favorites' : 'Favorite'}" aria-pressed="${server.favorite}">
               ${icon('star', server.favorite ? 'star-fill' : '')}
             </button>
             <span class="divider"></span>
             <button type="button" class="btn btn-ghost btn-icon btn-ghost-danger" data-action="delete-mcp" data-id="${server.id}"
-              title="删除" aria-label="删除 MCP">${icon('trash')}</button>
+              title="Delete" aria-label="Delete MCP">${icon('trash')}</button>
           </div>
         </div>
         <div class="detail-chips">
           <span class="badge badge-neutral badge-tight">${icon('folder')}${esc(folderLabel(server.folder))}</span>
           <span class="badge badge-${server.source === 'manual' ? 'outline' : server.source === 'market' ? 'primary' : 'warning'} badge-tight">${
-            server.source === 'manual' ? '手动创建' : server.source === 'market' ? '来自商店' : '导入'
+            server.source === 'manual' ? 'Manual' : server.source === 'market' ? 'From store' : 'Imported'
           }</span>
           ${server.tags.map((tag) => `<span class="badge badge-primary badge-tight">#${esc(tag)}</span>`).join('')}
-          <span class="badge badge-${server.enabled ? 'success' : 'warning'} badge-tight">${server.enabled ? '已启用' : '已停用'}</span>
-          <span class="detail-updated">更新于 ${esc(server.updatedLabel)}</span>
+          <span class="badge badge-${server.enabled ? 'success' : 'warning'} badge-tight">${server.enabled ? 'Enabled' : 'Disabled'}</span>
+          <span class="detail-updated">Updated ${esc(server.updatedLabel)}</span>
         </div>
-        <div class="repo-path">${icon('git-branch')}<span>仓库文件</span><code>${esc(server.repoPath)}</code></div>
+        <div class="repo-path">${icon('git-branch')}<span>Repository file</span><code>${esc(server.repoPath)}</code></div>
         <div class="detail-buttons">
-          <button type="button" class="btn btn-primary" data-action="deploy-mcp" data-id="${server.id}" ${server.enabled ? '' : 'disabled title="已停用的服务禁止分发"'}>
-            ${icon('send')}应用到平台
+          <button type="button" class="btn btn-primary" data-action="deploy-mcp" data-id="${server.id}" ${server.enabled ? '' : 'disabled title="Disabled servers cannot be dispatched"'}>
+            ${icon('send')}Apply to platforms
           </button>
-          <button type="button" class="btn btn-outline" data-action="edit-mcp" data-id="${server.id}">${icon('pencil')}编辑</button>
-          <button type="button" class="btn btn-outline" data-action="mcp-versions" data-id="${server.id}">${icon('history')}版本（${server.version}）</button>
+          <button type="button" class="btn btn-outline" data-action="edit-mcp" data-id="${server.id}">${icon('pencil')}Edit</button>
+          <button type="button" class="btn btn-outline" data-action="mcp-versions" data-id="${server.id}">${icon('history')}Versions (${server.version})</button>
         </div>
       </div>
 
       <div class="mcp-tabs">
         ${[
-          ['config', '配置（脱敏）'],
-          ['health', `健康检查（${issues.length}）`],
-          ['deploy', `分发状态（${managed}/${D.mcpTargets.length}）`],
+          ['config', 'Config (redacted)'],
+          ['health', `Health (${issues.length})`],
+          ['deploy', `Dispatch (${managed}/${D.mcpTargets.length})`],
         ]
           .map(
             ([value, label]) => `<button type="button" class="mcp-tab ${state.mcpTab === value ? 'active' : ''}"
@@ -2224,10 +2224,10 @@
       <div class="subnav">
         ${tabsHtml(
           [
-            { value: 'overview', label: '概览' },
-            { value: 'changes', label: '变更', count: counts.incoming + counts.outgoing + counts.conflict },
-            { value: 'deploy', label: '分发', count: 5 },
-            { value: 'history', label: '历史' },
+            { value: 'overview', label: 'Overview' },
+            { value: 'changes', label: 'Changes', count: counts.incoming + counts.outgoing + counts.conflict },
+            { value: 'deploy', label: 'Dispatch', count: 5 },
+            { value: 'history', label: 'History' },
           ],
           state.syncTab,
           'set-sync-tab',
@@ -2235,7 +2235,7 @@
         <div class="subnav-right">
           ${icon('git-branch')}
           <span class="mono" style="font-size:9.5px">${D.repo.url} · ${D.repo.branch}</span>
-          <span class="badge badge-success badge-tight">已连接</span>
+          <span class="badge badge-success badge-tight">Connected</span>
         </div>
       </div>
     `;
@@ -2267,49 +2267,49 @@
                 <span class="badge badge-neutral badge-tight">${esc(repo.visibility)}</span>
                 <span class="badge badge-outline badge-tight">${icon('git-branch', 'icon-xs')}${esc(repo.branch)}</span>
               </div>
-              <p>已连接 · 上次 fetch ${esc(repo.lastFetch)} · 上次合入 ${esc(repo.lastSync)} · ${esc(repo.auth)}</p>
+              <p>Connected · Last fetch ${esc(repo.lastFetch)} · Last merge ${esc(repo.lastSync)} · ${esc(repo.auth)}</p>
               <div class="sync-hero-path">${esc(repo.localPath)}</div>
             </div>
             <div class="sync-hero-actions">
-              <button type="button" class="btn btn-outline btn-sm" data-action="sync-fetch">${icon('refresh', 'icon-sm')}立即 fetch</button>
-              <button type="button" class="btn btn-outline btn-sm" data-action="sync-push">${icon('arrow-up', 'icon-sm')}推送…</button>
-              <button type="button" class="btn btn-ghost btn-sm" data-action="sync-settings">${icon('sliders', 'icon-sm')}设置</button>
+              <button type="button" class="btn btn-outline btn-sm" data-action="sync-fetch">${icon('refresh', 'icon-sm')}Fetch now</button>
+              <button type="button" class="btn btn-outline btn-sm" data-action="sync-push">${icon('arrow-up', 'icon-sm')}Push…</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-action="sync-settings">${icon('sliders', 'icon-sm')}Settings</button>
             </div>
           </div>
           <div class="sync-hero-meta">
-            <span class="badge badge-info badge-tight">${icon('arrow-up', 'icon-xs')}领先远程 ${repo.ahead}</span>
-            <span class="badge badge-warning badge-tight">${icon('arrow-down', 'icon-xs')}落后远程 ${repo.behind}</span>
+            <span class="badge badge-info badge-tight">${icon('arrow-up', 'icon-xs')}Ahead of remote ${repo.ahead}</span>
+            <span class="badge badge-warning badge-tight">${icon('arrow-down', 'icon-xs')}Behind remote ${repo.behind}</span>
             <span>${esc(repo.pushMode)} · ${esc(repo.autoFetch)}</span>
           </div>
         </section>
 
         <section class="policy-grid">
           <article class="policy-card">
-            <div class="policy-top"><span class="policy-icon">${icon('grid')}</span><strong>Skills</strong><span class="badge badge-primary badge-tight">双向同步</span></div>
-            <p>按文件夹写入 skills/&lt;folder&gt;/&lt;skill&gt;/SKILL.md；脚本随仓库双向进出，拉取后审核再分发。</p>
-            <div class="policy-foot">2 待拉取 · 1 待推送</div>
+            <div class="policy-top"><span class="policy-icon">${icon('grid')}</span><strong>Skills</strong><span class="badge badge-primary badge-tight">Two-way sync</span></div>
+            <p>Writes skills/&lt;folder&gt;/&lt;skill&gt;/SKILL.md by folder; scripts travel both ways with the repo — review after pull, then dispatch.</p>
+            <div class="policy-foot">2 pending pull · 1 pending push</div>
           </article>
           <article class="policy-card">
-            <div class="policy-top"><span class="policy-icon">${icon('server')}</span><strong>MCP</strong><span class="badge badge-info badge-tight">模板双向 · 密钥本机</span></div>
-            <p>按文件夹写入 mcp/&lt;folder&gt;/&lt;name&gt;.json；仓库只存 ${'${VAR}'} 占位，真实 Token 留在本机钥匙串。</p>
-            <div class="policy-foot">1 项被安全策略阻断</div>
+            <div class="policy-top"><span class="policy-icon">${icon('server')}</span><strong>MCP</strong><span class="badge badge-info badge-tight">Templates two-way · Secrets local</span></div>
+            <p>Writes mcp/&lt;folder&gt;/&lt;name&gt;.json by folder; the repo stores only the ${'${VAR}'} placeholder, while real tokens stay in the local keychain.</p>
+            <div class="policy-foot">1 item blocked by security policy</div>
           </article>
           <article class="policy-card">
-            <div class="policy-top"><span class="policy-icon">${icon('message')}</span><strong>Prompts</strong><span class="badge badge-primary badge-tight">按 Prompt 参与</span></div>
-            <p>frontmatter 存元数据与变量定义，正文分 System / User；私密 Prompt 可逐条设为仅本机。</p>
-            <div class="policy-foot">5 条待处理 · 1 条仅本机</div>
+            <div class="policy-top"><span class="policy-icon">${icon('message')}</span><strong>Prompts</strong><span class="badge badge-primary badge-tight">Per-Prompt opt-in</span></div>
+            <p>Frontmatter holds metadata and variable definitions; content is split into System / User. Private Prompts can be set to local only individually.</p>
+            <div class="policy-foot">5 pending · 1 local only</div>
           </article>
           <article class="policy-card">
-            <div class="policy-top"><span class="policy-icon">${icon('file')}</span><strong>Agent 指令</strong><span class="badge badge-primary badge-tight">按契约参与</span></div>
-            <p>仓库存 canonical .contract.md；项目投影与「本机全局目录」分发分开确认，全局路径可逐项改写。</p>
-            <div class="policy-foot">4 条待处理 · 2 项阻断 · 1 条仅本机</div>
+            <div class="policy-top"><span class="policy-icon">${icon('file')}</span><strong>Agent Instructions</strong><span class="badge badge-primary badge-tight">Per-contract opt-in</span></div>
+            <p>The repo stores canonical .contract.md files; project projection and local global-directory dispatch are confirmed separately, and global paths can be overridden individually.</p>
+            <div class="policy-foot">4 pending · 2 blocked · 1 local only</div>
           </article>
         </section>
 
         <section class="panel">
           <div class="panel-head">
-            <h3>${icon('folder')}仓库目录结构 = 平台文件夹</h3>
-            <span class="badge badge-outline badge-tight">不使用平台也能直接浏览</span>
+            <h3>${icon('folder')}Repository structure = platform folders</h3>
+            <span class="badge badge-outline badge-tight">Browsable without the app</span>
           </div>
           <div class="panel-body">
             <div class="terminal">
@@ -2318,16 +2318,16 @@
                 <span style="margin-left:5px">tony/ai-assets</span>
                 <span>main · tree</span>
               </div>
-              <pre><span class="tok-folder">prompts/</span><span class="tok-file">编程/代码质量/review.prompt.md</span>
-<span class="tok-folder">instructions/</span><span class="tok-file">团队/前端/frontend.contract.md</span>
-<span class="tok-folder">skills/</span><span class="tok-file">开发流程/Git/commit-helper/SKILL.md</span>
-<span class="tok-folder">mcp/</span><span class="tok-file">开发/GitHub/github.json</span>
+              <pre><span class="tok-folder">prompts/</span><span class="tok-file">engineering/code-quality/review.prompt.md</span>
+<span class="tok-folder">instructions/</span><span class="tok-file">team/frontend/frontend.contract.md</span>
+<span class="tok-folder">skills/</span><span class="tok-file">dev-workflow/git/commit-helper/SKILL.md</span>
+<span class="tok-folder">mcp/</span><span class="tok-file">development/github/github.json</span>
 
-<span class="tok-dim"># 最后一级保持单文件约定</span>
-<span class="tok-green">Prompt</span>  一条一个 .prompt.md
-<span class="tok-green">指令</span>    一条一个 .contract.md
-<span class="tok-green">Skill</span>   一个技能一个目录
-<span class="tok-green">MCP</span>     一个 server 一个 .json</pre>
+<span class="tok-dim"># Leaf level holds one file per asset</span>
+<span class="tok-green">Prompt</span>  one .prompt.md each
+<span class="tok-green">Instruction</span>  one .contract.md each
+<span class="tok-green">Skill</span>   one directory per skill
+<span class="tok-green">MCP</span>     one .json per server</pre>
             </div>
           </div>
         </section>
@@ -2335,38 +2335,38 @@
         <button type="button" class="blocked-alert" data-action="sync-open-changes">
           ${icon('lock')}
           <span>
-            <strong>${counts.blocked} 项资产包含明文凭据，推送已被阻断</strong>
-            <p>前往「变更」处理 Prompt / 指令正文或 MCP env / headers 中的明文；真实值不会进入仓库。</p>
+            <strong>${counts.blocked} assets contain plaintext credentials; push is blocked</strong>
+            <p>Go to Changes to fix plaintext in Prompt / instruction bodies or MCP env / headers. Real values never enter the repo.</p>
           </span>
           ${icon('chevron-right')}
         </button>
 
         <section class="stat-grid">
           <button type="button" class="stat-card" data-action="sync-open-changes">
-            <div class="stat-top"><span class="stat-value info">${counts.incoming}</span><span class="label">待拉取</span>${icon('chevron-right', 'icon-xs chev')}</div>
-            <div class="stat-hint">含 1 条 Prompt · 2 条指令 · 合入前需确认</div>
+            <div class="stat-top"><span class="stat-value info">${counts.incoming}</span><span class="label">Pending pull</span>${icon('chevron-right', 'icon-xs chev')}</div>
+            <div class="stat-hint">Includes 1 Prompt · 2 instructions · Confirm before merging</div>
           </button>
           <button type="button" class="stat-card" data-action="sync-open-changes">
-            <div class="stat-top"><span class="stat-value warning">${counts.outgoing}</span><span class="label">待推送</span>${icon('chevron-right', 'icon-xs chev')}</div>
-            <div class="stat-hint">${counts.blocked} 项被阻断 · 本地改动待提交</div>
+            <div class="stat-top"><span class="stat-value warning">${counts.outgoing}</span><span class="label">Pending push</span>${icon('chevron-right', 'icon-xs chev')}</div>
+            <div class="stat-hint">${counts.blocked} blocked · Local changes awaiting commit</div>
           </button>
           <button type="button" class="stat-card" data-action="sync-open-changes">
-            <div class="stat-top"><span class="stat-value danger">${counts.conflict}</span><span class="label">冲突</span>${icon('chevron-right', 'icon-xs chev')}</div>
-            <div class="stat-hint">双方都改过，禁止静默覆盖</div>
+            <div class="stat-top"><span class="stat-value danger">${counts.conflict}</span><span class="label">Conflict</span>${icon('chevron-right', 'icon-xs chev')}</div>
+            <div class="stat-hint">Both sides changed; no silent overwrite</div>
           </button>
           <button type="button" class="stat-card" data-action="sync-open-deploy">
-            <div class="stat-top"><span class="stat-value primary">5</span><span class="label">分发待处理</span>${icon('chevron-right', 'icon-xs chev')}</div>
-            <div class="stat-hint">3 过时 · 2 漂移</div>
+            <div class="stat-top"><span class="stat-value primary">5</span><span class="label">Dispatch pending</span>${icon('chevron-right', 'icon-xs chev')}</div>
+            <div class="stat-hint">3 stale · 2 drifted</div>
           </button>
         </section>
 
         <section class="panel">
           <div class="panel-head">
-            <h3>${icon('grid')}本机 Agent</h3>
-            <span class="badge badge-success badge-tight">已检测 ${detected.length}</span>
-            <span class="sub">只向已安装的工具分发，避免制造空目录</span>
-            <button type="button" class="btn btn-ghost btn-sm" style="margin-left:auto" data-action="redetect-agents">${icon('refresh', 'icon-sm')}重新检测</button>
-            <button type="button" class="btn btn-outline btn-sm" data-action="sync-open-deploy">管理分发${icon('chevron-right', 'icon-sm')}</button>
+            <h3>${icon('grid')}Local agents</h3>
+            <span class="badge badge-success badge-tight">Detected ${detected.length}</span>
+            <span class="sub">Dispatch only to installed tools to avoid empty directories</span>
+            <button type="button" class="btn btn-ghost btn-sm" style="margin-left:auto" data-action="redetect-agents">${icon('refresh', 'icon-sm')}Re-detect</button>
+            <button type="button" class="btn btn-outline btn-sm" data-action="sync-open-deploy">Manage dispatch${icon('chevron-right', 'icon-sm')}</button>
           </div>
           <div class="panel-body">
             <div class="agent-grid">
@@ -2378,7 +2378,7 @@
                       <div class="name">${esc(agent.name)}</div>
                       <div class="path">${esc(agent.skillDir || agent.mcpFile)}</div>
                     </div>
-                    <span class="badge badge-${index === 1 || index === 3 ? 'warning' : 'success'} badge-tight">${index === 1 || index === 3 ? '1 待处理' : '正常'}</span>
+                    <span class="badge badge-${index === 1 || index === 3 ? 'warning' : 'success'} badge-tight">${index === 1 || index === 3 ? '1 pending' : 'Healthy'}</span>
                   </div>
                 `)
                 .join('')}
@@ -2388,8 +2388,8 @@
 
         <section class="panel">
           <div class="panel-head">
-            <h3>${icon('history')}最近同步</h3>
-            <button type="button" class="btn btn-ghost btn-sm" style="margin-left:auto" data-action="sync-open-history">全部历史${icon('chevron-right', 'icon-sm')}</button>
+            <h3>${icon('history')}Recent sync</h3>
+            <button type="button" class="btn btn-ghost btn-sm" style="margin-left:auto" data-action="sync-open-history">All history${icon('chevron-right', 'icon-sm')}</button>
           </div>
           <div class="panel-body">
             <div class="timeline">
@@ -2435,24 +2435,24 @@
       <div style="display:flex;flex-direction:column;gap:11px">
         <div class="banner">
           ${icon('shield')}
-          <span>仓库与本地库之间是三方合并：<b>远端（仓库）</b>、<b>本地（本机库）</b>、<b>基线（上次同步）</b>。任何一方单独修改都能自动前进；双方都改时进入「冲突」，禁止静默覆盖。</span>
+          <span>The repo and local library use a three-way merge: <b>remote (repo)</b>, <b>local (this machine's library)</b>, and <b>base (last sync)</b>. Changes on one side advance automatically; if both sides changed, it becomes a Conflict and is never silently overwritten.</span>
         </div>
 
         <div class="filter-bar">
           ${tabsHtml(
             [
-              { value: 'incoming', label: '待拉取', count: counts.incoming },
-              { value: 'outgoing', label: '待推送', count: counts.outgoing },
-              { value: 'conflict', label: '冲突', count: counts.conflict },
+              { value: 'incoming', label: 'Pending pull', count: counts.incoming },
+              { value: 'outgoing', label: 'Pending push', count: counts.outgoing },
+              { value: 'conflict', label: 'Conflict', count: counts.conflict },
             ],
             state.changesTab,
             'set-changes-tab',
           )}
           <div class="filter-pills">
             ${[
-              ['all', '全部'],
+              ['all', 'All'],
               ['prompt', 'Prompt'],
-              ['contract', '指令'],
+              ['contract', 'Instruction'],
               ['skill', 'Skill'],
               ['mcp', 'MCP'],
             ]
@@ -2465,19 +2465,19 @@
           <span style="color:var(--muted-fg);font-size:9.5px">
             ${
               state.changesTab === 'incoming'
-                ? 'Prompt 与 Agent 指令必须预览全文后逐条接受'
+                ? 'Prompts and Agent Instructions must be previewed in full and accepted one by one'
                 : state.changesTab === 'outgoing'
-                  ? '推送前会再次扫描正文与 MCP env / headers'
-                  : '可以选择采用仓库、保留本地，或手动合并后写入'
+                  ? 'Bodies and MCP env / headers are scanned again before push'
+                  : 'Choose the repo version, keep local, or merge manually before writing'
             }
           </span>
           <div style="margin-left:auto;display:flex;gap:5px">
             ${
               state.changesTab === 'incoming'
-                ? '<button type="button" class="btn btn-primary btn-sm" data-action="accept-low-risk">接受低风险变更</button>'
+                ? '<button type="button" class="btn btn-primary btn-sm" data-action="accept-low-risk">Accept low-risk changes</button>'
                 : state.changesTab === 'outgoing'
-                  ? '<button type="button" class="btn btn-primary btn-sm" data-action="sync-push">推送所选…</button>'
-                  : '<button type="button" class="btn btn-outline btn-sm" data-action="sync-open-history">查看历史</button>'
+                  ? '<button type="button" class="btn btn-primary btn-sm" data-action="sync-push">Push selected…</button>'
+                  : '<button type="button" class="btn btn-outline btn-sm" data-action="sync-open-history">View history</button>'
             }
           </div>
         </div>
@@ -2487,8 +2487,8 @@
             ? `<div class="change-list">${filtered.map((change) => renderChangeRow(change)).join('')}</div>`
             : `<div class="panel"><div class="empty" style="min-height:240px">
                 <span class="empty-icon">${icon(state.changesTab === 'conflict' ? 'check' : state.changesTab === 'incoming' ? 'arrow-down' : 'arrow-up')}</span>
-                <strong>${state.changesTab === 'incoming' ? '没有待拉取的变更' : state.changesTab === 'outgoing' ? '没有待推送的本地改动' : '没有冲突'}</strong>
-                <p>${state.changesTab === 'conflict' ? '同步状态良好；下次双方改动同一文件时会在这里提示。' : 'fetch 后新的远端差异会出现在这里。'}</p>
+                <strong>${state.changesTab === 'incoming' ? 'No incoming changes' : state.changesTab === 'outgoing' ? 'No outgoing local changes' : 'No conflicts'}</strong>
+                <p>${state.changesTab === 'conflict' ? 'Everything is in sync; the next time both sides change the same file it will show up here.' : 'New remote differences appear here after a fetch.'}</p>
               </div></div>`
         }
       </div>
@@ -2497,7 +2497,7 @@
 
   function renderChangeRow(change) {
     const assetIcon = { prompt: 'message', contract: 'file', skill: 'grid', mcp: 'server' }[change.kind];
-    const assetLabel = { prompt: 'Prompt', contract: '指令', skill: 'Skill', mcp: 'MCP' }[change.kind];
+    const assetLabel = { prompt: 'Prompt', contract: 'Instruction', skill: 'Skill', mcp: 'MCP' }[change.kind];
     const directionVariant =
       change.direction === 'incoming' ? 'info' : change.direction === 'outgoing' ? 'warning' : 'danger';
     return `
@@ -2508,11 +2508,11 @@
             <strong>${esc(change.assetName)}</strong>
             <span class="badge badge-neutral badge-tight">${assetLabel}</span>
             <span class="badge badge-${directionVariant} badge-tight">${
-              change.direction === 'incoming' ? '待拉取' : change.direction === 'outgoing' ? '待推送' : '冲突'
+              change.direction === 'incoming' ? 'Pending pull' : change.direction === 'outgoing' ? 'Pending push' : 'Conflict'
             }</span>
             <span class="badge badge-outline badge-tight">${esc(change.changeLabel)}</span>
             ${change.risk !== 'none' ? `<span class="badge badge-${change.risk === 'secrets' ? 'danger' : 'warning'} badge-tight">${icon(change.risk === 'secrets' ? 'lock' : 'alert', 'icon-xs')}${esc(change.riskLabel)}</span>` : ''}
-            ${change.blocked ? '<span class="badge badge-danger badge-tight">已阻止推送</span>' : ''}
+            ${change.blocked ? '<span class="badge badge-danger badge-tight">Push blocked</span>' : ''}
             <span class="version">${esc(change.versionLine)}</span>
           </div>
           <p>${esc(change.summary)}</p>
@@ -2527,14 +2527,14 @@
           ${
             change.direction === 'incoming'
               ? `<button type="button" class="btn btn-outline btn-sm" data-action="review-change" data-id="${change.id}">
-                  ${change.kind === 'prompt' || change.kind === 'contract' || change.risk !== 'none' ? '预览并接受' : '接受'}
+                  ${change.kind === 'prompt' || change.kind === 'contract' || change.risk !== 'none' ? 'Preview and accept' : 'Accept'}
                   ${icon('chevron-right', 'icon-sm')}
                 </button>`
               : change.direction === 'outgoing'
                 ? change.blocked
-                  ? `<button type="button" class="btn btn-danger btn-sm" data-action="secret-change" data-id="${change.id}">${icon('lock', 'icon-sm')}处理密钥</button>`
-                  : `<button type="button" class="btn btn-outline btn-sm" data-action="push-change" data-id="${change.id}">${icon('arrow-up', 'icon-sm')}推送</button>`
-                : `<button type="button" class="btn btn-danger btn-sm" data-action="conflict-change" data-id="${change.id}">${icon('alert', 'icon-sm')}解决冲突</button>`
+                  ? `<button type="button" class="btn btn-danger btn-sm" data-action="secret-change" data-id="${change.id}">${icon('lock', 'icon-sm')}Fix secrets</button>`
+                  : `<button type="button" class="btn btn-outline btn-sm" data-action="push-change" data-id="${change.id}">${icon('arrow-up', 'icon-sm')}Push</button>`
+                : `<button type="button" class="btn btn-danger btn-sm" data-action="conflict-change" data-id="${change.id}">${icon('alert', 'icon-sm')}Resolve conflict</button>`
           }
         </div>
       </article>
@@ -2575,13 +2575,13 @@
       <div style="display:flex;flex-direction:column;gap:11px">
         <div class="banner">
           ${icon('send')}
-          <span>分发层是<b>单向写出</b>：本地库 → 各 Agent 默认目录，不回写仓库。Agent 内被手工改过的文件标记为<b>漂移</b>，不会在批量同步中被覆盖；需要逐项确认。</span>
+          <span>The dispatch layer is <b>write-only</b>: local library → each Agent's default directory; it never writes back to the repo. Files edited manually inside an Agent are marked <b>Drifted</b>, are never overwritten by bulk sync, and require individual confirmation.</span>
         </div>
 
         <div class="filter-bar">
           <div class="filter-pills">
             ${[
-              ['all', '全部'],
+              ['all', 'All'],
               ['skill', 'Skills'],
               ['mcp', 'MCP'],
             ]
@@ -2591,16 +2591,16 @@
               )
               .join('')}
           </div>
-          <span style="color:var(--muted-fg);font-size:9.5px">已检测 ${agents.length} 个 Agent · 过时 3 · 漂移 2</span>
+          <span style="color:var(--muted-fg);font-size:9.5px">Detected ${agents.length} agents · 3 stale · 2 drifted</span>
           <div style="margin-left:auto;display:flex;gap:5px">
-            <button type="button" class="btn btn-outline btn-sm" data-action="redetect-agents">${icon('refresh', 'icon-sm')}重新检测</button>
-            <button type="button" class="btn btn-primary btn-sm" data-action="sync-all-stale">${icon('refresh', 'icon-sm')}同步全部过时（3）</button>
+            <button type="button" class="btn btn-outline btn-sm" data-action="redetect-agents">${icon('refresh', 'icon-sm')}Re-detect</button>
+            <button type="button" class="btn btn-primary btn-sm" data-action="sync-all-stale">${icon('refresh', 'icon-sm')}Sync all stale (3)</button>
           </div>
         </div>
 
         <div class="matrix-wrap">
           <table class="matrix">
-            <thead><tr><th>资产</th>${agents.map((agent) => `<th>${esc(agent.name)}<span class="path">${esc(agent.skillDir || agent.mcpFile)}</span></th>`).join('')}</tr></thead>
+            <thead><tr><th>Asset</th>${agents.map((agent) => `<th>${esc(agent.name)}<span class="path">${esc(agent.skillDir || agent.mcpFile)}</span></th>`).join('')}</tr></thead>
             <tbody>
               ${assets
                 .map((asset) => {
@@ -2612,9 +2612,9 @@
                     ${agents
                       .map((agent) => {
                         const supported = !(asset.kind === 'skill' && !agent.skillDir) && !(asset.kind === 'mcp' && !agent.mcpFile);
-                        if (!supported) return '<td><span style="color:var(--muted-fg-2);font-size:9px">不支持</span></td>';
+                        if (!supported) return '<td><span style="color:var(--muted-fg-2);font-size:9px">Unsupported</span></td>';
                         const status = deploymentStatus(asset, agent.id);
-                        const label = { synced: '已同步', stale: '过时', drifted: '漂移', missing: '未分发' }[status];
+                        const label = { synced: 'Synced', stale: 'Stale', drifted: 'Drifted', missing: 'Not dispatched' }[status];
                         return `<td><button type="button" class="deploy-pill ${status}" data-action="open-deploy-cell" data-asset-kind="${asset.kind}" data-asset-id="${asset.id}" data-agent-id="${agent.id}">
                           ${icon(status === 'stale' ? 'refresh' : status === 'drifted' ? 'alert' : status === 'synced' ? 'check' : 'plus')}${label}
                         </button></td>`;
@@ -2627,7 +2627,7 @@
           </table>
         </div>
 
-        <p class="hint-text">默认以 symlink 发布，库内编辑即时生效；文件系统不支持时回退 copy 并逐条提示。分发目标路径按工具规范生成，已停用的 MCP 不允许分发。</p>
+        <p class="hint-text">Published as symlinks by default, so library edits take effect immediately; falls back to copy with per-item notices when the file system does not support symlinks. Dispatch paths follow each tool's convention; disabled MCP servers cannot be dispatched.</p>
       </div>
     `;
   }
@@ -2637,13 +2637,13 @@
       <div style="display:flex;flex-direction:column;gap:11px">
         <div class="banner">
           ${icon('history')}
-          <span>所有 fetch、拉取、推送、冲突与分发都会留下可审计记录。真实产品把事件写入本机 SQLite，并保留每次写入的版本与目标路径。</span>
+          <span>Every fetch, pull, push, conflict, and dispatch leaves an auditable record. The real product writes events to local SQLite, retaining the version and target path of every write.</span>
         </div>
         <div class="panel">
           <div class="panel-head">
-            <h3>${icon('history')}同步历史</h3>
-            <span class="badge badge-outline badge-tight">${D.syncEvents.length} 条</span>
-            <span class="sub">最近 7 天</span>
+            <h3>${icon('history')}Sync history</h3>
+            <span class="badge badge-outline badge-tight">${D.syncEvents.length} events</span>
+            <span class="sub">Last 7 days</span>
           </div>
           <div class="panel-body">
             <div class="timeline">
@@ -2661,31 +2661,31 @@
 
   function renderSettings() {
     const sections = [
-      ['appearance', '外观'],
-      ['sync-policy', '同步策略'],
-      ['repo-layout', '仓库目录结构'],
-      ['global-dirs', 'Agent 全局目录'],
-      ['data', '数据'],
-      ['about', '关于'],
+      ['appearance', 'Appearance'],
+      ['sync-policy', 'Sync policy'],
+      ['repo-layout', 'Repository layout'],
+      ['global-dirs', 'Agent global directories'],
+      ['data', 'Data'],
+      ['about', 'About'],
     ];
     const themes = [
-      ['light', '亮色', '固定使用亮色主题', 'sun'],
-      ['dark', '暗色', '固定使用暗色主题', 'moon'],
-      ['system', '跟随系统', '随操作系统外观自动切换', 'monitor'],
+      ['light', 'Light', 'Always use the light theme', 'sun'],
+      ['dark', 'Dark', 'Always use the dark theme', 'moon'],
+      ['system', 'System', 'Follow the OS appearance', 'monitor'],
     ];
 
     return `
       <div class="content-scroll" style="height:100%">
         <div class="settings-layout">
           <aside class="settings-nav">
-            <div class="label">设置</div>
+            <div class="label">Settings</div>
             ${sections.map(([id, label]) => `<a href="#settings-${id}">${label}</a>`).join('')}
           </aside>
           <div class="settings-stack">
             <section class="settings-section" id="settings-appearance">
               <div class="settings-head">
                 <span class="settings-icon">${icon('sun')}</span>
-                <div><h2>外观</h2><p>主题立即生效并持久化到本机。</p></div>
+                <div><h2>Appearance</h2><p>The theme applies immediately and is saved on this machine.</p></div>
               </div>
               <div class="settings-body">
                 <div class="theme-grid">
@@ -2708,31 +2708,31 @@
             <section class="settings-section" id="settings-sync-policy">
               <div class="settings-head">
                 <span class="settings-icon">${icon('git-branch')}</span>
-                <div><h2>同步策略</h2><p>Git 仓库负责跨机器 / 跨团队共享；本机负责审核、投影与向各 Agent 分发。Prompt 与 Agent 指令默认跟随仓库策略，但每条都可以设为仅本机。</p></div>
+                <div><h2>Sync policy</h2><p>The Git repository handles cross-machine / cross-team sharing; this machine handles review, projection, and dispatch to each Agent. Prompts and Agent Instructions follow the repo policy by default, but each one can be set to local only.</p></div>
               </div>
               <div class="settings-body">
                 <dl class="kv-list">
-                  <div class="kv-row"><dt>Skills</dt><dd class="primary">双向同步 · 按文件夹映射目录</dd></div>
-                  <div class="kv-row"><dt>MCP</dt><dd class="info">一 server 一文件 · 密钥只存本机</dd></div>
-                  <div class="kv-row"><dt>Prompts</dt><dd class="info">按文件夹映射 · 可设为仅本机</dd></div>
-                  <div class="kv-row"><dt>Agent 指令</dt><dd class="info">仓库文件夹 + 项目投影 + 全局目录投影</dd></div>
+                  <div class="kv-row"><dt>Skills</dt><dd class="primary">Two-way sync · Directories mapped by folder</dd></div>
+                  <div class="kv-row"><dt>MCP</dt><dd class="info">One file per server · Secrets stored locally only</dd></div>
+                  <div class="kv-row"><dt>Prompts</dt><dd class="info">Mapped by folder · Can be local only</dd></div>
+                  <div class="kv-row"><dt>Agent Instructions</dt><dd class="info">Repo folders + project projection + global directory projection</dd></div>
                 </dl>
-                <p class="settings-note">仓库连接、拉取 / 推送、冲突解决与 Skill / MCP 分发统一在「同步」工作区完成；Agent 指令的投影与漂移在「Agent 指令」工作区完成。原型不会访问真实 Git 或文件系统。</p>
+                <p class="settings-note">Repository connection, pull / push, conflict resolution, and Skill / MCP dispatch all happen in the Sync workspace; Agent Instruction projection and drift are handled in the Agent Instructions workspace. The prototype never touches real Git or the file system.</p>
               </div>
             </section>
 
             <section class="settings-section" id="settings-repo-layout">
               <div class="settings-head">
                 <span class="settings-icon">${icon('folder')}</span>
-                <div><h2>仓库目录结构</h2><p>平台中的文件夹就是仓库目录；目录内可以继续建子文件夹，每个目录里保持单文件约定。</p></div>
+                <div><h2>Repository layout</h2><p>Folders in the app are repository directories; subfolders can nest further, and each directory keeps one file per asset.</p></div>
               </div>
               <div class="settings-body">
                 <div class="terminal">
                   <div class="terminal-head"><span class="terminal-dot red"></span><span class="terminal-dot amber"></span><span class="terminal-dot green"></span><span style="margin-left:5px">repository layout</span><span>v0.5</span></div>
-                  <pre><span class="tok-folder">prompts/</span><span class="tok-file">&lt;分类&gt;/&lt;子分类&gt;/&lt;slug&gt;.prompt.md</span>
-<span class="tok-folder">instructions/</span><span class="tok-file">&lt;分类&gt;/&lt;子分类&gt;/&lt;slug&gt;.contract.md</span>
-<span class="tok-folder">skills/</span><span class="tok-file">&lt;分类&gt;/&lt;skill-name&gt;/SKILL.md</span>
-<span class="tok-folder">mcp/</span><span class="tok-file">&lt;分类&gt;/&lt;server-name&gt;.json</span></pre>
+                  <pre><span class="tok-folder">prompts/</span><span class="tok-file">&lt;category&gt;/&lt;subcategory&gt;/&lt;slug&gt;.prompt.md</span>
+<span class="tok-folder">instructions/</span><span class="tok-file">&lt;category&gt;/&lt;subcategory&gt;/&lt;slug&gt;.contract.md</span>
+<span class="tok-folder">skills/</span><span class="tok-file">&lt;category&gt;/&lt;skill-name&gt;/SKILL.md</span>
+<span class="tok-folder">mcp/</span><span class="tok-file">&lt;category&gt;/&lt;server-name&gt;.json</span></pre>
                 </div>
               </div>
             </section>
@@ -2740,7 +2740,7 @@
             <section class="settings-section" id="settings-global-dirs">
               <div class="settings-head">
                 <span class="settings-icon">${icon('send')}</span>
-                <div><h2>Agent 全局目录</h2><p>Agent 指令可以单独投影到本机 Agent 的用户级目录；路径可在「Agent 指令 → 全局分发」中逐项修改。</p></div>
+                <div><h2>Agent global directories</h2><p>Agent Instructions can be projected separately into user-level directories of local Agents; paths can be changed individually in Agent Instructions → Global dispatch.</p></div>
               </div>
               <div class="settings-body">
                 ${D.globalTargets
@@ -2748,7 +2748,7 @@
                     (target) => `
                     <div class="global-dir-row">
                       <strong>${esc(target.agentName)}</strong>
-                      <span class="badge badge-neutral badge-tight">${target.pathMode === 'file' ? '单文件' : '独立文件'}</span>
+                      <span class="badge badge-neutral badge-tight">${target.pathMode === 'file' ? 'Single file' : 'Separate files'}</span>
                       <code>${esc(state.globalPaths[target.id])}</code>
                     </div>
                   `,
@@ -2760,11 +2760,11 @@
             <section class="settings-section" id="settings-data">
               <div class="settings-head">
                 <span class="settings-icon">${icon('database')}</span>
-                <div><h2>数据</h2><p>高保真原型的数据保存在浏览器内存，主题与视图偏好保存在 localStorage（键 pk_hifi_theme / pk_hifi_prompt_view）。</p></div>
+                <div><h2>Data</h2><p>High-fidelity prototype data lives in browser memory; theme and view preferences are stored in localStorage (keys pk_hifi_theme / pk_hifi_prompt_view).</p></div>
               </div>
               <div class="settings-body">
                 <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger-border)" data-action="reset-demo">
-                  ${icon('refresh', 'icon-sm')}重置演示数据
+                  ${icon('refresh', 'icon-sm')}Reset demo data
                 </button>
               </div>
             </section>
@@ -2772,11 +2772,11 @@
             <section class="settings-section" id="settings-about">
               <div class="settings-head">
                 <span class="settings-icon">${icon('sparkles')}</span>
-                <div><h2>关于</h2><p>Prompt Keeper 高保真原型 v0.5.0</p></div>
+                <div><h2>About</h2><p>Prompt Keeper high-fidelity prototype v0.5.0</p></div>
               </div>
               <div class="settings-body">
-                <p style="color:var(--muted-fg);font-size:10px;line-height:17px">在 PromptHub（AGPL-3.0）v0.6.2 的 Prompt / Skill / MCP 管理域之上，增加 Git 仓库双向同步、多 Agent 分发层与 Agent 指令契约；v0.5 把四类资产统一为「文件夹即仓库目录」，并为 Agent 指令增加可改写路径的本机全局目录分发。</p>
-                <p style="color:var(--muted-fg-2);font-size:9px;line-height:15px;margin-top:6px">本原型不含真实后端；Git 操作、投影、分发与 AI 响应均为模拟。交互设计依据 docs/interaction-design.md。</p>
+                <p style="color:var(--muted-fg);font-size:10px;line-height:17px">Builds on the Prompt / Skill / MCP management domain of PromptHub (AGPL-3.0) v0.6.2, adding two-way Git repository sync, a multi-Agent dispatch layer, and Agent Instruction contracts; v0.5 unifies the four asset types under "folders are repository directories" and adds overridable local global-directory dispatch for Agent Instructions.</p>
+                <p style="color:var(--muted-fg-2);font-size:9px;line-height:15px;margin-top:6px">This prototype has no real backend; Git operations, projections, dispatch, and AI responses are all simulated. Interaction design follows docs/interaction-design.md.</p>
               </div>
             </section>
           </div>
@@ -2818,7 +2818,7 @@
         <div class="modal ${size}" role="dialog" aria-modal="true" aria-label="${esc(title)}" tabindex="-1">
           <div class="modal-head">
             <div class="modal-head-main"><h2>${esc(title)}</h2>${subtitle ? `<p>${esc(subtitle)}</p>` : ''}</div>
-            <button type="button" class="modal-close" data-action="${closeAction}" aria-label="关闭">${icon('x', 'icon-sm')}</button>
+            <button type="button" class="modal-close" data-action="${closeAction}" aria-label="Close">${icon('x', 'icon-sm')}</button>
           </div>
           <div class="modal-body">${body}</div>
           ${footer ? `<div class="modal-foot">${footer}</div>` : ''}
@@ -2839,7 +2839,7 @@
         <div class="drawer" role="dialog" aria-modal="true" aria-label="${esc(title)}">
           <div class="drawer-head">
             <div class="modal-head-main"><h2>${esc(title)}</h2>${subtitle ? `<p>${esc(subtitle)}</p>` : ''}</div>
-            <button type="button" class="modal-close" data-action="close-modal" aria-label="关闭">${icon('x', 'icon-sm')}</button>
+            <button type="button" class="modal-close" data-action="close-modal" aria-label="Close">${icon('x', 'icon-sm')}</button>
           </div>
           <div class="drawer-body">${body}</div>
           <div class="drawer-foot">${footer}</div>
@@ -2874,44 +2874,44 @@
         <input type="hidden" name="id" value="${esc(model.id || '')}" />
         <div class="form-row">
           <div>
-            <label class="field-label" for="prompt-title">标题 *</label>
-            <input class="input" id="prompt-title" name="title" value="${esc(model.title)}" placeholder="例如：代码审查助手" required />
+            <label class="field-label" for="prompt-title">Title *</label>
+            <input class="input" id="prompt-title" name="title" value="${esc(model.title)}" placeholder="e.g. Code review assistant" required />
           </div>
           <div>
-            <label class="field-label" for="prompt-folder">文件夹</label>
-            <input class="input mono" id="prompt-folder" name="folder" value="${esc(model.folder || '')}" placeholder="编程/前端" list="prompt-folders" />
+            <label class="field-label" for="prompt-folder">Folder</label>
+            <input class="input mono" id="prompt-folder" name="folder" value="${esc(model.folder || '')}" placeholder="engineering/frontend" list="prompt-folders" />
             <datalist id="prompt-folders">${[...new Set(state.prompts.map((item) => item.folder).filter(Boolean))]
               .map((folder) => `<option value="${esc(folder)}"></option>`)
               .join('')}</datalist>
           </div>
         </div>
         <div>
-          <label class="field-label" for="prompt-description">描述</label>
-          <input class="input" id="prompt-description" name="description" value="${esc(model.description)}" placeholder="一句话说明用途与输出" />
+          <label class="field-label" for="prompt-description">Description</label>
+          <input class="input" id="prompt-description" name="description" value="${esc(model.description)}" placeholder="One sentence on purpose and output" />
         </div>
         <div>
           <label class="field-label" for="prompt-system">System Prompt</label>
-          <textarea class="textarea" id="prompt-system" name="system" rows="4" placeholder="定义角色、约束与输出格式…">${esc(model.system)}</textarea>
+          <textarea class="textarea" id="prompt-system" name="system" rows="4" placeholder="Define role, constraints, and output format…">${esc(model.system)}</textarea>
         </div>
         <div>
           <label class="field-label" for="prompt-user">User Prompt</label>
-          <textarea class="textarea" id="prompt-user" name="user" rows="4" placeholder="用 {{变量名}} 定义模板变量…">${esc(model.user)}</textarea>
+          <textarea class="textarea" id="prompt-user" name="user" rows="4" placeholder="Define template variables with {{variable_name}}…">${esc(model.user)}</textarea>
         </div>
         <div>
-          <label class="field-label" for="prompt-tags">标签（逗号分隔）</label>
-          <input class="input" id="prompt-tags" name="tags" value="${esc(model.tags.join(', '))}" placeholder="编程, 代码审查" />
+          <label class="field-label" for="prompt-tags">Tags (comma-separated)</label>
+          <input class="input" id="prompt-tags" name="tags" value="${esc(model.tags.join(', '))}" placeholder="Engineering, Code Review" />
         </div>
-        <p class="hint-text">文件夹会原样映射为仓库目录；保存后生成新版本并进入待推送。含明文凭据的正文会在推送前被阻断。</p>
+        <p class="hint-text">Folders map 1:1 to repository directories; saving creates a new version and marks it pending push. Bodies with plaintext credentials are blocked before push.</p>
       </form>
     `;
     openModal({
-      title: editing ? '编辑 Prompt' : '新建 Prompt',
-      subtitle: editing ? '保存后生成新版本，并在列表中标记待推送' : '用 {{变量名}} 定义模板变量，文件夹即仓库目录',
+      title: editing ? 'Edit Prompt' : 'New Prompt',
+      subtitle: editing ? 'Saving creates a new version and marks it pending push in the list' : 'Define template variables with {{variable_name}}; folders are repository directories',
       size: 'wide',
       body,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-        <button type="submit" form="prompt-form" class="btn btn-primary">${icon('check')}${editing ? '保存修改' : '创建 Prompt'}</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+        <button type="submit" form="prompt-form" class="btn btn-primary">${icon('check')}${editing ? 'Save changes' : 'Create Prompt'}</button>
       `,
     });
   }
@@ -2924,7 +2924,7 @@
         const id = `var-${variable.name}`;
         if (variable.type === 'textarea') {
           return `<div><label class="field-label" for="${id}">{{${esc(variable.name)}}}${variable.required ? ' *' : ''}</label>
-            <textarea class="textarea" id="${id}" name="${esc(variable.name)}" rows="3" placeholder="${esc(variable.label || '填写内容')}"></textarea></div>`;
+            <textarea class="textarea" id="${id}" name="${esc(variable.name)}" rows="3" placeholder="${esc(variable.label || 'Enter a value')}"></textarea></div>`;
         }
         if (variable.type === 'select') {
           return `<div><label class="field-label" for="${id}">{{${esc(variable.name)}}}</label>
@@ -2933,25 +2933,25 @@
               .join('')}</select>${icon('chevron-down')}</div></div>`;
         }
         return `<div><label class="field-label" for="${id}">{{${esc(variable.name)}}}${variable.required ? ' *' : ''}</label>
-          <input class="input" id="${id}" name="${esc(variable.name)}" value="${esc(variable.example || '')}" placeholder="例如：${esc(variable.example || '填写内容')}" /></div>`;
+          <input class="input" id="${id}" name="${esc(variable.name)}" value="${esc(variable.example || '')}" placeholder="e.g. ${esc(variable.example || 'Enter a value')}" /></div>`;
       })
       .join('');
 
     openModal({
-      title: `复制「${prompt.title}」`,
-      subtitle: '填写模板变量；值仅在本机临时使用，不写入仓库',
+      title: `Copy "${prompt.title}"`,
+      subtitle: 'Fill in template variables; values are used temporarily on this machine and never written to the repo',
       body: `<form class="form-grid" data-form="copy-variables" id="copy-form">${fields}</form>`,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-        <button type="submit" form="copy-form" class="btn btn-primary">${icon('copy')}复制到剪贴板</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+        <button type="submit" form="copy-form" class="btn btn-primary">${icon('copy')}Copy to clipboard</button>
       `,
     });
   }
 
   function openPromptVersions(prompt) {
     openModal({
-      title: `版本历史 — ${prompt.title}`,
-      subtitle: '恢复历史版本会另存当前内容为新版本，不会静默丢失修改',
+      title: `Version history — ${prompt.title}`,
+      subtitle: 'Restoring a historical version saves the current content as a new version, so changes are never lost silently',
       body: `
         <div>
           ${prompt.versions
@@ -2960,17 +2960,17 @@
               <div class="version-row ${version.current ? 'current' : ''}">
                 <span class="version-num">v${version.v}</span>
                 <div class="version-main">
-                  <strong>${version.current ? '当前版本' : '历史版本'} · ${esc(version.note)}</strong>
-                  <p>${esc(version.at)} · ${version.current ? '编辑于本机' : '可恢复'}</p>
+                  <strong>${version.current ? 'Current version' : 'Historical version'} · ${esc(version.note)}</strong>
+                  <p>${esc(version.at)} · ${version.current ? 'Edited locally' : 'Restorable'}</p>
                 </div>
-                ${version.current ? '<span class="badge badge-primary badge-tight">使用中</span>' : `<button type="button" class="btn btn-outline btn-xs" data-action="restore-prompt-version" data-id="${prompt.id}" data-version="${version.v}">恢复</button>`}
+                ${version.current ? '<span class="badge badge-primary badge-tight">In use</span>' : `<button type="button" class="btn btn-outline btn-xs" data-action="restore-prompt-version" data-id="${prompt.id}" data-version="${version.v}">Restore</button>`}
               </div>
             `,
             )
             .join('')}
         </div>
       `,
-      footer: '<button type="button" class="btn btn-primary" data-action="close-modal">完成</button>',
+      footer: '<button type="button" class="btn btn-primary" data-action="close-modal">Done</button>',
     });
   }
 
@@ -2982,7 +2982,7 @@
         const id = `test-${variable.name}`;
         if (variable.type === 'textarea') {
           return `<div class="test-field"><label for="${id}">{{${esc(variable.name)}}}<code>textarea</code></label>
-            <textarea class="textarea" id="${id}" name="${esc(variable.name)}" rows="3" placeholder="${esc(variable.label || '输入测试内容')}">function sum(items) { return items.reduce((a, b) => a + b, 0) }</textarea></div>`;
+            <textarea class="textarea" id="${id}" name="${esc(variable.name)}" rows="3" placeholder="${esc(variable.label || 'Enter test content')}">function sum(items) { return items.reduce((a, b) => a + b, 0) }</textarea></div>`;
         }
         if (variable.type === 'select') {
           return `<div class="test-field"><label for="${id}">{{${esc(variable.name)}}}<code>select</code></label>
@@ -2991,29 +2991,29 @@
               .join('')}</select>${icon('chevron-down')}</div></div>`;
         }
         return `<div class="test-field"><label for="${id}">{{${esc(variable.name)}}}<code>text</code></label>
-          <input class="input" id="${id}" name="${esc(variable.name)}" value="${esc(variable.example || '')}" placeholder="填写测试值" /></div>`;
+          <input class="input" id="${id}" name="${esc(variable.name)}" value="${esc(variable.example || '')}" placeholder="Enter a test value" /></div>`;
       })
       .join('');
 
     openDrawer({
-      title: `AI 测试 · ${prompt.title}`,
-      subtitle: '模拟运行：变量填值后按模板渲染，不会调用真实模型',
+      title: `AI test · ${prompt.title}`,
+      subtitle: 'Simulated run: renders the template with your values; no real model is called',
       body: `
         <form data-form="test-prompt" id="test-form">
           <div class="test-controls">
             <div class="test-field">
-              <label>测试模型</label>
+              <label>Test model</label>
               <div class="select"><select name="model"><option>GPT-5.2</option><option>Claude Sonnet 4.5</option><option>GLM-5.3 Flash</option><option>DeepSeek V4</option></select>${icon('chevron-down')}</div>
             </div>
-            ${fields || '<p class="hint-text">该 Prompt 没有模板变量，将直接使用完整正文测试。</p>'}
-            <button type="submit" class="btn btn-primary" style="margin-top:2px">${icon('play', 'icon-sm')}运行测试</button>
+            ${fields || '<p class="hint-text">This Prompt has no template variables; the full content will be used for the test.</p>'}
+            <button type="submit" class="btn btn-primary" style="margin-top:2px">${icon('play', 'icon-sm')}Run test</button>
           </div>
         </form>
         <div id="test-result-area">
-          <div class="note-strip" style="margin-top:12px">${icon('flask')}<span>运行后会在这里展示模拟输出、耗时与命中变量。真实产品会把渲染后的 Prompt 发送到所选模型。</span></div>
+          <div class="note-strip" style="margin-top:12px">${icon('flask')}<span>Simulated output, latency, and matched variables appear here after running. The real product sends the rendered Prompt to the selected model.</span></div>
         </div>
       `,
-      footer: '<button type="button" class="btn btn-outline" data-action="close-modal">关闭</button>',
+      footer: '<button type="button" class="btn btn-outline" data-action="close-modal">Close</button>',
     });
   }
 
@@ -3023,33 +3023,33 @@
 
   function openContractSync(contract) {
     openModal({
-      title: `同步范围 — ${contract.title}`,
-      subtitle: '仓库契约与本机库的能力边界',
+      title: `Sync scope — ${contract.title}`,
+      subtitle: 'Capability boundary between the repository contract and the local library',
       body: `
         <div class="form-grid">
           <div class="info-grid">
-            <div class="info-card"><div class="label">当前状态</div><div class="value">${statusBadge(contract.sync, contract.syncLabel)}</div></div>
-            <div class="info-card"><div class="label">仓库文件</div><div class="value mono">${esc(contract.repoPath)}</div></div>
+            <div class="info-card"><div class="label">Current status</div><div class="value">${statusBadge(contract.sync, contract.syncLabel)}</div></div>
+            <div class="info-card"><div class="label">Repository file</div><div class="value mono">${esc(contract.repoPath)}</div></div>
           </div>
           <div>
-            <span class="field-label">同步策略</span>
+            <span class="field-label">Sync policy</span>
             <div class="choice-grid">
               <button type="button" class="choice active">
                 ${icon('git-branch')}
-                <span><strong>跟随仓库策略</strong><p>从 instructions/ 目录双向同步；推送前扫描凭据。</p></span>
+                <span><strong>Follow repo policy</strong><p>Two-way sync from the instructions/ directory; credentials are scanned before push.</p></span>
               </button>
               <button type="button" class="choice">
                 ${icon('file')}
-                <span><strong>仅本机</strong><p>保留在本机库，不写入仓库；仍可项目投影与全局分发。</p></span>
+                <span><strong>Local only</strong><p>Keep in the local library without writing to the repo; project projection and global dispatch still work.</p></span>
               </button>
             </div>
           </div>
-          <div class="note-strip">${icon('shield')}<span>契约正文会进入 Agent 上下文。拉取、恢复与手动合并都必须逐条预览；推送前会扫描高置信度凭据。</span></div>
+          <div class="note-strip">${icon('shield')}<span>Contract body enters the Agent context. Pull, restore, and manual merges must be previewed item by item; high-confidence credentials are scanned before push.</span></div>
         </div>
       `,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-        <button type="button" class="btn btn-primary" data-action="save-contract-sync">保存同步范围</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+        <button type="button" class="btn btn-primary" data-action="save-contract-sync">Save sync scope</button>
       `,
     });
   }
@@ -3071,12 +3071,12 @@
           </div>
           ${
             installed
-              ? `<span class="badge badge-success badge-tight">已安装 · ${mode}</span>
-                 <button type="button" class="btn btn-ghost btn-xs btn-ghost-danger" data-action="remove-skill-platform" data-skill="${skill.id}" data-platform="${platform.id}">移除</button>`
+              ? `<span class="badge badge-success badge-tight">Installed · ${mode}</span>
+                 <button type="button" class="btn btn-ghost btn-xs btn-ghost-danger" data-action="remove-skill-platform" data-skill="${skill.id}" data-platform="${platform.id}">Remove</button>`
               : mode === 'external'
-                ? '<span class="badge badge-warning badge-tight">外部安装</span>'
-                : `<span class="badge badge-outline badge-tight">未安装</span>
-                   <button type="button" class="btn btn-outline btn-xs" data-action="install-skill-platform" data-skill="${skill.id}" data-platform="${platform.id}">安装</button>`
+                ? '<span class="badge badge-warning badge-tight">External install</span>'
+                : `<span class="badge badge-outline badge-tight">Not installed</span>
+                   <button type="button" class="btn btn-outline btn-xs" data-action="install-skill-platform" data-skill="${skill.id}" data-platform="${platform.id}">Install</button>`
           }
         </div>
       `;
@@ -3092,7 +3092,7 @@
     const content =
       state.skillModalTab === 'platforms'
         ? `<div style="display:flex;flex-direction:column;gap:6px">
-             <p class="hint-text" style="margin:0 0 3px">symlink 模式多工具共享同一份文件、改动即时同步；copy 模式各平台保留独立副本。</p>
+             <p class="hint-text" style="margin:0 0 3px">In symlink mode, multiple tools share one file and edits apply immediately; in copy mode each platform keeps its own copy.</p>
              ${skillPlatformRows(skill)}
            </div>`
         : `<div class="md">${md(skill.instructions)}</div>`;
@@ -3105,21 +3105,21 @@
         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:9px">
           <span class="badge badge-neutral badge-tight">${icon('folder')}${esc(folderLabel(skill.folder))}</span>
           ${sourceBadge(skill.source)}
-          <span class="badge badge-outline badge-tight">${installed}/${SKILL_PLATFORMS.length} 平台</span>
+          <span class="badge badge-outline badge-tight">${installed}/${SKILL_PLATFORMS.length} platforms</span>
           <code style="margin-left:auto;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:4px;background:var(--muted);padding:2px 6px;font-family:var(--font-mono);font-size:8.5px;color:var(--muted-fg)">${esc(skill.repoPath)}</code>
         </div>
         <div class="filter-pills" style="margin-bottom:9px">
-          <button type="button" class="${state.skillModalTab === 'content' ? 'active' : ''}" data-action="set-skill-modal-tab" data-value="content">指令内容（SKILL.md）</button>
-          <button type="button" class="${state.skillModalTab === 'platforms' ? 'active' : ''}" data-action="set-skill-modal-tab" data-value="platforms">分发平台（${installed}/${SKILL_PLATFORMS.length}）</button>
+          <button type="button" class="${state.skillModalTab === 'content' ? 'active' : ''}" data-action="set-skill-modal-tab" data-value="content">Content (SKILL.md)</button>
+          <button type="button" class="${state.skillModalTab === 'platforms' ? 'active' : ''}" data-action="set-skill-modal-tab" data-value="platforms">Platforms (${installed}/${SKILL_PLATFORMS.length})</button>
         </div>
         <div class="md-card" style="padding:12px 14px">${content}</div>
       `,
       footer: `
-        <span class="left" style="margin-right:auto;color:var(--muted-fg-2);font-size:9px">安装于 3 天前 · 保存编辑后进入待推送</span>
-        <button type="button" class="btn btn-outline btn-sm" data-action="toast-skill-edit">${icon('pencil', 'icon-sm')}编辑</button>
-        <button type="button" class="btn btn-ghost btn-sm btn-ghost-danger" data-action="toast-skill-delete">${icon('trash', 'icon-sm')}删除</button>
-        <button type="button" class="btn btn-outline btn-sm" data-action="toast-skill-versions">${icon('history', 'icon-sm')}版本</button>
-        <button type="button" class="btn btn-primary btn-sm" data-action="close-modal">完成</button>
+        <span class="left" style="margin-right:auto;color:var(--muted-fg-2);font-size:9px">Installed 3 days ago · Saving edits marks it pending push</span>
+        <button type="button" class="btn btn-outline btn-sm" data-action="toast-skill-edit">${icon('pencil', 'icon-sm')}Edit</button>
+        <button type="button" class="btn btn-ghost btn-sm btn-ghost-danger" data-action="toast-skill-delete">${icon('trash', 'icon-sm')}Delete</button>
+        <button type="button" class="btn btn-outline btn-sm" data-action="toast-skill-versions">${icon('history', 'icon-sm')}Versions</button>
+        <button type="button" class="btn btn-primary btn-sm" data-action="close-modal">Done</button>
       `,
     });
   }
@@ -3148,7 +3148,7 @@
     const totalSize = item.files.reduce((sum, file) => sum + parseFloat(file.size), 0).toFixed(1);
     const steps = `
       <div class="install-steps" style="margin-bottom:10px">
-        ${['审核内容', '选择平台', '安装结果']
+        ${['Review content', 'Choose platforms', 'Result']
           .map(
             (label, index) => `
             <span class="step ${step === index + 1 ? 'active' : ''} ${step > index + 1 ? 'done' : ''}">
@@ -3167,11 +3167,11 @@
     if (step === 1) {
       body = `
         ${steps}
-        <div class="banner" style="margin-bottom:9px">${icon('shield')}<span>安装前必须审核：以下内容将原样写入目标平台目录。</span></div>
+        <div class="banner" style="margin-bottom:9px">${icon('shield')}<span>Review before installing: the following content will be written verbatim into the target platform directories.</span></div>
         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:8px">
           <span class="badge badge-neutral badge-tight">v${esc(item.version)}</span>
-          <span class="badge badge-outline badge-tight">${item.files.length} 个文件</span>
-          <span class="badge badge-outline badge-tight">共 ${totalSize} KB</span>
+          <span class="badge badge-outline badge-tight">Files: ${item.files.length}</span>
+          <span class="badge badge-outline badge-tight">Total ${totalSize} KB</span>
         </div>
         <div class="panel" style="margin-bottom:9px">
           ${item.files
@@ -3181,15 +3181,15 @@
         <div class="md-card md" style="max-height:230px;overflow:auto">${md(item.instructions)}</div>
       `;
       footer = `
-        <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-        <button type="button" class="btn btn-primary" data-action="wizard-next">内容无问题，继续${icon('chevron-right', 'icon-sm')}</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+        <button type="button" class="btn btn-primary" data-action="wizard-next">Looks good, continue${icon('chevron-right', 'icon-sm')}</button>
       `;
     } else if (step === 2) {
       body = `
         ${steps}
         <div class="form-grid">
           <div>
-            <span class="field-label">目标平台（多选）</span>
+            <span class="field-label">Target platforms (multi-select)</span>
             <div style="display:flex;flex-wrap:wrap;gap:5px">
               ${SKILL_PLATFORMS.map(
                 (platform) => `
@@ -3202,11 +3202,11 @@
             </div>
           </div>
           <div>
-            <span class="field-label">安装模式</span>
+            <span class="field-label">Install mode</span>
             <div class="choice-grid">
               ${[
-                ['symlink', 'symlink（推荐）', '库内编辑即时生效，多工具共享同一份'],
-                ['copy', 'copy', '各平台独立副本，更新后需重新分发'],
+                ['symlink', 'symlink (recommended)', 'Library edits apply immediately; multiple tools share one file'],
+                ['copy', 'copy', 'Independent copy per platform; re-dispatch after updates'],
               ]
                 .map(
                   ([value, title, desc]) => `
@@ -3219,13 +3219,13 @@
                 .join('')}
             </div>
           </div>
-          <div class="note-strip">${icon('info')}<span>已选 ${wizard.platforms.length} 个平台；安装会写入各平台的技能目录，真实产品在 symlink 不受支持时回退 copy。</span></div>
+          <div class="note-strip">${icon('info')}<span>Platforms selected: ${wizard.platforms.length}; installation writes into each platform's skill directory. The real product falls back to copy when symlinks are unsupported.</span></div>
         </div>
       `;
       footer = `
-        <button type="button" class="btn btn-outline" data-action="wizard-back">返回审核</button>
+        <button type="button" class="btn btn-outline" data-action="wizard-back">Back to review</button>
         <button type="button" class="btn btn-primary" data-action="wizard-install" ${wizard.platforms.length && !wizard.installing ? '' : 'disabled'}>
-          ${wizard.installing ? '<span class="spinner"></span>安装中…' : `确认安装（${wizard.platforms.length} 个平台）`}
+          ${wizard.installing ? '<span class="spinner"></span>Installing…' : `Confirm install (${wizard.platforms.length})`}
         </button>
       `;
     } else {
@@ -3236,19 +3236,19 @@
             .map(
               (platformId) => {
                 const platform = SKILL_PLATFORMS.find((item) => item.id === platformId);
-                return `<div class="target-row"><span class="badge badge-success badge-tight">${icon('check', 'icon-xs')}</span><div class="info"><strong>${esc(platform.name)}</strong><span>${esc(platform.dir)}/${esc(item.name)}/</span></div><span class="badge badge-success badge-tight">已以 ${wizard.mode} 写入</span></div>`;
+                return `<div class="target-row"><span class="badge badge-success badge-tight">${icon('check', 'icon-xs')}</span><div class="info"><strong>${esc(platform.name)}</strong><span>${esc(platform.dir)}/${esc(item.name)}/</span></div><span class="badge badge-success badge-tight">Written via ${wizard.mode} written</span></div>`;
               },
             )
             .join('')}
         </div>
-        <p class="hint-text">安装完成后技能出现在「我的技能」；保存编辑会生成版本并进入待推送。</p>
+        <p class="hint-text">After installation the skill appears in My Skills; saving edits creates a version and marks it pending push.</p>
       `;
-      footer = '<button type="button" class="btn btn-primary" data-action="wizard-finish">完成</button>';
+      footer = '<button type="button" class="btn btn-primary" data-action="wizard-finish">Done</button>';
     }
 
     $('#overlay-root').innerHTML = modalShell({
-      title: `安装审核 — ${item.name}`,
-      subtitle: `第 ${step} 步 · ${['审核技能内容', '选择目标平台', '安装结果'][step - 1]}`,
+      title: `Install review — ${item.name}`,
+      subtitle: `Step ${step} · ${['Review skill content', 'Choose target platforms', 'Result'][step - 1]}`,
       size: 'wide',
       body,
       footer,
@@ -3281,8 +3281,8 @@
     };
 
     $('#overlay-root').innerHTML = modalShell({
-      title: `分发到 Agent 平台 — ${server.name}`,
-      subtitle: '应用会按平台规范改写其 MCP 配置文件；写入为原型模拟，不触碰真实文件',
+      title: `Dispatch to Agent platforms — ${server.name}`,
+      subtitle: 'The app rewrites each platform\'s MCP config file per its conventions; writes are simulated and never touch real files',
       size: 'wide',
       body: `
         <div style="display:flex;flex-direction:column;gap:6px">
@@ -3293,9 +3293,9 @@
                 const managed = !!server.installs[target.id];
                 return `
                   <div class="target-row" style="border-color:${selected ? 'color-mix(in oklab, var(--primary) 50%, var(--border))' : 'var(--border)'};background:${selected ? 'color-mix(in oklab, var(--primary-soft) 30%, var(--card))' : 'var(--card)'}">
-                    <button type="button" class="checkbox ${selected ? 'checked' : ''}" data-action="toggle-deploy-target" data-id="${target.id}" role="checkbox" aria-checked="${selected}" aria-label="选择 ${esc(target.name)}">${selected ? icon('check') : ''}</button>
+                    <button type="button" class="checkbox ${selected ? 'checked' : ''}" data-action="toggle-deploy-target" data-id="${target.id}" role="checkbox" aria-checked="${selected}" aria-label="Select ${esc(target.name)}">${selected ? icon('check') : ''}</button>
                     <div class="info"><strong>${esc(target.name)}</strong><span>${esc(target.file)}</span></div>
-                    ${managed ? '<span class="badge badge-success badge-tight">已由本应用管理</span>' : '<span class="badge badge-outline badge-tight">未创建</span>'}
+                    ${managed ? '<span class="badge badge-success badge-tight">Managed by this app</span>' : '<span class="badge badge-outline badge-tight">Not created</span>'}
                     <span class="badge badge-neutral badge-tight">${target.format}</span>
                   </div>
                 `;
@@ -3305,16 +3305,16 @@
         </div>
         <div style="margin-top:10px">
           <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
-            <span class="field-label" style="margin:0">写入预览 · ${esc(previewTarget.file)}</span>
+            <span class="field-label" style="margin:0">Write preview · ${esc(previewTarget.file)}</span>
             <span class="badge badge-outline badge-tight">${previewTarget.format}</span>
           </div>
-          <div class="code-panel"><div class="code-panel-head">${icon('lock')}凭据 [REDACTED]</div><pre>${esc(JSON.stringify(payload, null, 2))}</pre></div>
+          <div class="code-panel"><div class="code-panel-head">${icon('lock')}Credentials [REDACTED]</div><pre>${esc(JSON.stringify(payload, null, 2))}</pre></div>
         </div>
       `,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
         <button type="button" class="btn btn-primary" data-action="apply-mcp-deploy" ${state.deploySelected.size ? '' : 'disabled'}>
-          ${icon('send')}应用到所选（${state.deploySelected.size}）
+          ${icon('send')}Apply to selected (${state.deploySelected.size})
         </button>
       `,
     });
@@ -3330,7 +3330,7 @@
 
   function openReviewChange(change) {
     if (change.kind === 'prompt' && change.risk === 'none') {
-      // Prompt 必须逐条预览
+      // Prompts must be previewed individually
     }
     const instruction = change.kind === 'prompt' || change.kind === 'contract';
     const body = `
@@ -3338,42 +3338,42 @@
         ${icon(instruction ? 'eye' : 'shield')}
         <span>${
           instruction
-            ? `<b>${change.kind === 'prompt' ? 'Prompt' : 'Agent 指令'}必须逐条预览</b>：会影响后续 AI 输出或每次会话，接受后只写入本机库，不会自动分发。`
-            : '仓库内容会原样写入本机库；技能中的脚本可能被执行，请先读完。'
+            ? `<b>${change.kind === 'prompt' ? 'Prompt' : 'Agent Instructions'} must be previewed one by one</b>: it affects future AI output or every session. Accepting only writes to the local library; nothing is dispatched automatically.`
+            : 'Repository content is written verbatim into the local library; scripts inside skills may be executed, so read everything first.'
         }</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:8px">
-        <span class="badge badge-neutral badge-tight">${change.kind === 'prompt' ? 'Prompt' : change.kind === 'contract' ? '指令' : change.kind === 'skill' ? 'Skill' : 'MCP'}</span>
+        <span class="badge badge-neutral badge-tight">${change.kind === 'prompt' ? 'Prompt' : change.kind === 'contract' ? 'Instruction' : change.kind === 'skill' ? 'Skill' : 'MCP'}</span>
         <span class="badge badge-outline badge-tight">${esc(change.versionLine)}</span>
-        <span class="badge badge-outline badge-tight">1 个文件</span>
+        <span class="badge badge-outline badge-tight">1 file</span>
         <code style="overflow:hidden;max-width:100%;border-radius:4px;background:var(--muted);padding:2px 5px;font-family:var(--font-mono);font-size:8.5px;color:var(--muted-fg);text-overflow:ellipsis;white-space:nowrap">${esc(change.path)}</code>
       </div>
       <div class="code-panel" style="margin-bottom:9px">
-        <div class="code-panel-head">${icon('git-branch')}仓库相对本地的变更</div>
-        <pre><span class="tok-dim">--- 本地版本</span>
-<span class="tok-dim">+++ 仓库版本</span>
-- 本地当前：${esc(change.versionLine)}
-+ 仓库改动：${esc(change.summary)}
-<span class="tok-green">+ 已通过内容审核，可写入本机库</span></pre>
+        <div class="code-panel-head">${icon('git-branch')}Changes in the repo relative to local</div>
+        <pre><span class="tok-dim">--- Local version</span>
+<span class="tok-dim">+++ Repository version</span>
+- Local now: ${esc(change.versionLine)}
++ Repo change: ${esc(change.summary)}
+<span class="tok-green">+ Reviewed, safe to write to the local library</span></pre>
       </div>
       ${
         change.risk === 'scripts'
-          ? '<div class="health-card" style="margin-bottom:9px">' + icon('alert') + '<div><code>scripts/</code><p>该技能包含可执行脚本；接受后不会自动分发，仍需在分发时确认目标路径。</p></div></div>'
+          ? '<div class="health-card" style="margin-bottom:9px">' + icon('alert') + '<div><code>scripts/</code><p>This skill contains executable scripts. Accepting does not dispatch it; you still confirm the target path when dispatching.</p></div></div>'
           : ''
       }
       <label style="display:flex;align-items:flex-start;gap:7px;font-size:10px;line-height:15px;color:var(--fg-2)">
         <input type="checkbox" data-review-trust style="margin-top:2px;accent-color:var(--primary)" />
-        <span>我已预览全文，确认内容安全且不含我的私密信息</span>
+        <span>I have previewed the full content and confirm it is safe and contains no private information of mine</span>
       </label>
     `;
     openModal({
-      title: `预览并接受 — ${change.assetName}`,
-      subtitle: instruction ? '接受后只写入本机库，不会自动分发到 Agent' : '仓库内容会原样写入本机库',
+      title: `Preview and accept — ${change.assetName}`,
+      subtitle: instruction ? 'Accepting only writes to the local library; nothing is dispatched to Agents automatically' : 'Repository content is written verbatim into the local library',
       size: 'wide',
       body,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">拒绝</button>
-        <button type="button" class="btn btn-primary" data-action="accept-change" data-id="${change.id}" disabled>接受 ${change.kind === 'prompt' ? 'Prompt' : change.kind === 'contract' ? '指令' : '并写入本机'}</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Reject</button>
+        <button type="button" class="btn btn-primary" data-action="accept-change" data-id="${change.id}" disabled>Accept ${change.kind === 'prompt' ? 'Prompt' : change.kind === 'contract' ? 'Instruction' : 'and write locally'}</button>
       `,
     });
   }
@@ -3385,24 +3385,24 @@
       .split('/')
       .map((part) => part.trim())
       .filter(Boolean);
-    const remoteVersion = versionText[0]?.replace(/^仓库\s*/, '') || '—';
-    const localVersion = versionText[1]?.replace(/^本地\s*/, '') || '—';
-    const baseVersion = versionText[2]?.replace(/^基线\s*/, '') || '—';
+    const remoteVersion = versionText[0]?.replace(/^Repo\s*/, '') || '—';
+    const localVersion = versionText[1]?.replace(/^Local\s*/, '') || '—';
+    const baseVersion = versionText[2]?.replace(/^Base\s*/, '') || '—';
     openModal({
-      title: `解决冲突 — ${change.assetName}`,
-      subtitle: '仓库与本地都修改了同一个文件；禁止静默覆盖',
+      title: `Resolve conflict — ${change.assetName}`,
+      subtitle: 'Both the repo and local changed the same file; silent overwrite is never allowed',
       size: 'wide',
       body: `
         <div class="preview-summary" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:9px">
-          <div class="summary-card"><span class="num" style="background:var(--muted);color:var(--muted-fg)">${esc(baseVersion)}</span><div><div class="label">基线（上次同步）</div><div class="sub">三方合并的共同起点</div></div></div>
-          <div class="summary-card"><span class="num" style="background:var(--info-soft);color:var(--info)">${esc(remoteVersion)}</span><div><div class="label">仓库版本</div><div class="sub">远端文件的新改动</div></div></div>
-          <div class="summary-card"><span class="num" style="background:var(--warning-soft);color:var(--warning)">${esc(localVersion)}</span><div><div class="label">本地版本</div><div class="sub">本机库的新改动</div></div></div>
+          <div class="summary-card"><span class="num" style="background:var(--muted);color:var(--muted-fg)">${esc(baseVersion)}</span><div><div class="label">Base (last sync)</div><div class="sub">Common starting point of the three-way merge</div></div></div>
+          <div class="summary-card"><span class="num" style="background:var(--info-soft);color:var(--info)">${esc(remoteVersion)}</span><div><div class="label">Repository version</div><div class="sub">New changes in the remote file</div></div></div>
+          <div class="summary-card"><span class="num" style="background:var(--warning-soft);color:var(--warning)">${esc(localVersion)}</span><div><div class="label">Local version</div><div class="sub">New changes in the local library</div></div></div>
         </div>
         <div class="choice-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:9px">
           ${[
-            ['remote', '采用仓库', '丢弃本地改动，仓库成为新基线'],
-            ['local', '保留本地', '保留本地内容，合并结果进入待推送'],
-            ['manual', '手动合并', '逐段编辑，最安全但耗时'],
+            ['remote', 'Use repository', 'Discard local changes; the repo becomes the new base'],
+            ['local', 'Keep local', 'Keep local content; the merged result becomes pending push'],
+            ['manual', 'Merge manually', 'Edit section by section; safest but slowest'],
           ]
             .map(
               ([value, title, desc]) => `
@@ -3415,46 +3415,46 @@
             .join('')}
         </div>
         <div class="code-panel">
-          <div class="code-panel-head">${icon('git-branch')}三方改动对比</div>
-          <pre><span class="tok-dim">@@ 基线 ${esc(baseVersion)} → 仓库 ${esc(remoteVersion)} / 本地 ${esc(localVersion)} @@</span>
-+ 仓库版本：${esc(change.summary)}
-- 本地版本：保留本地对同一文件的修改
-<span class="tok-green">+ 手动合并时可以保留双方的有效改动</span>
-<span class="tok-dim"># 应用后写入本地库并生成新版本，随后可在「待推送」推回仓库</span></pre>
+          <div class="code-panel-head">${icon('git-branch')}Three-way diff</div>
+          <pre><span class="tok-dim">@@ Base ${esc(baseVersion)} → Repo ${esc(remoteVersion)} / Local ${esc(localVersion)} @@</span>
++ Repository version: ${esc(change.summary)}
+- Local version: keep the local edits to the same file
+<span class="tok-green">+ A manual merge can keep valid changes from both sides</span>
+<span class="tok-dim"># After applying, it writes to the local library as a new version; you can push it back from Pending push</span></pre>
         </div>
-        <p class="hint-text">选择「采用仓库」会丢弃本地改动；选择「保留本地」或「手动合并」会把结果加入待推送。</p>
+        <p class="hint-text">Choosing Use repository discards local changes; Keep local or Merge manually adds the result to Pending push.</p>
       `,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">稍后处理</button>
-        <button type="button" class="btn btn-primary" data-action="resolve-conflict" data-id="${change.id}">${icon('check')}应用并标记已解决</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Later</button>
+        <button type="button" class="btn btn-primary" data-action="resolve-conflict" data-id="${change.id}">${icon('check')}Apply and mark resolved</button>
       `,
     });
   }
 
   function openSecretChange(change) {
     openModal({
-      title: `明文凭据阻断推送 — ${change.assetName}`,
-      subtitle: `${change.kind === 'prompt' ? 'Prompt' : change.kind === 'mcp' ? 'MCP' : '资产'} · ${change.path}`,
+      title: `Plaintext credentials block push — ${change.assetName}`,
+      subtitle: `${change.kind === 'prompt' ? 'Prompt' : change.kind === 'mcp' ? 'MCP' : 'Asset'} · ${change.path}`,
       size: 'wide',
       body: `
-        <div class="health-card error" style="margin-bottom:9px">${icon('alert')}<div><p>检测到正文或 env / headers 中的疑似 Token。提交会把凭据永久写入 Git 历史，任何能读仓库的人都能看到。</p></div></div>
+        <div class="health-card error" style="margin-bottom:9px">${icon('alert')}<div><p>A likely token was found in the body or env / headers. Committing would write the credential permanently into Git history, visible to anyone who can read the repo.</p></div></div>
         <div class="code-panel" style="margin-bottom:9px">
-          <div class="code-panel-head">${icon('terminal')}检测到的明文片段</div>
+          <div class="code-panel-head">${icon('terminal')}Detected plaintext snippet</div>
           <pre><span class="tok-dim">userPrompt:</span>
-  "测试 Token：<span style="color:#ff9696">sk-live-8f3a2c9d4e5b6a71</span>"
+  "Test token: <span style="color:#ff9696">sk-live-8f3a2c9d4e5b6a71</span>"
 
-<span class="tok-dim"># 将替换为</span>
-  "测试 Token：<span class="tok-green">{{api_key}}</span>"</pre>
+<span class="tok-dim"># Will be replaced with</span>
+  "Test token: <span class="tok-green">{{api_key}}</span>"</pre>
         </div>
         <ul style="padding-left:18px;color:var(--muted-fg);font-size:10px;line-height:17px">
-          <li>正文中的原始 Token 会替换为 <code>{{api_key}}</code> 模板变量，变量定义随文件同步。</li>
-          <li>真实值不写入 Prompt / 版本快照或仓库；复制或投影时由你临时填写。</li>
-          <li>替换后可正常推送，本次提交仍会记录「曾发现明文」的审计事件。</li>
+          <li>The raw token in the body is replaced with the <code>{{api_key}}</code> template variable; its definition syncs with the file.</li>
+          <li>The real value is never written to the Prompt, version snapshots, or the repo; you fill it in temporarily when copying or projecting.</li>
+          <li>After replacement, push works normally; this commit still records an audit event that plaintext was found.</li>
         </ul>
       `,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-        <button type="button" class="btn btn-primary" data-action="fix-secret" data-id="${change.id}">${icon('lock')}替换为模板变量</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+        <button type="button" class="btn btn-primary" data-action="fix-secret" data-id="${change.id}">${icon('lock')}Replace with template variable</button>
       `,
     });
   }
@@ -3464,7 +3464,7 @@
       (change) => change.direction === 'outgoing' && !change.blocked,
     );
     openModal({
-      title: `推送到仓库 — ${rows.length} 项`,
+      title: `Push to repository — ${rows.length} items`,
       subtitle: `${D.repo.url} · ${D.repo.branch}`,
       size: 'wide',
       body: `
@@ -3476,29 +3476,29 @@
                 <div class="target-row">
                   ${icon(change.kind === 'prompt' ? 'message' : change.kind === 'contract' ? 'file' : change.kind === 'skill' ? 'grid' : 'server')}
                   <div class="info"><strong>${esc(change.assetName)}</strong><span>${esc(change.path)}</span></div>
-                  <span class="badge badge-warning badge-tight">待推送</span>
+                  <span class="badge badge-warning badge-tight">Pending push</span>
                 </div>
               `,
               )
               .join('')}
           </div>
           <div>
-            <label class="field-label" for="commit-message">提交信息 *</label>
+            <label class="field-label" for="commit-message">Commit message *</label>
             <input class="input" id="commit-message" value="chore: sync prompts, instructions, skills and MCP templates" />
           </div>
           <div>
-            <span class="field-label">推送方式</span>
+            <span class="field-label">Push mode</span>
             <div class="choice-grid">
-              <button type="button" class="choice active">${icon('git-branch')}<span><strong>独立分支 + PR（推荐）</strong><p>可评审、可回滚；不会直接改动主分支</p></span></button>
-              <button type="button" class="choice">${icon('arrow-up')}<span><strong>直接推送到当前分支</strong><p>适合个人仓库；失败不会改写远端</p></span></button>
+              <button type="button" class="choice active">${icon('git-branch')}<span><strong>Dedicated branch + PR (recommended)</strong><p>Reviewable and revertible; never touches the main branch directly</p></span></button>
+              <button type="button" class="choice">${icon('arrow-up')}<span><strong>Push directly to the current branch</strong><p>Fine for personal repos; a failure never rewrites the remote</p></span></button>
             </div>
           </div>
-          <div class="note-strip">${icon('lock')}<span>推送前会再次扫描 Prompt / 指令正文与 MCP env / headers；发现明文凭据会阻断整个提交。</span></div>
+          <div class="note-strip">${icon('lock')}<span>Bodies of Prompts / instructions and MCP env / headers are scanned again before push; any plaintext credential blocks the entire commit.</span></div>
         </div>
       `,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-        <button type="button" class="btn btn-primary" data-action="do-push">${icon('arrow-up')}推送 ${rows.length} 项</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+        <button type="button" class="btn btn-primary" data-action="do-push">${icon('arrow-up')}Push ${rows.length} items</button>
       `,
     });
   }
@@ -3536,38 +3536,38 @@
 
     openModal({
       title: `${asset.name} → ${agent.name}`,
-      subtitle: `${assetKind === 'skill' ? '技能' : 'MCP'} ${asset.version || ''} · 分发是单向写出，不修改仓库`,
+      subtitle: `${assetKind === 'skill' ? 'Skill' : 'MCP'} ${asset.version || ''} · Dispatch is write-only and never modifies the repo`,
       size: 'wide',
       body: `
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-          ${statusBadge(status, { synced: '已同步', stale: '过时', drifted: '漂移', missing: '未分发' }[status])}
+          ${statusBadge(status, { synced: 'Synced', stale: 'Stale', drifted: 'Drifted', missing: 'Not dispatched' }[status])}
           <span style="color:var(--muted-fg);font-size:9.5px">${
             deployment
-              ? `当前 ${deployment.version} · 部署于 ${deployment.at}`
-              : '该 Agent 目录中还没有此资产'
+              ? `Currently ${deployment.version} · deployed ${deployment.at}`
+              : 'This asset is not in the Agent directory yet'
           }</span>
         </div>
-        <div class="info-card" style="margin-bottom:8px"><div class="label">目标路径</div><div class="value mono">${esc(targetPath)}</div></div>
+        <div class="info-card" style="margin-bottom:8px"><div class="label">Target path</div><div class="value mono">${esc(targetPath)}</div></div>
         ${
           deployment?.note
             ? `<div class="health-card" style="margin-bottom:8px">${icon('alert')}<div><p>${esc(deployment.note)}</p></div></div>`
             : ''
         }
-        <span class="field-label">安装模式</span>
+        <span class="field-label">Install mode</span>
         <div class="choice-grid" style="margin-bottom:8px">
-          <button type="button" class="choice active">${icon('link')}<span><strong>symlink（推荐）</strong><p>库内编辑即时生效，多工具共享同一份</p></span></button>
-          <button type="button" class="choice">${icon('copy')}<span><strong>copy</strong><p>各 Agent 独立副本，更新后需重新分发</p></span></button>
+          <button type="button" class="choice active">${icon('link')}<span><strong>symlink (recommended)</strong><p>Library edits apply immediately; multiple tools share one file</p></span></button>
+          <button type="button" class="choice">${icon('copy')}<span><strong>copy</strong><p>Independent copy per Agent; re-dispatch after updates</p></span></button>
         </div>
         ${
           preview
-            ? `<div class="code-panel"><div class="code-panel-head">${icon('lock')}写入内容预览 · 凭据 [REDACTED]</div><pre>${esc(preview)}</pre></div>`
-            : `<div class="note-strip">${icon('folder')}<span>目标目录：<code>${esc(targetPath)}</code></span></div>`
+            ? `<div class="code-panel"><div class="code-panel-head">${icon('lock')}Write preview · credentials [REDACTED]</div><pre>${esc(preview)}</pre></div>`
+            : `<div class="note-strip">${icon('folder')}<span>Target directory: <code>${esc(targetPath)}</code></span></div>`
         }
       `,
       footer: `
-        <button type="button" class="btn btn-ghost btn-ghost-danger left" data-action="remove-deploy">${icon('trash')}移除分发</button>
-        <button type="button" class="btn btn-outline" data-action="close-modal">关闭</button>
-        <button type="button" class="btn btn-primary" data-action="sync-deploy-cell">${icon('send')}${deployment ? '重新同步' : '分发到此 Agent'}</button>
+        <button type="button" class="btn btn-ghost btn-ghost-danger left" data-action="remove-deploy">${icon('trash')}Remove dispatch</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Close</button>
+        <button type="button" class="btn btn-primary" data-action="sync-deploy-cell">${icon('send')}${deployment ? 'Re-sync' : 'Dispatch to this Agent'}</button>
       `,
     });
   }
@@ -3579,19 +3579,19 @@
   function openPlatformPreview(item) {
     openModal({
       title: item.title,
-      subtitle: `${item.author} · ${item.category} · 使用 ${num(item.uses)} 次`,
+      subtitle: `${item.author} · ${item.category} · used ${num(item.uses)}×`,
       size: 'wide',
       body: `
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px">
           ${item.tags.map((tag) => `<span class="badge badge-primary badge-tight">#${esc(tag)}</span>`).join('')}
-          <span class="badge badge-outline badge-tight">更新于 ${esc(item.updatedLabel)}</span>
+          <span class="badge badge-outline badge-tight">Updated ${esc(item.updatedLabel)}</span>
         </div>
-        <div class="md-card md">${md(item.preview + '\n\n## 输出结构\n- 先给结论与建议\n- 再列证据与风险\n- 最后给出下一步动作')}</div>
+        <div class="md-card md">${md(item.preview + '\n\n## Output structure\n- Lead with conclusions and recommendations\n- Then list evidence and risks\n- Finish with next actions')}</div>
       `,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">关闭</button>
-        <button type="button" class="btn btn-outline" data-action="copy-platform-prompt" data-id="${item.id}">${icon('copy')}复制</button>
-        <button type="button" class="btn btn-primary" data-action="save-platform-prompt" data-id="${item.id}">保存到我的 Prompt</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Close</button>
+        <button type="button" class="btn btn-outline" data-action="copy-platform-prompt" data-id="${item.id}">${icon('copy')}Copy</button>
+        <button type="button" class="btn btn-primary" data-action="save-platform-prompt" data-id="${item.id}">Save to My Prompts</button>
       `,
     });
   }
@@ -3600,7 +3600,7 @@
     const targets = D.globalTargets.filter((target) => state.selectedGlobalTargets.has(target.id));
     const contracts = state.contracts.filter((contract) => state.selectedGlobalContracts.has(contract.id));
     if (!targets.length || !contracts.length) {
-      toast('请先选择指令与全局目录', { tone: 'warning' });
+      toast('Select instructions and global directories first', { tone: 'warning' });
       return;
     }
     const files = targets.map((target) => {
@@ -3615,53 +3615,53 @@
       };
     });
     openModal({
-      title: '全局目录写入预览',
-      subtitle: '只显示即将写入本机 Agent 目录的文件；真实写入前还会检查路径与漂移',
+      title: 'Global directory write preview',
+      subtitle: 'Shows only the files about to be written into local Agent directories; real writes also check paths and drift',
       size: 'wide',
       body: files
         .map(
           (file) => `
           <div class="compiled-file" style="margin-bottom:8px">
-            <div class="compiled-head">${icon('file')}<span style="font-size:9px;font-weight:550">${esc(file.target.label)}</span><span class="badge badge-outline badge-tight">${file.target.pathMode === 'file' ? '合并文件' : '独立文件'}</span><code style="margin-left:auto">${esc(file.path)}</code></div>
+            <div class="compiled-head">${icon('file')}<span style="font-size:9px;font-weight:550">${esc(file.target.label)}</span><span class="badge badge-outline badge-tight">${file.target.pathMode === 'file' ? 'Merged file' : 'Separate file'}</span><code style="margin-left:auto">${esc(file.path)}</code></div>
             <pre>${esc(`<!-- pk:begin · managed by Prompt Keeper -->\n${file.body}\n<!-- pk:end -->`)}</pre>
           </div>
         `,
         )
         .join(''),
-      footer: '<button type="button" class="btn btn-outline" data-action="close-modal">关闭</button>',
+      footer: '<button type="button" class="btn btn-outline" data-action="close-modal">Close</button>',
     });
   }
 
   function openMcpStoreInstall(item) {
     openModal({
-      title: `安装 MCP — ${item.name}`,
-      subtitle: '安装前审核配置、启动命令与凭据字段；安装后只写入本机库',
+      title: `Install MCP — ${item.name}`,
+      subtitle: 'Review config, launch command, and credential fields before installing; installation only writes to the local library',
       size: 'wide',
       body: `
-        <div class="banner" style="margin-bottom:9px">${icon('shield')}<span>安装不会立即写入任何 Agent 配置；需要额外执行「应用到平台」，并在写入前确认目标路径。</span></div>
+        <div class="banner" style="margin-bottom:9px">${icon('shield')}<span>Installing does not write any Agent config immediately; you must additionally run Apply to platforms and confirm the target path before writing.</span></div>
         <div class="form-grid">
           <div class="info-grid">
-            <div class="info-card"><div class="label">传输方式</div><div class="value">${esc(item.transport)}</div></div>
-            <div class="info-card"><div class="label">安装量</div><div class="value tabular">${num(item.downloads)} 次</div></div>
+            <div class="info-card"><div class="label">Transport</div><div class="value">${esc(item.transport)}</div></div>
+            <div class="info-card"><div class="label">Installs</div><div class="value tabular">${num(item.downloads)} times</div></div>
           </div>
           <div>
-            <span class="field-label">功能说明</span>
+            <span class="field-label">What it does</span>
             <p style="color:var(--muted-fg);font-size:10px;line-height:17px">${esc(item.whatItDoes)}</p>
           </div>
           <div>
-            <span class="field-label">适用场景</span>
+            <span class="field-label">Use cases</span>
             <div class="var-list">
               ${item.useCases.map((useCase) => `<span class="var-chip" style="font-family:var(--font-sans)">${esc(useCase)}</span>`).join('')}
             </div>
           </div>
           <div>
-            <span class="field-label">安装命令</span>
+            <span class="field-label">Install command</span>
             <div class="code-panel"><div class="code-panel-head">${icon('terminal')}terminal</div><pre>${esc(item.installCommand)}</pre></div>
           </div>
           ${
             item.envDocs.length
               ? `<div>
-                  <span class="field-label">凭据字段（安装后填写）</span>
+                  <span class="field-label">Credential fields (fill in after install)</span>
                   <div style="display:flex;flex-direction:column;gap:5px">
                     ${item.envDocs
                       .map(
@@ -3669,39 +3669,39 @@
                         <div class="target-row">
                           ${icon('key')}
                           <div class="info"><strong>${esc(doc.key)}</strong><span>${esc(doc.desc)}</span></div>
-                          <span class="badge badge-warning badge-tight">必填</span>
+                          <span class="badge badge-warning badge-tight">Required</span>
                         </div>
                       `,
                       )
                       .join('')}
                   </div>
                 </div>`
-              : '<div class="note-strip">' + icon('check') + '<span>该 MCP 不需要额外凭据。</span></div>'
+              : '<div class="note-strip">' + icon('check') + '<span>This MCP needs no additional credentials.</span></div>'
           }
-          <div class="note-strip">${icon('lock')}<span>仓库只同步 <code>${'${VAR}'}</code> 占位；真实值用 AES-256-GCM 加密存在本机钥匙串，不进入版本快照。</span></div>
+          <div class="note-strip">${icon('lock')}<span>The repo syncs only the <code>${'${VAR}'}</code> placeholder; real values are stored with AES-256-GCM encryption in the local keychain and never enter version snapshots.</span></div>
         </div>
       `,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-        <button type="button" class="btn btn-primary" data-action="confirm-install-mcp-store" data-id="${item.id}">${icon('download')}安装到我的库</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+        <button type="button" class="btn btn-primary" data-action="confirm-install-mcp-store" data-id="${item.id}">${icon('download')}Install to My Library</button>
       `,
     });
   }
 
   function openExternalMcpImport(agent, name) {
     openModal({
-      title: `反向导入 — ${name}`,
-      subtitle: `${agent.name} · 从 Agent 配置读取的外部 MCP 条目`,
+      title: `Reverse import — ${name}`,
+      subtitle: `${agent.name} · External MCP entry read from the Agent config`,
       size: 'wide',
       body: `
         <div class="form-grid">
           <div class="info-grid">
-            <div class="info-card"><div class="label">来源</div><div class="value mono">${esc(agent.mcpFile)}</div></div>
-            <div class="info-card"><div class="label">当前归属</div><div class="value">外部安装 · 未纳入我的库</div></div>
+            <div class="info-card"><div class="label">Source</div><div class="value mono">${esc(agent.mcpFile)}</div></div>
+            <div class="info-card"><div class="label">Ownership</div><div class="value">External install · not in My Library</div></div>
           </div>
-          <div class="note-strip">${icon('info')}<span>反向导入只读取配置条目并复制到本机库，不会修改原 Agent 文件。导入后可生成版本、参与仓库模板同步，但真实凭据不会随导入复制。</span></div>
+          <div class="note-strip">${icon('info')}<span>Reverse import only reads the config entry and copies it into the local library; the original Agent file is untouched. After import it gains versions and repository template sync, but real credentials are never copied.</span></div>
           <div>
-            <span class="field-label">导入后的配置（脱敏）</span>
+            <span class="field-label">Config after import (redacted)</span>
             <div class="code-panel"><div class="code-panel-head">${icon('terminal')}mcp / ${esc(name)}</div><pre>${esc(
               JSON.stringify(
                 {
@@ -3717,48 +3717,48 @@
         </div>
       `,
       footer: `
-        <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-        <button type="button" class="btn btn-primary" data-action="confirm-import-external-mcp" data-agent="${agent.id}" data-name="${esc(name)}">导入到我的库</button>
+        <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+        <button type="button" class="btn btn-primary" data-action="confirm-import-external-mcp" data-agent="${agent.id}" data-name="${esc(name)}">Import to My Library</button>
       `,
     });
   }
 
   function openRepoSettings() {
     openModal({
-      title: '仓库设置',
+      title: 'Repository settings',
       subtitle: 'tony/ai-assets · main',
       size: 'wide',
       body: `
         <div class="form-grid">
           <div class="info-grid">
-            <div class="info-card"><div class="label">Provider</div><div class="value">GitHub · 私有仓库</div></div>
-            <div class="info-card"><div class="label">认证</div><div class="value">${esc(D.repo.auth)}</div></div>
-            <div class="info-card"><div class="label">自动 fetch</div><div class="value">${esc(D.repo.autoFetch)}</div></div>
-            <div class="info-card"><div class="label">推送方式</div><div class="value">${esc(D.repo.pushMode)}</div></div>
+            <div class="info-card"><div class="label">Provider</div><div class="value">GitHub · Private repo</div></div>
+            <div class="info-card"><div class="label">Authentication</div><div class="value">${esc(D.repo.auth)}</div></div>
+            <div class="info-card"><div class="label">Auto fetch</div><div class="value">${esc(D.repo.autoFetch)}</div></div>
+            <div class="info-card"><div class="label">Push mode</div><div class="value">${esc(D.repo.pushMode)}</div></div>
           </div>
-          <div class="info-card"><div class="label">本机克隆路径</div><div class="value mono">${esc(D.repo.localPath)}</div><div class="hint">真实产品为应用托管目录，不写入用户项目仓库。</div></div>
-          <div class="note-strip">${icon('shield')}<span>仓库只存储四类资产与模板；真实密钥、全局目录路径与分发状态只保留在本机。</span></div>
+          <div class="info-card"><div class="label">Local clone path</div><div class="value mono">${esc(D.repo.localPath)}</div><div class="hint">The real product uses an app-managed directory, not the user's project repo.</div></div>
+          <div class="note-strip">${icon('shield')}<span>The repo stores only the four asset types and templates; real secrets, global directory paths, and dispatch state stay on this machine.</span></div>
         </div>
       `,
-      footer: '<button type="button" class="btn btn-primary" data-action="close-modal">完成</button>',
+      footer: '<button type="button" class="btn btn-primary" data-action="close-modal">Done</button>',
     });
   }
 
   function openDeployModalForNew(assetId) {
     const agent = D.agents.find((item) => item.id === 'claude');
     openModal({
-      title: `分发给 ${agent.name}`,
-      subtitle: '选择安装模式；分发是单向写出',
+      title: `Dispatch to ${agent.name}`,
+      subtitle: 'Choose an install mode; dispatch is write-only',
       body: `
         <div class="form-grid">
-          <div class="info-card"><div class="label">目标路径</div><div class="value mono">${esc(agent.skillDir)}/${esc(assetId)}/</div></div>
+          <div class="info-card"><div class="label">Target path</div><div class="value mono">${esc(agent.skillDir)}/${esc(assetId)}/</div></div>
           <div class="choice-grid">
-            <button type="button" class="choice active">${icon('link')}<span><strong>symlink（推荐）</strong><p>库内编辑即时生效</p></span></button>
-            <button type="button" class="choice">${icon('copy')}<span><strong>copy</strong><p>独立副本，更新后需重新分发</p></span></button>
+            <button type="button" class="choice active">${icon('link')}<span><strong>symlink (recommended)</strong><p>Library edits apply immediately</p></span></button>
+            <button type="button" class="choice">${icon('copy')}<span><strong>copy</strong><p>Independent copy; re-dispatch after updates</p></span></button>
           </div>
         </div>
       `,
-      footer: '<button type="button" class="btn btn-outline" data-action="close-modal">取消</button><button type="button" class="btn btn-primary" data-action="close-modal">确认分发</button>',
+      footer: '<button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button><button type="button" class="btn btn-primary" data-action="close-modal">Confirm dispatch</button>',
     });
   }
 
@@ -3789,13 +3789,13 @@
       case 'theme-toggle':
         state.theme = state.theme === 'light' ? 'dark' : state.theme === 'dark' ? 'system' : 'light';
         applyTheme();
-        toast(`主题已切换为${state.theme === 'system' ? '跟随系统' : state.theme === 'dark' ? '暗色' : '亮色'}`, { tone: 'info' });
+        toast(`Theme switched to ${state.theme === 'system' ? 'System' : state.theme === 'dark' ? 'Dark' : 'Light'}`, { tone: 'info' });
         break;
       case 'set-theme':
         state.theme = el.dataset.theme;
         applyTheme();
         if (state.page === 'settings') renderWorkspaceOnly();
-        toast('外观设置已保存', { tone: 'info' });
+        toast('Appearance settings saved', { tone: 'info' });
         break;
       case 'toggle-folder': {
         const folder = el.dataset.folder;
@@ -3869,7 +3869,7 @@
         if (prompt) {
           prompt.favorite = !prompt.favorite;
           renderWorkspaceOnly();
-          toast(prompt.favorite ? `已收藏「${prompt.title}」` : '已取消收藏', { tone: 'info' });
+          toast(prompt.favorite ? `Added "${prompt.title}"` : 'Removed from favorites', { tone: 'info' });
         }
         break;
       }
@@ -3878,7 +3878,7 @@
         if (prompt) {
           prompt.pinned = !prompt.pinned;
           renderWorkspaceOnly();
-          toast(prompt.pinned ? '已置顶' : '已取消置顶', { tone: 'info' });
+          toast(prompt.pinned ? 'Pinned' : 'Unpinned', { tone: 'info' });
         }
         break;
       }
@@ -3897,7 +3897,7 @@
           openVariableForm(prompt);
         } else {
           const text = [prompt.system, prompt.user].filter(Boolean).join('\n\n');
-          copyText(text.trim(), `已复制「${prompt.title}」到剪贴板`).then((copied) => {
+          copyText(text.trim(), `Copied "${prompt.title}" to clipboard`).then((copied) => {
             if (copied) {
               prompt.usage += 1;
               renderWorkspaceOnly();
@@ -3922,7 +3922,7 @@
           prompt.version = Number(el.dataset.version);
           closeOverlay();
           renderWorkspaceOnly();
-          toast(`已恢复 v${el.dataset.version}，当前内容已另存为新版本`);
+          toast(`Restored v${el.dataset.version}; current content saved as a new version`);
         }
         break;
       }
@@ -3930,17 +3930,17 @@
         const prompt = state.prompts.find((item) => item.id === id);
         if (prompt) {
           openModal({
-            title: '删除 Prompt？',
-            subtitle: '此操作不可撤销',
+            title: 'Delete Prompt?',
+            subtitle: 'This cannot be undone',
             size: 'small',
-            body: `<p style="color:var(--muted-fg);font-size:11px;line-height:18px">将删除「<b style="color:var(--fg)">${esc(prompt.title)}</b>」及其全部 ${prompt.versions.length} 个历史版本。${
+            body: `<p style="color:var(--muted-fg);font-size:11px;line-height:18px">This deletes "<b style="color:var(--fg)">${esc(prompt.title)}</b>" and all its historical versions.${
               prompt.sync === 'local'
                 ? ''
-                : '<span style="display:block;margin-top:7px;border:1px solid var(--warning-border);border-radius:7px;background:var(--warning-soft);padding:7px 9px;color:var(--warning)">该 Prompt 参与仓库同步。本次只删除本地副本，不会修改仓库文件。</span>'
+                : '<span style="display:block;margin-top:7px;border:1px solid var(--warning-border);border-radius:7px;background:var(--warning-soft);padding:7px 9px;color:var(--warning)">This Prompt participates in repository sync. Only the local copy is deleted; repository files are untouched.</span>'
             }</p>`,
             footer: `
-              <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-              <button type="button" class="btn btn-danger" data-action="confirm-delete-prompt" data-id="${prompt.id}">确认删除</button>
+              <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+              <button type="button" class="btn btn-danger" data-action="confirm-delete-prompt" data-id="${prompt.id}">Delete</button>
             `,
           });
         }
@@ -3952,34 +3952,34 @@
         state.selectedPrompt = state.prompts[0]?.id || null;
         closeOverlay();
         render();
-        toast(`已删除「${prompt?.title || 'Prompt'}」`);
+        toast(`Deleted "${prompt?.title || 'Prompt'}"`);
         break;
       }
       case 'sync-prompt': {
         const prompt = state.prompts.find((item) => item.id === id);
         if (prompt) {
           openModal({
-            title: `同步范围 — ${prompt.title}`,
-            subtitle: 'Prompt 可选参与 Git 同步；仅本机时不写入 Agent 目录',
+            title: `Sync scope — ${prompt.title}`,
+            subtitle: 'Prompts can opt into Git sync; local-only Prompts are not written to Agent directories',
             body: `
               <div class="form-grid">
                 <div class="info-grid">
-                  <div class="info-card"><div class="label">当前状态</div><div class="value">${statusBadge(prompt.sync, prompt.syncLabel)}</div></div>
-                  <div class="info-card"><div class="label">仓库文件</div><div class="value mono">${esc(prompt.repoPath)}</div></div>
+                  <div class="info-card"><div class="label">Current status</div><div class="value">${statusBadge(prompt.sync, prompt.syncLabel)}</div></div>
+                  <div class="info-card"><div class="label">Repository file</div><div class="value mono">${esc(prompt.repoPath)}</div></div>
                 </div>
                 <div>
-                  <span class="field-label">同步策略</span>
+                  <span class="field-label">Sync policy</span>
                   <div class="choice-grid">
-                    <button type="button" class="choice ${prompt.sync !== 'local' ? 'active' : ''}">${icon('git-branch')}<span><strong>跟随仓库策略</strong><p>写入 prompts/&lt;folder&gt;/&lt;slug&gt;.prompt.md</p></span></button>
-                    <button type="button" class="choice ${prompt.sync === 'local' ? 'active' : ''}">${icon('file')}<span><strong>仅本机</strong><p>保留本地，不写入仓库与 Agent 目录</p></span></button>
+                    <button type="button" class="choice ${prompt.sync !== 'local' ? 'active' : ''}">${icon('git-branch')}<span><strong>Follow repo policy</strong><p>Writes to prompts/&lt;folder&gt;/&lt;slug&gt;.prompt.md</p></span></button>
+                    <button type="button" class="choice ${prompt.sync === 'local' ? 'active' : ''}">${icon('file')}<span><strong>Local only</strong><p>Keep local; never written to the repo or Agent directories</p></span></button>
                   </div>
                 </div>
-                <div class="note-strip">${icon('shield')}<span>推送前会扫描 Prompt 正文中的高置信度凭据；命中后要求替换为 <code>{{变量}}</code>。</span></div>
+                <div class="note-strip">${icon('shield')}<span>High-confidence credentials in the Prompt body are scanned before push; matches must be replaced with <code>{{variable}}</code>.</span></div>
               </div>
             `,
             footer: `
-              <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-              <button type="button" class="btn btn-primary" data-action="save-prompt-sync">保存同步范围</button>
+              <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+              <button type="button" class="btn btn-primary" data-action="save-prompt-sync">Save sync scope</button>
             `,
           });
         }
@@ -3987,7 +3987,7 @@
       }
       case 'save-prompt-sync':
         closeOverlay();
-        toast('同步范围已保存；变更会进入待推送');
+        toast('Sync scope saved; changes become pending push');
         break;
 
       case 'preview-platform-prompt': {
@@ -3997,7 +3997,7 @@
       }
       case 'copy-platform-prompt': {
         const item = D.platformPrompts.find((entry) => entry.id === id);
-        if (item) copyText(item.description + '\n\n' + item.preview, `已复制平台 Prompt「${item.title}」`);
+        if (item) copyText(item.description + '\n\n' + item.preview, `Copied platform Prompt "${item.title}"`);
         break;
       }
       case 'save-platform-prompt': {
@@ -4014,14 +4014,14 @@
             usage: 0,
             version: 1,
             updatedAt: Date.now(),
-            updatedLabel: '刚刚',
+            updatedLabel: 'Just now',
             system: item.preview,
             user: '{{input}}',
             variables: [{ name: 'input', type: 'textarea', required: true }],
             sync: 'local',
-            syncLabel: '仅本机',
-            repoPath: '— 保存后默认为仅本机',
-            versions: [{ v: 1, note: '保存自平台', at: '刚刚', current: true }],
+            syncLabel: 'Local only',
+            repoPath: '— Local only by default after saving',
+            versions: [{ v: 1, note: 'Saved from platform', at: 'Just now', current: true }],
           };
           state.prompts.unshift(newPrompt);
           state.selectedPrompt = newPrompt.id;
@@ -4030,7 +4030,7 @@
           $('#global-search').value = '';
           closeOverlay();
           render();
-          toast(`已保存「${item.title}」到我的 Prompt（仅本机）`);
+          toast(`Saved "${item.title}" to My Prompts (local only)`);
         }
         break;
       }
@@ -4064,29 +4064,29 @@
         break;
       case 'copy-contract': {
         const contract = state.contracts.find((item) => item.id === id);
-        if (contract) copyText(contract.body, `已复制「${contract.title}」正文`);
+        if (contract) copyText(contract.body, `Copied "${contract.title}" body`);
         break;
       }
       case 'edit-contract': {
         const contract = state.contracts.find((item) => item.id === id);
         if (contract) {
           openModal({
-            title: `编辑契约 — ${contract.title}`,
-            subtitle: '保存后生成新版本；相关投影会标记为「待更新」',
+            title: `Edit contract — ${contract.title}`,
+            subtitle: 'Saving creates a new version; related projections are marked Stale',
             size: 'wide',
             body: `
               <form class="form-grid" data-form="edit-contract" id="contract-form">
                 <div class="form-row">
-                  <div><label class="field-label">标题</label><input class="input" name="title" value="${esc(contract.title)}" /></div>
-                  <div><label class="field-label">文件夹</label><input class="input mono" name="folder" value="${esc(contract.folder)}" /></div>
+                  <div><label class="field-label">Title</label><input class="input" name="title" value="${esc(contract.title)}" /></div>
+                  <div><label class="field-label">Folder</label><input class="input mono" name="folder" value="${esc(contract.folder)}" /></div>
                 </div>
-                <div><label class="field-label">描述</label><input class="input" name="description" value="${esc(contract.description)}" /></div>
-                <div><label class="field-label">契约正文（Markdown）</label><textarea class="textarea" name="body" rows="10" style="font-family:var(--font-mono);font-size:10.5px">${esc(contract.body)}</textarea></div>
+                <div><label class="field-label">Description</label><input class="input" name="description" value="${esc(contract.description)}" /></div>
+                <div><label class="field-label">Contract body (Markdown)</label><textarea class="textarea" name="body" rows="10" style="font-family:var(--font-mono);font-size:10.5px">${esc(contract.body)}</textarea></div>
               </form>
             `,
             footer: `
-              <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-              <button type="submit" form="contract-form" class="btn btn-primary">保存修改</button>
+              <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+              <button type="submit" form="contract-form" class="btn btn-primary">Save changes</button>
             `,
           });
         }
@@ -4101,22 +4101,22 @@
         const contract = state.contracts.find((item) => item.id === id);
         if (contract) {
           openModal({
-            title: `版本历史 — ${contract.title}`,
-            subtitle: '恢复历史版本不会覆盖 Agent 目录中的投影',
+            title: `Version history — ${contract.title}`,
+            subtitle: 'Restoring a historical version never overwrites projections in Agent directories',
             body: `
               <div>
-                <div class="version-row current"><span class="version-num">v${contract.version}</span><div class="version-main"><strong>当前版本 · ${esc(contract.updatedLabel)}</strong><p>本地最新，已标记「${esc(contract.syncLabel)}」</p></div><span class="badge badge-primary badge-tight">使用中</span></div>
-                <div class="version-row"><span class="version-num">v${Math.max(1, contract.version - 1)}</span><div class="version-main"><strong>历史版本 · 初始版本</strong><p>10 天前 · 可恢复</p></div><button type="button" class="btn btn-outline btn-xs" data-action="restore-contract-version">恢复</button></div>
+                <div class="version-row current"><span class="version-num">v${contract.version}</span><div class="version-main"><strong>Current version · ${esc(contract.updatedLabel)}</strong><p>Latest locally, marked "${esc(contract.syncLabel)}"</p></div><span class="badge badge-primary badge-tight">In use</span></div>
+                <div class="version-row"><span class="version-num">v${Math.max(1, contract.version - 1)}</span><div class="version-main"><strong>Historical version · initial</strong><p>10 days ago · restorable</p></div><button type="button" class="btn btn-outline btn-xs" data-action="restore-contract-version">Restore</button></div>
               </div>
             `,
-            footer: '<button type="button" class="btn btn-primary" data-action="close-modal">完成</button>',
+            footer: '<button type="button" class="btn btn-primary" data-action="close-modal">Done</button>',
           });
         }
         break;
       }
       case 'restore-contract-version':
         closeOverlay();
-        toast('已恢复历史版本，当前内容已另存为新版本；相关投影标记为待更新');
+        toast('Historical version restored; current content saved as a new version; related projections marked Stale');
         break;
       case 'contract-sync': {
         const contract = state.contracts.find((item) => item.id === id);
@@ -4125,19 +4125,19 @@
       }
       case 'save-contract-sync':
         closeOverlay();
-        toast('同步范围已保存；契约进入待推送');
+        toast('Sync scope saved; contract is pending push');
         break;
       case 'delete-contract': {
         const contract = state.contracts.find((item) => item.id === id);
         if (contract) {
           openModal({
-            title: '删除指令契约？',
-            subtitle: '不会自动删除已投影的目标文件',
+            title: 'Delete instruction contract?',
+            subtitle: 'Projected target files are not deleted automatically',
             size: 'small',
-            body: `<p style="color:var(--muted-fg);font-size:11px;line-height:18px">将删除「<b style="color:var(--fg)">${esc(contract.title)}</b>」及其全部历史版本。已投影到 ${contract.targets.length} 个目标；删除本地契约不会自动删除 Agent 目录中已写入的文件，需要到「项目投影」逐项移除。</p>`,
+            body: `<p style="color:var(--muted-fg);font-size:11px;line-height:18px">This deletes "<b style="color:var(--fg)">${esc(contract.title)}</b>" and all historical versions. Projected to ${contract.targets.length} target(s); deleting the local contract does not delete files already written to Agent directories — remove them individually under Project projections.</p>`,
             footer: `
-              <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-              <button type="button" class="btn btn-danger" data-action="confirm-delete-contract" data-id="${contract.id}">确认删除</button>
+              <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+              <button type="button" class="btn btn-danger" data-action="confirm-delete-contract" data-id="${contract.id}">Delete</button>
             `,
           });
         }
@@ -4148,30 +4148,30 @@
         state.selectedContract = state.contracts[0]?.id || null;
         closeOverlay();
         render();
-        toast('已删除本地契约；目标文件需要逐项移除');
+        toast('Local contract deleted; target files must be removed individually');
         break;
       case 'new-contract':
         openModal({
-          title: '新建 Agent 指令契约',
-          subtitle: '一条 canonical 契约，编译到各 Agent 原生格式',
+          title: 'New Agent instruction contract',
+          subtitle: 'One canonical contract, compiled to each Agent\'s native format',
           size: 'wide',
           body: `
             <form class="form-grid" data-form="new-contract" id="new-contract-form">
               <div class="form-row">
-                <div><label class="field-label">标题 *</label><input class="input" name="title" required placeholder="例如：前端代码规范" /></div>
-                <div><label class="field-label">文件夹</label><input class="input mono" name="folder" placeholder="团队/前端" /></div>
+                <div><label class="field-label">Title *</label><input class="input" name="title" required placeholder="e.g. Frontend code standards" /></div>
+                <div><label class="field-label">Folder</label><input class="input mono" name="folder" placeholder="team/frontend" /></div>
               </div>
-              <div><label class="field-label">描述</label><input class="input" name="description" placeholder="一句话说明生效范围与目的" /></div>
+              <div><label class="field-label">Description</label><input class="input" name="description" placeholder="One sentence on scope and purpose" /></div>
               <div class="form-row">
-                <div><label class="field-label">范围</label><div class="select"><select name="scope"><option>项目级</option><option>路径级</option></select>${icon('chevron-down')}</div></div>
-                <div><label class="field-label">激活方式</label><div class="select"><select name="activation"><option>常驻</option><option>Glob</option><option>模型判断</option><option>手动</option></select>${icon('chevron-down')}</div></div>
+                <div><label class="field-label">Scope</label><div class="select"><select name="scope"><option>Project</option><option>Path</option></select>${icon('chevron-down')}</div></div>
+                <div><label class="field-label">Activation</label><div class="select"><select name="activation"><option>Always on</option><option>Glob</option><option>Model decision</option><option>Manual</option></select>${icon('chevron-down')}</div></div>
               </div>
-              <div><label class="field-label">契约正文（Markdown）</label><textarea class="textarea" name="body" rows="8" style="font-family:var(--font-mono);font-size:10.5px" placeholder="# 团队约定&#10;&#10;- 约束一&#10;- 约束二"></textarea></div>
+              <div><label class="field-label">Contract body (Markdown)</label><textarea class="textarea" name="body" rows="8" style="font-family:var(--font-mono);font-size:10.5px" placeholder="# Team conventions&#10;&#10;- Rule one&#10;- Rule two"></textarea></div>
             </form>
           `,
           footer: `
-            <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-            <button type="submit" form="new-contract-form" class="btn btn-primary">创建契约</button>
+            <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+            <button type="submit" form="new-contract-form" class="btn btn-primary">Create contract</button>
           `,
         });
         break;
@@ -4182,16 +4182,16 @@
       case 'projection-action': {
         const status = el.dataset.status;
         if (status === 'drifted') {
-          toast('已显式覆盖 Agent 侧手工修改；该操作可回滚', { tone: 'warning' });
+          toast('Explicitly overwrote manual Agent-side changes; this can be rolled back', { tone: 'warning' });
         } else if (status === 'remove') {
-          toast('已移除投影；本地库与仓库不受影响', { tone: 'info' });
+          toast('Projection removed; the local library and repo are unaffected', { tone: 'info' });
         } else {
-          toast('已重新投影，目标文件与契约一致');
+          toast('Re-projected; target files match the contract');
         }
         break;
       }
       case 'reproject-all':
-        toast('投影状态已刷新：3 条待更新 · 2 条漂移', { tone: 'info' });
+        toast('Projection status refreshed: 3 stale · 2 drifted', { tone: 'info' });
         break;
       case 'toggle-global-target': {
         if (state.selectedGlobalTargets.has(id)) state.selectedGlobalTargets.delete(id);
@@ -4204,7 +4204,7 @@
         if (target) {
           state.globalPaths[id] = target.defaultPath;
           renderWorkspaceOnly();
-          toast(`已恢复 ${target.label} 的默认路径`);
+          toast(`Restored the default path for ${target.label}`);
         }
         break;
       }
@@ -4226,16 +4226,16 @@
       case 'global-project':
         closeOverlay();
         toast(
-          `已投影 ${state.selectedGlobalContracts.size} 条指令到 ${state.selectedGlobalTargets.size} 个全局目录（模拟写入）`,
+          `Projected instructions: ${state.selectedGlobalContracts.size} · global directories: ${state.selectedGlobalTargets.size} (simulated write)`,
         );
         break;
       case 'global-projection-action':
         toast(
           el.dataset.status === 'drifted'
-            ? '已显式覆盖全局目录中的手工修改，可回滚'
+            ? 'Explicitly overwrote manual changes in the global directory; this can be rolled back'
             : el.dataset.status === 'remove'
-              ? '已移除全局投影；本地库与仓库不受影响'
-              : '已重新投影到全局目录',
+              ? 'Global projection removed; the local library and repo are unaffected'
+              : 'Re-projected to the global directory',
           { tone: el.dataset.status === 'drifted' ? 'warning' : 'success' },
         );
         break;
@@ -4275,7 +4275,7 @@
           skill.installs[el.dataset.platform] = 'symlink';
           renderSkillModal();
           renderWorkspaceOnly();
-          toast(`已通过 symlink 安装到 ${SKILL_PLATFORMS.find((item) => item.id === el.dataset.platform)?.name}`);
+          toast(`Installed via symlink to ${SKILL_PLATFORMS.find((item) => item.id === el.dataset.platform)?.name}`);
         }
         break;
       }
@@ -4285,18 +4285,18 @@
           delete skill.installs[el.dataset.platform];
           renderSkillModal();
           renderWorkspaceOnly();
-          toast('已从平台移除该技能', { tone: 'info' });
+          toast('Removed the skill from the platform', { tone: 'info' });
         }
         break;
       }
       case 'toast-skill-edit':
-        toast('编辑会生成新版本并进入待推送', { tone: 'info' });
+        toast('Editing creates a new version and marks it pending push', { tone: 'info' });
         break;
       case 'toast-skill-delete':
-        toast('原型演示：删除需在真实产品中二次确认', { tone: 'warning' });
+        toast('Prototype demo: deletion requires a second confirmation in the real product', { tone: 'warning' });
         break;
       case 'toast-skill-versions':
-        toast('版本历史：v1.2.0（当前）· 1.1.0 · 1.0.0', { tone: 'info' });
+        toast('Version history: v1.2.0 (current) · 1.1.0 · 1.0.0', { tone: 'info' });
         break;
       case 'set-store-source':
         state.storeSource = el.dataset.value;
@@ -4366,7 +4366,7 @@
           folder: item.category,
           tags: [item.category],
           installs: Object.fromEntries(wizard.platforms.map((platform) => [platform, wizard.mode])),
-          updatedLabel: '刚刚',
+          updatedLabel: 'Just now',
           pending: true,
           repoPath: `skills/${item.category}/${item.name}/SKILL.md`,
           instructions: item.instructions,
@@ -4377,7 +4377,7 @@
         state.skillTab = 'mine';
         state.selectedSkill = newSkill.id;
         render();
-        toast(`「${item.name}」已安装并分发到 ${wizard.platforms.length} 个平台`);
+        toast(`"${item.name}" installed and dispatched to ${wizard.platforms.length} platform(s)`);
         break;
       }
 
@@ -4401,7 +4401,7 @@
         if (server) {
           server.enabled = !server.enabled;
           renderWorkspaceOnly();
-          toast(`${server.name} 已${server.enabled ? '启用' : '停用'}`, { tone: server.enabled ? 'success' : 'warning' });
+          toast(`${server.name} ${server.enabled ? 'enabled' : 'disabled'}`, { tone: server.enabled ? 'success' : 'warning' });
         }
         break;
       }
@@ -4419,20 +4419,20 @@
         break;
       case 'copy-mcp-config': {
         const server = state.mcps.find((item) => item.id === id);
-        if (server) copyText(mcpConfig(server), `已复制「${server.name}」脱敏配置`);
+        if (server) copyText(mcpConfig(server), `Copied "${server.name}" redacted config`);
         break;
       }
       case 'edit-mcp':
-        toast('原型演示：表单 / JSON 双模式编辑，保存即生成版本并进入待推送', { tone: 'info' });
+        toast('Prototype demo: form / JSON dual-mode editing; saving creates a version and marks it pending push', { tone: 'info' });
         break;
       case 'mcp-versions':
-        toast('版本历史：v2（当前）· v1 · 恢复不会自动改写 Agent 配置', { tone: 'info' });
+        toast('Version history: v2 (current) · v1 · restoring never rewrites Agent config', { tone: 'info' });
         break;
       case 'delete-mcp':
-        toast('原型演示：删除会清理配置、版本与凭据记录，但不移除 Agent 侧条目', { tone: 'warning' });
+        toast('Prototype demo: deletion clears config, versions, and credential records but leaves Agent-side entries in place', { tone: 'warning' });
         break;
       case 'new-mcp':
-        toast('新建 MCP：支持商店安装、粘贴 JSON、从 Agent 反向导入', { tone: 'info' });
+        toast('New MCP: install from the store, paste JSON, or reverse-import from an Agent', { tone: 'info' });
         break;
       case 'install-mcp-store': {
         const item = D.mcpStore.find((entry) => entry.id === id);
@@ -4452,19 +4452,19 @@
             env: Object.fromEntries(item.envDocs.map((doc) => [doc.key, ''])),
             enabled: true,
             favorite: false,
-            folder: '商店/MCP',
-            tags: ['商店'],
+            folder: 'store/mcp',
+            tags: ['Store'],
             source: 'market',
             installs: {},
             notes: '',
             health: item.envDocs.map((doc) => ({
               level: 'warning',
               field: `env.${doc.key}`,
-              message: '必填环境变量为空，分发到 Agent 后服务会启动失败。',
+              message: 'Required environment variable is empty; the service will fail to start after dispatch to an Agent.',
             })),
             version: 1,
-            updatedLabel: '刚刚',
-            repoPath: `mcp/商店/MCP/${item.name}.json`,
+            updatedLabel: 'Just now',
+            repoPath: `mcp/store/mcp/${item.name}.json`,
             config: {
               transport: item.transport,
               command: 'npx',
@@ -4478,7 +4478,7 @@
           state.mcpTab = 'config';
           closeOverlay();
           render();
-          toast(`已安装「${item.name}」到我的 MCP；请填写 ${item.envDocs.length || 0} 个凭据字段`, {
+          toast(`Installed "${item.name}" to My MCP; fill in the credential fields before use`, {
             tone: item.envDocs.length ? 'warning' : 'success',
           });
         }
@@ -4496,28 +4496,28 @@
           const imported = {
             id: `m-import-${Date.now()}`,
             name,
-            description: `从 ${agent.name} 配置文件反向导入的外部 MCP 条目。`,
+            description: `From ${agent.name} config file (reverse-imported external MCP entry).`,
             transport: 'stdio',
             command: 'npx',
             args: ['-y', name],
             env: {},
             enabled: true,
             favorite: false,
-            folder: `导入/${agent.name}`,
-            tags: ['导入'],
+            folder: `Imported/${agent.name}`,
+            tags: ['Imported'],
             source: 'import',
             installs: { [agent.id]: true },
-            notes: '从 Agent 配置反向导入；请核对启动命令与凭据。',
+            notes: 'Reverse-imported from the Agent config; verify the launch command and credentials.',
             health: [
               {
                 level: 'warning',
                 field: 'command',
-                message: '导入条目缺少可验证的启动命令，请在编辑中确认。',
+                message: 'Imported entry has no verifiable launch command; confirm it when editing.',
               },
             ],
             version: 1,
-            updatedLabel: '刚刚',
-            repoPath: `mcp/导入/${agent.name}/${name}.json`,
+            updatedLabel: 'Just now',
+            repoPath: `mcp/Imported/${agent.name}/${name}.json`,
             config: { transport: 'stdio', command: 'npx', args: ['-y', name], env: {} },
           };
           state.mcps.unshift(imported);
@@ -4525,12 +4525,12 @@
           state.mcpSection = 'mine';
           closeOverlay();
           render();
-          toast(`已从 ${agent.name} 反向导入「${name}」到我的库`);
+          toast(`Reverse-imported "${name}" into My Library`);
         }
         break;
       }
       case 'open-agent-mcp-config':
-        toast('原型演示：打开并校验 Agent MCP 配置文件，写入前会保留原文件权限', { tone: 'info' });
+        toast('Prototype demo: opens and validates the Agent MCP config file, preserving the original file permissions before writing', { tone: 'info' });
         break;
       case 'deploy-mcp': {
         const server = state.mcps.find((item) => item.id === id);
@@ -4551,7 +4551,7 @@
           });
           closeOverlay();
           renderWorkspaceOnly();
-          toast(`已把 ${server.name} 应用到 ${state.deploySelected.size} 个平台（模拟写入）`);
+          toast(`Applied ${server.name} to ${state.deploySelected.size} platforms (simulated write)`);
         }
         break;
       }
@@ -4590,7 +4590,7 @@
         renderWorkspaceOnly();
         break;
       case 'sync-fetch':
-        toast('fetch 完成：远端有 3 个提交待确认', { tone: 'info' });
+        toast('Fetch complete: 3 remote commits pending review', { tone: 'info' });
         break;
       case 'sync-push':
         openPushModal();
@@ -4599,7 +4599,7 @@
         openRepoSettings();
         break;
       case 'redetect-agents':
-        toast('检测完成：发现 6 个本机 Agent；未安装的工具不会写入', { tone: 'info' });
+        toast('Detection complete: 6 local Agents found; uninstalled tools are never written', { tone: 'info' });
         break;
       case 'review-change': {
         const change = findChange(id);
@@ -4612,12 +4612,12 @@
           state.resolvedChanges.add(id);
           closeOverlay();
           renderWorkspaceOnly();
-          toast(`已接受 ${change.assetName}，本机库已生成新版本`);
+          toast(`Accepted ${change.assetName}; a new version was created in the local library`);
         }
         break;
       }
       case 'accept-low-risk':
-        toast('已接受低风险变更并生成版本；Prompt 与指令仍需逐条预览', { tone: 'info' });
+        toast('Low-risk changes accepted and versioned; Prompts and instructions still require individual preview', { tone: 'info' });
         break;
       case 'push-change': {
         const change = findChange(id);
@@ -4638,7 +4638,7 @@
         state.resolvedChanges.add(id);
         closeOverlay();
         renderWorkspaceOnly();
-        toast('已替换为 {{api_key}} 变量；真实值未落盘', { tone: 'warning' });
+        toast('Replaced with the {{api_key}} variable; the real value was never persisted', { tone: 'warning' });
         break;
       }
       case 'set-conflict-strategy':
@@ -4649,12 +4649,12 @@
         state.resolvedChanges.add(id);
         closeOverlay();
         renderWorkspaceOnly();
-        toast('冲突已解决，合并结果已加入待推送');
+        toast('Conflict resolved; the merge result is now pending push');
         break;
       }
       case 'do-push':
         closeOverlay();
-        toast('已推送变更到独立分支并创建 PR #24（原型模拟）');
+        toast('Pushed changes to a dedicated branch and opened PR #24 (simulated)');
         break;
       case 'set-deploy-kind':
         state.deployKind = el.dataset.value;
@@ -4665,24 +4665,24 @@
         break;
       case 'sync-deploy-cell':
         closeOverlay();
-        toast('已重新同步该资产到目标 Agent');
+        toast('Re-synced the asset to the target Agent');
         break;
       case 'remove-deploy':
         closeOverlay();
-        toast('已移除分发；本地库与仓库不受影响', { tone: 'info' });
+        toast('Dispatch removed; the local library and repo are unaffected', { tone: 'info' });
         break;
       case 'sync-all-stale':
-        toast('已重新分发 3 项过时资产；漂移项未自动覆盖', { tone: 'warning' });
+        toast('Re-dispatched 3 stale assets; drifted items were not overwritten', { tone: 'warning' });
         break;
       case 'reset-demo':
         openModal({
-          title: '重置演示数据？',
-          subtitle: '将清除本地偏好并恢复初始状态',
+          title: 'Reset demo data?',
+          subtitle: 'Clears local preferences and restores the initial state',
           size: 'small',
-          body: '<p style="color:var(--muted-fg);font-size:11px;line-height:18px">仅清除浏览器中的主题与视图偏好，然后重新加载页面。原型数据本身不会被修改。</p>',
+          body: '<p style="color:var(--muted-fg);font-size:11px;line-height:18px">Only the theme and view preferences in the browser are cleared, then the page reloads. The prototype data itself is not modified.</p>',
           footer: `
-            <button type="button" class="btn btn-outline" data-action="close-modal">取消</button>
-            <button type="button" class="btn btn-danger" data-action="confirm-reset-demo">重置并刷新</button>
+            <button type="button" class="btn btn-outline" data-action="close-modal">Cancel</button>
+            <button type="button" class="btn btn-danger" data-action="confirm-reset-demo">Reset and reload</button>
           `,
         });
         break;
@@ -4692,7 +4692,7 @@
         location.reload();
         break;
       case 'toast-info':
-        toast(el.dataset.message || '原型演示', { tone: 'info' });
+        toast(el.dataset.message || 'Prototype demo', { tone: 'info' });
         break;
       default:
         break;
@@ -4722,11 +4722,11 @@
     if (form.dataset.form === 'prompt') {
       const title = String(values.title || '').trim();
       if (!title) {
-        toast('标题必填', { tone: 'warning' });
+        toast('Title is required', { tone: 'warning' });
         return;
       }
       const tags = String(values.tags || '')
-        .split(/[,，]/)
+        .split(/,/)
         .map((tag) => tag.trim())
         .filter(Boolean);
       const existing = values.id ? state.prompts.find((item) => item.id === values.id) : null;
@@ -4743,14 +4743,14 @@
         ].map((name) => previousVars.get(name) || { name, type: 'text', required: true });
         existing.version += 1;
         existing.updatedAt = Date.now();
-        existing.updatedLabel = '刚刚';
+        existing.updatedLabel = 'Just now';
         existing.sync = existing.sync === 'local' ? 'local' : 'pending';
-        existing.syncLabel = existing.sync === 'local' ? '仅本机' : '待推送';
-        existing.versions.unshift({ v: existing.version, note: '本地编辑', at: '刚刚', current: true });
+        existing.syncLabel = existing.sync === 'local' ? 'Local only' : 'Pending push';
+        existing.versions.unshift({ v: existing.version, note: 'Local edit', at: 'Just now', current: true });
         state.selectedPrompt = existing.id;
         closeOverlay();
         render();
-        toast(`已保存「${title}」，生成本地版本 v${existing.version}`);
+        toast(`Saved "${title}", local version v${existing.version}`);
       } else {
         const newPrompt = {
           id: `p-${Date.now()}`,
@@ -4763,7 +4763,7 @@
           usage: 0,
           version: 1,
           updatedAt: Date.now(),
-          updatedLabel: '刚刚',
+          updatedLabel: 'Just now',
           system: String(values.system || '').trim(),
           user: String(values.user || '').trim(),
           variables: [
@@ -4774,16 +4774,16 @@
             ),
           ].map((name) => ({ name, type: 'text', required: true })),
           sync: 'local',
-          syncLabel: '仅本机',
-          repoPath: '— 新建后默认为仅本机',
-          versions: [{ v: 1, note: '新建', at: '刚刚', current: true }],
+          syncLabel: 'Local only',
+          repoPath: '— Local only by default after creation',
+          versions: [{ v: 1, note: 'New', at: 'Just now', current: true }],
         };
         state.prompts.unshift(newPrompt);
         state.selectedPrompt = newPrompt.id;
         state.promptTab = 'mine';
         closeOverlay();
         render();
-        toast(`已创建「${title}」；默认为仅本机`);
+        toast(`Created "${title}"; local only by default`);
       }
       return;
     }
@@ -4794,7 +4794,7 @@
         const rendered = [replaceTemplate(target.system, values), replaceTemplate(target.user, values)]
           .filter(Boolean)
           .join('\n\n');
-        copyText(rendered, `已复制「${target.title}」到剪贴板，用量 +1`).then((copied) => {
+        copyText(rendered, `Copied "${target.title}" to clipboard; usage +1`).then((copied) => {
           if (copied) {
             target.usage += 1;
             renderWorkspaceOnly();
@@ -4811,18 +4811,18 @@
       if (!target || !area) return;
       area.innerHTML = `
         <div class="test-result">
-          <div class="test-result-head">${icon('flask')}正在运行 · ${esc(values.model || '模型')}<span class="badge badge-info badge-tight">模拟</span></div>
-          <div class="test-result-body" style="display:flex;align-items:center;gap:8px;color:var(--muted-fg);font-size:10px"><span class="spinner"></span>渲染 Prompt 并等待模型响应…</div>
+          <div class="test-result-head">${icon('flask')}Running · ${esc(values.model || 'Model')}<span class="badge badge-info badge-tight">Simulated</span></div>
+          <div class="test-result-body" style="display:flex;align-items:center;gap:8px;color:var(--muted-fg);font-size:10px"><span class="spinner"></span>Rendering Prompt and waiting for model response…</div>
         </div>
       `;
       setTimeout(() => {
         if (!document.contains(area)) return;
         area.innerHTML = `
           <div class="test-result">
-            <div class="test-result-head">${icon('check')}测试完成 · ${esc(values.model || '模型')}<span class="badge badge-success badge-tight">耗时 1.8s</span></div>
+            <div class="test-result-head">${icon('check')}Test complete · ${esc(values.model || 'Model')}<span class="badge badge-success badge-tight">1.8s elapsed</span></div>
             <div class="test-result-body md">
               ${md(
-                `## 模拟输出\n\n已完成对模板的渲染，并命中 ${target.variables.length} 个变量。\n\n| 维度 | 评分 | 主要发现 |\n| --- | --- | --- |\n| 正确性 | 8/10 | 逻辑完整，边界条件需补充 |\n| 可读性 | 9/10 | 命名清晰，函数长度合理 |\n| 性能 | 7/10 | 避免在循环内重复计算 |\n| 安全 | 8/10 | 外部输入需继续校验 |\n\n**总评：可以合并，建议补充边界测试。**`,
+                `## Simulated output\n\nTemplate rendered with ${target.variables.length} variables matched.\n\n| Dimension | Score | Key findings |\n| --- | --- | --- |\n| Correctness | 8/10 | Logic is complete; edge cases need more coverage |\n| Readability | 9/10 | Clear naming, reasonable function length |\n| Performance | 7/10 | Avoid recomputing inside loops |\n| Security | 8/10 | External input still needs validation |\n\n**Overall: safe to merge; add edge-case tests.**`,
               )}
             </div>
           </div>
@@ -4839,12 +4839,12 @@
         contract.folder = String(values.folder || '').trim();
         contract.body = String(values.body || '').trim();
         contract.version += 1;
-        contract.updatedLabel = '刚刚';
+        contract.updatedLabel = 'Just now';
         contract.sync = 'pending';
-        contract.syncLabel = '待推送';
+        contract.syncLabel = 'Pending push';
         closeOverlay();
         render();
-        toast(`已保存「${contract.title}」，生成 v${contract.version}`);
+        toast(`Saved "${contract.title}", generated v${contract.version}`);
       }
       return;
     }
@@ -4852,38 +4852,38 @@
     if (form.dataset.form === 'new-contract') {
       const title = String(values.title || '').trim();
       if (!title) {
-        toast('标题必填', { tone: 'warning' });
+        toast('Title is required', { tone: 'warning' });
         return;
       }
       const contract = {
         id: `c-${Date.now()}`,
         title,
         description: String(values.description || '').trim(),
-        folder: String(values.folder || '').trim() || '未分类',
-        scope: String(values.scope || '项目级'),
-        scopeDesc: '在项目根目录生效',
-        activation: String(values.activation || '常驻'),
-        activationDesc: '每次会话始终进入上下文',
+        folder: String(values.folder || '').trim() || 'Uncategorized',
+        scope: String(values.scope || 'Project'),
+        scopeDesc: 'Applies at the project root',
+        activation: String(values.activation || 'Always on'),
+        activationDesc: 'Always enters context every session',
         priority: 50,
         targets: ['agents-md', 'claude'],
         tags: [],
         version: 1,
-        updatedLabel: '刚刚',
+        updatedLabel: 'Just now',
         updatedAt: Date.now(),
         sync: 'local',
-        syncLabel: '仅本机',
-        repoPath: '— 新建后默认为仅本机',
+        syncLabel: 'Local only',
+        repoPath: '— Local only by default after creation',
         imports: [],
-        globalStatus: '尚未投影',
-        body: String(values.body || '').trim() || '# 新契约\n\n- 在这里写约束。',
-        globalProjections: '尚未投影',
+        globalStatus: 'Not projected yet',
+        body: String(values.body || '').trim() || '# New contract\n\n- Write your constraints here.',
+        globalProjections: 'Not projected yet',
       };
       state.contracts.unshift(contract);
       state.selectedContract = contract.id;
       state.instructionTab = 'library';
       closeOverlay();
       render();
-      toast(`已创建契约「${title}」；默认为仅本机`);
+      toast(`Created contract "${title}"; local only by default`);
     }
   });
 
@@ -4908,17 +4908,17 @@
       const target = D.globalTargets.find((item) => item.id === el.dataset.id);
       const value = el.value.trim();
       if (!value || (!value.startsWith('~') && !value.startsWith('/'))) {
-        toast('全局路径必须是以 ~ 或 / 开头的绝对路径', { tone: 'warning' });
+        toast('Global paths must be absolute, starting with ~ or /', { tone: 'warning' });
         el.value = state.globalPaths[el.dataset.id];
         return;
       }
       state.globalPaths[el.dataset.id] = value;
-      toast(`已更新 ${target?.label || '全局目录'} 路径；相关投影标记为待更新`, { tone: 'info' });
+      toast(`Updated the ${target?.label || 'global directory'} path; related projections marked Stale`, { tone: 'info' });
     } else if (action === 'mcp-notes') {
       const server = state.mcps.find((item) => item.id === el.dataset.id);
       if (server) {
         server.notes = el.value;
-        toast('个人备注已保存（不产生版本）', { tone: 'info' });
+        toast('Personal notes saved (no version created)', { tone: 'info' });
       }
     }
   });

@@ -21,7 +21,7 @@ function snap(version: number, createdAt: string, data: Record<string, string>, 
   return { id: `v${version}-${Math.random().toString(36).slice(2, 8)}`, version, note, createdAt, data }
 }
 
-/* ---------------- 平台清单 ---------------- */
+/* ---------------- Platform registry ---------------- */
 
 export const SKILL_PLATFORMS: SkillPlatform[] = [
   { id: 'claude', name: 'Claude Code', dir: '~/.claude/skills' },
@@ -52,120 +52,120 @@ export const AI_MODELS: ModelOption[] = [
   { id: 'deepseek-v4', name: 'DeepSeek V4' },
 ]
 
-/* ---------------- Prompt 种子 ---------------- */
+/* ---------------- Prompt seeds ---------------- */
 
 const reviewV1 = {
-  title: '代码审查助手',
-  description: '按正确性 / 可读性 / 性能 / 安全四个维度审查代码',
-  systemPrompt: '你是一位资深代码审查专家。请从正确性、可读性、性能、安全四个维度审查用户提交的代码，每个维度给出评分与具体改进建议，最后给出总评。使用简体中文回答。',
-  userPrompt: '请审查以下 {{language}} 代码：\n\n```\n{{code}}\n```\n\n重点关注：{{focus}}',
+  title: 'Code Review Assistant',
+  description: 'Review code across four dimensions: correctness, readability, performance, and security',
+  systemPrompt: 'You are a senior code review expert. Review the code submitted by the user across four dimensions: correctness, readability, performance, and security. Give a score and concrete improvement suggestions for each dimension, then finish with an overall assessment. Respond in English.',
+  userPrompt: 'Review the following {{language}} code:\n\n```\n{{code}}\n```\n\nFocus on: {{focus}}',
 }
 
 const PROMPT_SEEDS: Omit<Prompt, 'syncPolicy'>[] = [
   {
     id: 'p-review',
-    title: '代码审查助手',
-    description: '按正确性 / 可读性 / 性能 / 安全四个维度审查代码',
+    title: 'Code Review Assistant',
+    description: 'Review code across four dimensions: correctness, readability, performance, and security',
     systemPrompt: reviewV1.systemPrompt,
     userPrompt: reviewV1.userPrompt,
-    folder: '编程/代码质量',
-    tags: ['编程', '代码审查'],
+    folder: 'engineering/code-quality',
+    tags: ['Engineering', 'Code Review'],
     isFavorite: true,
     isPinned: true,
     usageCount: 42,
     variables: [
       { name: 'language', type: 'text', example: 'typescript', required: true },
-      { name: 'code', type: 'textarea', required: true, label: '待审查代码' },
-      { name: 'focus', type: 'select', options: ['正确性', '性能', '安全', '可读性'], required: false },
+      { name: 'code', type: 'textarea', required: true, label: 'Code to review' },
+      { name: 'focus', type: 'select', options: ['Correctness', 'Performance', 'Security', 'Readability'], required: false },
     ],
     versions: [
-      snap(3, daysAgo(1), reviewV1, '加入「重点关注」变量'),
+      snap(3, daysAgo(1), reviewV1, 'Added the "Focus on" variable'),
       snap(
         2,
         daysAgo(6),
-        { ...reviewV1, userPrompt: '请审查以下 {{language}} 代码：\n\n```\n{{code}}\n```' },
-        '补充评分维度说明',
+        { ...reviewV1, userPrompt: 'Review the following {{language}} code:\n\n```\n{{code}}\n```' },
+        'Expanded the scoring dimension notes',
       ),
-      snap(1, daysAgo(20), { ...reviewV1, systemPrompt: '你是一位代码审查专家，请审查用户提交的代码并给出建议。' }),
+      snap(1, daysAgo(20), { ...reviewV1, systemPrompt: 'You are a code review expert. Review the code submitted by the user and give suggestions.' }),
     ],
     createdAt: daysAgo(20),
     updatedAt: daysAgo(1),
   },
   {
     id: 'p-commit',
-    title: 'Git 提交信息生成',
-    description: '依据 diff 产出 Conventional Commits 规范的提交信息',
-    systemPrompt: '你是 Conventional Commits 专家。根据用户提供的 diff 产出一条符合规范的提交信息：一行主题（不超过 50 字符），空一行后跟正文要点。只输出提交信息本身，不要任何解释。',
+    title: 'Git Commit Message Generator',
+    description: 'Generate commit messages that follow the Conventional Commits spec from a diff',
+    systemPrompt: 'You are a Conventional Commits expert. From the diff provided by the user, produce one compliant commit message: a subject line (no more than 50 characters), a blank line, then bullet points in the body. Output only the commit message itself, with no explanation.',
     userPrompt: '{{diff}}',
-    folder: '编程/Git',
-    tags: ['编程', 'Git'],
+    folder: 'engineering/git',
+    tags: ['Engineering', 'Git'],
     isFavorite: true,
     isPinned: false,
     usageCount: 87,
-    variables: [{ name: 'diff', type: 'textarea', required: true, label: 'Git Diff 内容' }],
-    versions: [snap(2, daysAgo(3), { title: 'Git 提交信息生成', description: '依据 diff 产出 Conventional Commits 规范的提交信息', systemPrompt: '你是 Conventional Commits 专家。根据用户提供的 diff 产出一条符合规范的提交信息：一行主题（不超过 50 字符），空一行后跟正文要点。只输出提交信息本身，不要任何解释。', userPrompt: '{{diff}}' }, '禁止输出解释文字'), snap(1, daysAgo(15), { title: 'Git 提交信息生成', description: '依据 diff 产出提交信息', systemPrompt: '根据 diff 写一条提交信息。', userPrompt: '{{diff}}' })],
+    variables: [{ name: 'diff', type: 'textarea', required: true, label: 'Git diff content' }],
+    versions: [snap(2, daysAgo(3), { title: 'Git Commit Message Generator', description: 'Generate commit messages that follow the Conventional Commits spec from a diff', systemPrompt: 'You are a Conventional Commits expert. From the diff provided by the user, produce one compliant commit message: a subject line (no more than 50 characters), a blank line, then bullet points in the body. Output only the commit message itself, with no explanation.', userPrompt: '{{diff}}' }, 'Disallowed explanatory text in the output'), snap(1, daysAgo(15), { title: 'Git Commit Message Generator', description: 'Generate a commit message from a diff', systemPrompt: 'Write one commit message based on the diff.', userPrompt: '{{diff}}' })],
     createdAt: daysAgo(15),
     updatedAt: daysAgo(3),
   },
   {
     id: 'p-regex',
-    title: '正则表达式解释器',
-    description: '逐段解释正则含义，指出回溯风险',
-    systemPrompt: '你是正则表达式专家。请逐段解释用户给出的正则表达式，并用表格总结每个捕获组；最后指出潜在的灾难性回溯风险。',
-    userPrompt: '请解释这个正则表达式：{{regex}}',
-    folder: '编程/基础',
-    tags: ['编程'],
+    title: 'Regular Expression Explainer',
+    description: 'Explain a regular expression piece by piece and flag backtracking risks',
+    systemPrompt: 'You are a regular expression expert. Explain the regular expression provided by the user piece by piece and summarize each capture group in a table. Finish by calling out potential catastrophic backtracking risks.',
+    userPrompt: 'Explain this regular expression: {{regex}}',
+    folder: 'engineering/fundamentals',
+    tags: ['Engineering'],
     isFavorite: false,
     isPinned: false,
     usageCount: 15,
     variables: [{ name: 'regex', type: 'text', required: true, example: '^\\d{4}-\\d{2}$' }],
-    versions: [snap(1, daysAgo(9), { title: '正则表达式解释器', description: '逐段解释正则含义，指出回溯风险', systemPrompt: '你是正则表达式专家。请逐段解释用户给出的正则表达式，并用表格总结每个捕获组；最后指出潜在的灾难性回溯风险。', userPrompt: '请解释这个正则表达式：{{regex}}' })],
+    versions: [snap(1, daysAgo(9), { title: 'Regular Expression Explainer', description: 'Explain a regular expression piece by piece and flag backtracking risks', systemPrompt: 'You are a regular expression expert. Explain the regular expression provided by the user piece by piece and summarize each capture group in a table. Finish by calling out potential catastrophic backtracking risks.', userPrompt: 'Explain this regular expression: {{regex}}' })],
     createdAt: daysAgo(9),
     updatedAt: daysAgo(9),
   },
   {
     id: 'p-weekly',
-    title: '周报生成器',
-    description: '把本周提交记录整理成一份结构化周报',
-    systemPrompt: '你是项目助理。把用户提供的提交记录整理为周报：本周概览（2 句）、按模块分类的要点列表、下周计划建议。语气：{{tone}}。',
-    userPrompt: '本周提交记录：\n{{commits}}',
-    folder: '写作/汇报',
-    tags: ['效率', '写作'],
+    title: 'Weekly Report Generator',
+    description: 'Turn this week\'s commit history into a structured weekly report',
+    systemPrompt: 'You are a project assistant. Turn the commit history provided by the user into a weekly report: a two-sentence overview of the week, a bulleted list of highlights grouped by module, and suggested plans for next week. Tone: {{tone}}.',
+    userPrompt: 'This week\'s commit history:\n{{commits}}',
+    folder: 'writing/reporting',
+    tags: ['Productivity', 'Writing'],
     isFavorite: true,
     isPinned: false,
     usageCount: 63,
     variables: [
-      { name: 'commits', type: 'textarea', required: true, label: '本周提交记录' },
-      { name: 'tone', type: 'select', options: ['简洁', '详尽'], required: false },
+      { name: 'commits', type: 'textarea', required: true, label: 'This week\'s commit history' },
+      { name: 'tone', type: 'select', options: ['Concise', 'Detailed'], required: false },
     ],
-    versions: [snap(1, daysAgo(5), { title: '周报生成器', description: '把本周提交记录整理成一份结构化周报', systemPrompt: '你是项目助理。把用户提供的提交记录整理为周报：本周概览（2 句）、按模块分类的要点列表、下周计划建议。语气：{{tone}}。', userPrompt: '本周提交记录：\n{{commits}}' })],
+    versions: [snap(1, daysAgo(5), { title: 'Weekly Report Generator', description: 'Turn this week\'s commit history into a structured weekly report', systemPrompt: 'You are a project assistant. Turn the commit history provided by the user into a weekly report: a two-sentence overview of the week, a bulleted list of highlights grouped by module, and suggested plans for next week. Tone: {{tone}}.', userPrompt: 'This week\'s commit history:\n{{commits}}' })],
     createdAt: daysAgo(5),
     updatedAt: daysAgo(2),
   },
   {
     id: 'p-doc-en',
-    title: '技术文档英文润色',
-    description: '把中文说明改写为地道的英文技术文档段落',
-    systemPrompt: '你是技术写作编辑。把用户的中文说明改写为地道、简洁的英文技术文档段落，保留代码块原样，输出仅含英文改写结果。',
+    title: 'Technical Documentation Polish',
+    description: 'Rewrite rough notes into clear, idiomatic technical documentation',
+    systemPrompt: 'You are a technical writing editor. Rewrite the user\'s rough notes into clear, concise, idiomatic technical documentation. Preserve code blocks verbatim and output only the rewritten text.',
     userPrompt: '{{text}}',
-    folder: '写作/文档',
-    tags: ['写作', '英文'],
+    folder: 'writing/docs',
+    tags: ['Writing', 'English'],
     isFavorite: false,
     isPinned: false,
     usageCount: 28,
     variables: [{ name: 'text', type: 'textarea', required: true }],
-    versions: [snap(1, daysAgo(12), { title: '技术文档英文润色', description: '把中文说明改写为地道的英文技术文档段落', systemPrompt: '你是技术写作编辑。把用户的中文说明改写为地道、简洁的英文技术文档段落，保留代码块原样，输出仅含英文改写结果。', userPrompt: '{{text}}' })],
+    versions: [snap(1, daysAgo(12), { title: 'Technical Documentation Polish', description: 'Rewrite rough notes into clear, idiomatic technical documentation', systemPrompt: 'You are a technical writing editor. Rewrite the user\'s rough notes into clear, concise, idiomatic technical documentation. Preserve code blocks verbatim and output only the rewritten text.', userPrompt: '{{text}}' })],
     createdAt: daysAgo(12),
     updatedAt: daysAgo(4),
   },
   {
     id: 'p-unit-test',
-    title: '单元测试生成',
-    description: '为函数生成覆盖边界条件的单元测试',
-    systemPrompt: '你是测试工程师。为用户提供的函数编写覆盖正常路径与边界条件的单元测试，先列出用例清单再给完整代码。',
-    userPrompt: '语言：{{language}}\n测试框架：{{framework}}\n函数：\n```\n{{code}}\n```',
-    folder: '编程/测试',
-    tags: ['编程', '测试'],
+    title: 'Unit Test Generator',
+    description: 'Generate unit tests that cover edge cases for a function',
+    systemPrompt: 'You are a test engineer. Write unit tests for the function provided by the user that cover both the happy path and edge cases. List the test cases first, then give the complete code.',
+    userPrompt: 'Language: {{language}}\nTest framework: {{framework}}\nFunction:\n```\n{{code}}\n```',
+    folder: 'engineering/testing',
+    tags: ['Engineering', 'Testing'],
     isFavorite: false,
     isPinned: false,
     usageCount: 34,
@@ -174,55 +174,55 @@ const PROMPT_SEEDS: Omit<Prompt, 'syncPolicy'>[] = [
       { name: 'framework', type: 'select', options: ['Vitest', 'Jest', 'pytest', 'go test'], required: false },
       { name: 'code', type: 'textarea', required: true },
     ],
-    versions: [snap(1, daysAgo(7), { title: '单元测试生成', description: '为函数生成覆盖边界条件的单元测试', systemPrompt: '你是测试工程师。为用户提供的函数编写覆盖正常路径与边界条件的单元测试，先列出用例清单再给完整代码。', userPrompt: '语言：{{language}}\n测试框架：{{framework}}\n函数：\n```\n{{code}}\n```' })],
+    versions: [snap(1, daysAgo(7), { title: 'Unit Test Generator', description: 'Generate unit tests that cover edge cases for a function', systemPrompt: 'You are a test engineer. Write unit tests for the function provided by the user that cover both the happy path and edge cases. List the test cases first, then give the complete code.', userPrompt: 'Language: {{language}}\nTest framework: {{framework}}\nFunction:\n```\n{{code}}\n```' })],
     createdAt: daysAgo(7),
     updatedAt: daysAgo(7),
   },
   {
     id: 'p-sql',
-    title: 'SQL 优化顾问',
-    description: '分析执行计划风险并给出优化建议',
-    systemPrompt: '你是数据库优化专家。分析用户给出的 SQL：指出可能的执行计划风险、缺失索引与改写方案，按收益从高到低排列建议。',
-    userPrompt: '请优化这条 SQL（表结构见注释）：\n\n{{sql}}',
-    folder: '编程/数据库',
-    tags: ['数据库'],
+    title: 'SQL Optimization Advisor',
+    description: 'Analyze execution plan risks and recommend optimizations',
+    systemPrompt: 'You are a database optimization expert. Analyze the SQL provided by the user: point out likely execution plan risks, missing indexes, and rewrite options, ranking recommendations from highest to lowest payoff.',
+    userPrompt: 'Optimize this SQL (the table schema is in the comments):\n\n{{sql}}',
+    folder: 'engineering/database',
+    tags: ['Database'],
     isFavorite: false,
     isPinned: false,
     usageCount: 9,
     variables: [{ name: 'sql', type: 'textarea', required: true }],
-    versions: [snap(1, daysAgo(18), { title: 'SQL 优化顾问', description: '分析执行计划风险并给出优化建议', systemPrompt: '你是数据库优化专家。分析用户给出的 SQL：指出可能的执行计划风险、缺失索引与改写方案，按收益从高到低排列建议。', userPrompt: '请优化这条 SQL（表结构见注释）：\n\n{{sql}}' })],
+    versions: [snap(1, daysAgo(18), { title: 'SQL Optimization Advisor', description: 'Analyze execution plan risks and recommend optimizations', systemPrompt: 'You are a database optimization expert. Analyze the SQL provided by the user: point out likely execution plan risks, missing indexes, and rewrite options, ranking recommendations from highest to lowest payoff.', userPrompt: 'Optimize this SQL (the table schema is in the comments):\n\n{{sql}}' })],
     createdAt: daysAgo(18),
     updatedAt: daysAgo(18),
   },
   {
     id: 'p-error',
-    title: '报错信息翻译',
-    description: '翻译英文报错并给出排查步骤',
-    systemPrompt: '你是调试助手。把用户的英文报错翻译成中文，解释最可能的原因，并给出 2-3 个排查步骤，按可能性排序。',
+    title: 'Error Message Explainer',
+    description: 'Explain error messages and provide troubleshooting steps',
+    systemPrompt: 'You are a debugging assistant. Explain the error message provided by the user, identify the most likely cause, and give 2-3 troubleshooting steps ordered by likelihood.',
     userPrompt: '{{error}}',
     folder: null,
-    tags: ['效率'],
+    tags: ['Productivity'],
     isFavorite: false,
     isPinned: false,
     usageCount: 51,
     variables: [{ name: 'error', type: 'textarea', required: true }],
-    versions: [snap(1, daysAgo(25), { title: '报错信息翻译', description: '翻译英文报错并给出排查步骤', systemPrompt: '你是调试助手。把用户的英文报错翻译成中文，解释最可能的原因，并给出 2-3 个排查步骤，按可能性排序。', userPrompt: '{{error}}' })],
+    versions: [snap(1, daysAgo(25), { title: 'Error Message Explainer', description: 'Explain error messages and provide troubleshooting steps', systemPrompt: 'You are a debugging assistant. Explain the error message provided by the user, identify the most likely cause, and give 2-3 troubleshooting steps ordered by likelihood.', userPrompt: '{{error}}' })],
     createdAt: daysAgo(25),
     updatedAt: daysAgo(11),
   },
   {
     id: 'p-api-debug',
-    title: '内部 API 调试助手',
-    description: '根据接口定义生成联调请求、错误码排查步骤与修复建议',
-    systemPrompt: '你是后端联调助手。根据接口定义给出可直接执行的 curl 请求、常见错误码排查步骤与修复建议。',
-    userPrompt: '接口：{{endpoint}}\n测试 Token：sk-live-8f3a2c9d4e5b6a71\n请生成联调请求，并在示例中复用该 Token。',
-    folder: '编程/调试',
-    tags: ['API', '调试'],
+    title: 'Internal API Debug Assistant',
+    description: 'Generate integration requests, error code troubleshooting steps, and fixes from an API definition',
+    systemPrompt: 'You are a backend integration assistant. Based on the API definition, provide curl requests that can be run directly, troubleshooting steps for common error codes, and suggested fixes.',
+    userPrompt: 'Endpoint: {{endpoint}}\nTest token: sk-live-8f3a2c9d4e5b6a71\nGenerate an integration request and reuse this token in the example.',
+    folder: 'engineering/debugging',
+    tags: ['API', 'Debugging'],
     isFavorite: false,
     isPinned: false,
     usageCount: 6,
     variables: [{ name: 'endpoint', type: 'text', required: true, example: 'GET /v1/orders' }],
-    versions: [snap(1, daysAgo(2), { title: '内部 API 调试助手', description: '根据接口定义生成联调请求、错误码排查步骤与修复建议', systemPrompt: '你是后端联调助手。根据接口定义给出可直接执行的 curl 请求、常见错误码排查步骤与修复建议。', userPrompt: '接口：{{endpoint}}\n测试 Token：sk-live-8f3a2c9d4e5b6a71\n请生成联调请求，并在示例中复用该 Token。' })],
+    versions: [snap(1, daysAgo(2), { title: 'Internal API Debug Assistant', description: 'Generate integration requests, error code troubleshooting steps, and fixes from an API definition', systemPrompt: 'You are a backend integration assistant. Based on the API definition, provide curl requests that can be run directly, troubleshooting steps for common error codes, and suggested fixes.', userPrompt: 'Endpoint: {{endpoint}}\nTest token: sk-live-8f3a2c9d4e5b6a71\nGenerate an integration request and reuse this token in the example.' })],
     createdAt: daysAgo(2),
     updatedAt: daysAgo(2),
   },
@@ -230,24 +230,24 @@ const PROMPT_SEEDS: Omit<Prompt, 'syncPolicy'>[] = [
 
 export const SEED_PROMPTS: Prompt[] = PROMPT_SEEDS.map((p) => ({
   ...p,
-  // 演示：个人排障速记默认仅本机；其余跟随仓库策略（v0.3 默认开启 Prompt 同步）
+  // Demo: personal troubleshooting notes stay local by default; everything else follows repo policy (v0.3 enables Prompt sync by default)
   syncPolicy: p.id === 'p-error' ? 'local' : 'inherit',
   inRepo: p.id !== 'p-error' && p.id !== 'p-api-debug',
 }))
 
 const commitHelperMd = `# Commit Helper
 
-依据 **Conventional Commits** 规范生成提交信息。
+Generate commit messages that follow the **Conventional Commits** spec.
 
-## 使用方式
-1. 读取 \`git diff --staged\` 输出
-2. 判断变更类型：feat / fix / refactor / docs / chore
-3. 输出一行主题 + 正文要点
+## Usage
+1. Read the output of \`git diff --staged\`
+2. Determine the change type: feat / fix / refactor / docs / chore
+3. Output a subject line plus bullet points in the body
 
-## 规则
-- 主题不超过 50 字符
-- 正文说明「为什么」而不是「改了什么」
-- 涉及破坏性变更时必须带 \`!\`
+## Rules
+- Keep the subject under 50 characters
+- Explain "why" in the body, not "what changed"
+- Always append \`!\` for breaking changes
 
 \`\`\`bash
 git diff --staged | commit-helper
@@ -256,54 +256,54 @@ git diff --staged | commit-helper
 
 const codeReviewerMd = `# Code Reviewer
 
-按四个维度审查当前分支的改动：
+Review the changes on the current branch across four dimensions:
 
-- **正确性**：逻辑错误、边界条件
-- **可读性**：命名、函数长度、注释密度
-- **性能**：循环复杂度、N+1 查询
-- **安全**：注入、越权、敏感信息泄漏
+- **Correctness**: logic errors, edge cases
+- **Readability**: naming, function length, comment density
+- **Performance**: cyclomatic complexity, N+1 queries
+- **Security**: injection, unauthorized access, sensitive data leaks
 
-## 输出格式
-每个维度给出评分（0-10）与证据行号，最后输出总评与合并建议。
+## Output format
+Give a score (0-10) and supporting line numbers for each dimension, then finish with an overall assessment and a merge recommendation.
 `
 
 const testWriterMd = `# Test Writer
 
-为指定函数生成单元测试：
+Generate unit tests for a given function:
 
-1. 分析函数签名与分支
-2. 列出用例矩阵（正常 / 边界 / 异常）
-3. 生成可运行测试代码
-4. 覆盖率不足 80% 时补充用例
+1. Analyze the function signature and branches
+2. List the case matrix (happy path / edge / error)
+3. Generate runnable test code
+4. Add more cases when coverage is below 80%
 
-支持 Vitest、Jest、pytest、go test。
+Supports Vitest, Jest, pytest, and go test.
 `
 
 const docWriterMd = `# Doc Writer
 
-把代码变更转化为文档更新：
+Turn code changes into documentation updates:
 
-- 从公开 API 变更推断 README 是否需要更新
-- 为新端点补充请求 / 响应示例
-- 变更破坏兼容性时生成迁移指南段落
+- Infer from public API changes whether the README needs an update
+- Add request / response examples for new endpoints
+- Generate a migration guide section when a change breaks compatibility
 `
 
 const frontendDesignMd = `# Frontend Design
 
-审查前端实现的设计一致性：
+Review design consistency in the frontend implementation:
 
-- 间距 / 圆角 / 阴影是否符合设计 token
-- 交互状态是否完整（hover / focus / disabled / loading / empty）
-- 暗色模式对比度检查
+- Do spacing / radius / shadow follow the design tokens?
+- Are interaction states complete (hover / focus / disabled / loading / empty)?
+- Dark mode contrast check
 `
 
 const pythonStandardsMd = `# Python Standards
 
- enforce 团队 Python 规范：
+ enforce the team Python standards:
 
-- 使用 \`uv\` 管理依赖，禁止手写 requirements.txt
-- 类型注解全覆盖，公共 API 必须有 docstring
-- 错误只捕获可恢复异常，禁止裸 except
+- Use \`uv\` to manage dependencies; never hand-write requirements.txt
+- Full type annotations; public APIs must have docstrings
+- Catch only recoverable exceptions; never use a bare except
 `
 
 export const SEED_SKILLS: Skill[] = [
@@ -311,29 +311,29 @@ export const SEED_SKILLS: Skill[] = [
     id: 's-commit-helper',
     name: 'commit-helper',
     emoji: '📝',
-    description: '依据 Conventional Commits 生成规范提交信息，自动区分 feat / fix / chore。',
+    description: 'Generate commit messages that follow the Conventional Commits spec, automatically distinguishing feat / fix / chore.',
     author: 'anthropic',
     version: '1.2.0',
     source: 'official',
-    category: '开发流程',
-    folder: '开发流程/Git',
-    tags: ['git', '规范'],
+    category: 'Dev Workflow',
+    folder: 'dev-workflow/git',
+    tags: ['git', 'Standards'],
     instructions: commitHelperMd,
     installs: { claude: 'symlink', cursor: 'copy' },
-    versions: [snap(2, daysAgo(3), { instructions: commitHelperMd }, '补充破坏性变更规则'), snap(1, daysAgo(14), { instructions: '# Commit Helper\n\n生成 Conventional Commits 提交信息。\n' })],
+    versions: [snap(2, daysAgo(3), { instructions: commitHelperMd }, 'Added the breaking change rule'), snap(1, daysAgo(14), { instructions: '# Commit Helper\n\nGenerate commit messages that follow the Conventional Commits spec.\n' })],
     installedAt: daysAgo(14),
   },
   {
     id: 's-code-reviewer',
     name: 'code-reviewer',
     emoji: '🔍',
-    description: '按正确性 / 可读性 / 性能 / 安全四维审查分支改动并评分。',
+    description: 'Review and score branch changes across correctness, readability, performance, and security.',
     author: 'anthropic',
     version: '2.0.1',
     source: 'official',
-    category: '代码质量',
-    folder: '开发流程/代码质量',
-    tags: ['审查'],
+    category: 'Code Quality',
+    folder: 'dev-workflow/code-quality',
+    tags: ['Review'],
     instructions: codeReviewerMd,
     installs: { claude: 'symlink' },
     versions: [snap(1, daysAgo(8), { instructions: codeReviewerMd })],
@@ -343,13 +343,13 @@ export const SEED_SKILLS: Skill[] = [
     id: 's-test-writer',
     name: 'test-writer',
     emoji: '🧪',
-    description: '生成覆盖边界条件的单元测试，支持四大主流框架。',
+    description: 'Generate unit tests that cover edge cases, with support for four major frameworks.',
     author: 'community',
     version: '1.0.0',
     source: 'community',
-    category: '测试',
-    folder: '开发流程/测试',
-    tags: ['测试'],
+    category: 'Testing',
+    folder: 'dev-workflow/testing',
+    tags: ['Testing'],
     instructions: testWriterMd,
     installs: { codex: 'copy' },
     versions: [snap(1, daysAgo(6), { instructions: testWriterMd })],
@@ -359,13 +359,13 @@ export const SEED_SKILLS: Skill[] = [
     id: 's-doc-writer',
     name: 'doc-writer',
     emoji: '📄',
-    description: '从代码变更推断文档更新点，生成迁移指南。',
+    description: 'Infer documentation updates from code changes and generate migration guides.',
     author: 'anthropic',
     version: '1.4.2',
     source: 'official',
-    category: '文档',
-    folder: '文档/技术写作',
-    tags: ['文档'],
+    category: 'Documentation',
+    folder: 'docs/technical-writing',
+    tags: ['Documentation'],
     instructions: docWriterMd,
     installs: { cursor: 'copy', kiro: 'symlink' },
     versions: [snap(1, daysAgo(10), { instructions: docWriterMd })],
@@ -375,13 +375,13 @@ export const SEED_SKILLS: Skill[] = [
     id: 's-frontend-design',
     name: 'frontend-design',
     emoji: '🎨',
-    description: '审查前端实现与设计 token 的一致性，检查交互状态完整性。',
+    description: 'Review frontend implementations for design token consistency and complete interaction states.',
     author: 'community',
     version: '0.9.0',
     source: 'community',
-    category: '设计',
-    folder: '设计/前端',
-    tags: ['前端', '设计'],
+    category: 'Design',
+    folder: 'design/frontend',
+    tags: ['Frontend', 'Design'],
     instructions: frontendDesignMd,
     installs: {},
     versions: [snap(1, daysAgo(2), { instructions: frontendDesignMd })],
@@ -391,13 +391,13 @@ export const SEED_SKILLS: Skill[] = [
     id: 's-python-standards',
     name: 'python-standards',
     emoji: '🐍',
-    description: '团队 Python 规范：uv 依赖管理、类型注解、异常处理约定。',
+    description: 'Team Python standards: uv dependency management, type annotations, and exception handling conventions.',
     author: 'local',
     version: '1.1.0',
     source: 'import',
-    category: '语言规范',
-    folder: '语言规范/Python',
-    tags: ['python'],
+    category: 'Language Standards',
+    folder: 'language-standards/python',
+    tags: ['Python'],
     instructions: pythonStandardsMd,
     installs: { windsurf: 'copy', claude: 'external' },
     versions: [snap(1, daysAgo(16), { instructions: pythonStandardsMd })],
@@ -405,138 +405,138 @@ export const SEED_SKILLS: Skill[] = [
   },
 ]
 
-/* ---------------- Skill 商店 ---------------- */
+/* ---------------- Skill Store ---------------- */
 
 const storeMd = (name: string, what: string, usage: string[]) =>
-  `# ${name}\n\n${what}\n\n## 何时使用\n${usage.map((u) => `- ${u}`).join('\n')}\n\n## 工作方式\n1. 理解用户目标\n2. 按最佳实践执行\n3. 输出结果并说明依据\n`
+  `# ${name}\n\n${what}\n\n## When to use\n${usage.map((u) => `- ${u}`).join('\n')}\n\n## How it works\n1. Understand the user's goal\n2. Follow best practices\n3. Deliver the result and explain the rationale\n`
 
 export const SEED_STORE_SKILLS: StoreSkill[] = [
   {
     id: 'ss-spreadsheet',
     name: 'spreadsheet-editor',
     emoji: '📊',
-    description: '创建、编辑与分析电子表格，支持公式计算与图表生成。',
+    description: 'Create, edit, and analyze spreadsheets, with formula evaluation and chart generation.',
     author: 'anthropic',
     version: '1.3.0',
-    category: '办公',
+    category: 'Office',
     downloads: 128400,
     source: 'official',
-    instructions: storeMd('Spreadsheet Editor', '读写 xlsx / csv，支持公式、透视与图表。', ['批量整理数据', '从表格生成报表']),
+    instructions: storeMd('Spreadsheet Editor', 'Read and write xlsx / csv, with formulas, pivot tables, and charts.', ['Bulk data cleanup', 'Generate reports from spreadsheets']),
     files: [{ path: 'SKILL.md', size: '3.2 KB' }, { path: 'scripts/formulas.py', size: '1.8 KB' }],
   },
   {
     id: 'ss-pdf',
     name: 'pdf-processor',
     emoji: '📕',
-    description: 'PDF 拆分、合并、文本提取与表单填写。',
+    description: 'Split, merge, extract text from, and fill PDF forms.',
     author: 'anthropic',
     version: '2.1.0',
-    category: '办公',
+    category: 'Office',
     downloads: 96200,
     source: 'official',
-    instructions: storeMd('PDF Processor', '对 PDF 执行常见操作并保持版式。', ['提取合同关键条款', '合并多份扫描件']),
+    instructions: storeMd('PDF Processor', 'Perform common PDF operations while preserving layout.', ['Extract key contract clauses', 'Merge scanned documents']),
     files: [{ path: 'SKILL.md', size: '2.7 KB' }, { path: 'scripts/merge.py', size: '1.1 KB' }],
   },
   {
     id: 'ss-skill-creator',
     name: 'skill-creator',
     emoji: '✨',
-    description: '引导你从零编写一份结构合规的 SKILL.md 技能。',
+    description: 'Guide you through writing a well-structured, spec-compliant SKILL.md from scratch.',
     author: 'anthropic',
     version: '1.0.4',
-    category: '元技能',
+    category: 'Meta Skills',
     downloads: 154000,
     source: 'official',
-    instructions: storeMd('Skill Creator', '按官方规范生成 SKILL.md：frontmatter、指令体、参考文件。', ['把重复流程沉淀为技能', '规范已有提示词为技能']),
+    instructions: storeMd('Skill Creator', 'Generate a SKILL.md per the official spec: frontmatter, instruction body, reference files.', ['Turn repeated workflows into Skills', 'Convert existing prompts into Skills']),
     files: [{ path: 'SKILL.md', size: '4.6 KB' }, { path: 'references/spec.md', size: '6.0 KB' }],
   },
   {
     id: 'ss-web-researcher',
     name: 'web-researcher',
     emoji: '🌐',
-    description: '联网检索、交叉验证并输出带来源的调研摘要。',
+    description: 'Search the web, cross-check findings, and produce a research summary with sources.',
     author: 'community',
     version: '0.8.2',
-    category: '调研',
+    category: 'Research',
     downloads: 43100,
     source: 'community',
-    instructions: storeMd('Web Researcher', '多轮搜索与来源校验，输出结构化调研报告。', ['技术选型对比', '竞品功能盘点']),
+    instructions: storeMd('Web Researcher', 'Multi-round search with source verification; outputs a structured research report.', ['Technology selection comparisons', 'Competitor feature inventories']),
     files: [{ path: 'SKILL.md', size: '2.2 KB' }],
   },
   {
     id: 'ss-sqlite',
     name: 'sqlite-analyst',
     emoji: '🗄️',
-    description: '分析 SQLite 库结构，审查慢查询并建议索引。',
+    description: 'Analyze SQLite schemas, review slow queries, and recommend indexes.',
     author: 'community',
     version: '1.1.0',
-    category: '数据',
+    category: 'Data',
     downloads: 28700,
     source: 'community',
-    instructions: storeMd('SQLite Analyst', '读取库结构、EXPLAIN 查询计划、建议索引。', ['定位慢查询', '审查表设计']),
+    instructions: storeMd('SQLite Analyst', 'Inspect schemas, EXPLAIN query plans, and recommend indexes.', ['Find slow queries', 'Review table design']),
     files: [{ path: 'SKILL.md', size: '2.9 KB' }, { path: 'scripts/analyze.sql', size: '0.9 KB' }],
   },
   {
     id: 'ss-api-designer',
     name: 'api-designer',
     emoji: '🧭',
-    description: '按 REST 与 OpenAPI 规范评审接口设计，给出重构建议。',
+    description: 'Review API design against REST and OpenAPI conventions, with refactoring suggestions.',
     author: 'community',
     version: '2.0.0',
-    category: '架构',
+    category: 'Architecture',
     downloads: 35900,
     source: 'community',
-    instructions: storeMd('API Designer', '审查资源建模、状态码、分页与错误结构。', ['新服务接口评审', 'OpenAPI 文档体检']),
+    instructions: storeMd('API Designer', 'Review resource modeling, status codes, pagination, and error structure.', ['Review a new service API', 'Audit OpenAPI documentation']),
     files: [{ path: 'SKILL.md', size: '3.5 KB' }],
   },
   {
     id: 'ss-release-notes',
     name: 'git-release-notes',
     emoji: '🏷️',
-    description: '汇总两个 tag 之间的提交，生成面向用户的发布说明。',
+    description: 'Collect commits between two tags and generate user-facing release notes.',
     author: 'anthropic',
     version: '1.2.1',
-    category: '开发流程',
+    category: 'Dev Workflow',
     downloads: 58300,
     source: 'official',
-    instructions: storeMd('Release Notes', '按 feature / fix / breaking 分类汇总提交记录。', ['准备版本发布公告', '整理 changelog']),
+    instructions: storeMd('Release Notes', 'Group commits by feature / fix / breaking.', ['Prepare a release announcement', 'Compile a changelog']),
     files: [{ path: 'SKILL.md', size: '1.9 KB' }],
   },
   {
     id: 'ss-ppt-writer',
     name: 'ppt-writer',
     emoji: '🖼️',
-    description: '把主题展开为 PPT 大纲、每页讲稿与视觉建议。',
+    description: 'Expand a topic into a slide outline, per-slide speaker notes, and visual suggestions.',
     author: 'community',
     version: '0.5.0',
-    category: '办公',
+    category: 'Office',
     downloads: 19400,
     source: 'community',
-    instructions: storeMd('PPT Writer', '生成大纲与逐页讲稿，标注视觉与图表建议。', ['项目汇报', '技术分享']),
+    instructions: storeMd('PPT Writer', 'Generate an outline and per-slide speaker notes, with visual and chart suggestions.', ['Project updates', 'Technical talks']),
     files: [{ path: 'SKILL.md', size: '2.4 KB' }],
   },
 ]
 
-/* ---------------- MCP 种子 ---------------- */
+/* ---------------- MCP seeds ---------------- */
 
 export const SEED_MCPS: McpServer[] = [
   {
     id: 'm-filesystem',
     name: 'filesystem',
-    description: '本地文件系统读写：列目录、读文件、受控写入。',
+    description: 'Read and write the local filesystem: list directories, read files, controlled writes.',
     transport: 'stdio',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-filesystem', '/Users/macbookair/Projects'],
     env: {},
     enabled: true,
     isFavorite: true,
-    folder: '本地工具/文件',
-    tags: ['文件'],
+    folder: 'local-tools/files',
+    tags: ['Files'],
     source: 'manual',
     installs: { 'claude-desktop': true, cursor: true },
     notes: '',
     versions: [
-      snap(2, daysAgo(2), { config: JSON.stringify({ transport: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '/Users/macbookair/Projects'], env: {} }, null, 2) }, '把根目录改为 Projects'),
+      snap(2, daysAgo(2), { config: JSON.stringify({ transport: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '/Users/macbookair/Projects'], env: {} }, null, 2) }, 'Changed the root directory to Projects'),
       snap(1, daysAgo(9), { config: JSON.stringify({ transport: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '/tmp'], env: {} }, null, 2) }),
     ],
     createdAt: daysAgo(9),
@@ -545,7 +545,7 @@ export const SEED_MCPS: McpServer[] = [
   {
     id: 'm-github',
     name: 'github',
-    description: 'GitHub 仓库 / Issue / PR 查询与操作。',
+    description: 'Query and operate on GitHub repositories / issues / PRs.',
     transport: 'stdio',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-github'],
@@ -553,11 +553,11 @@ export const SEED_MCPS: McpServer[] = [
     requiredEnv: ['GITHUB_PERSONAL_ACCESS_TOKEN'],
     enabled: true,
     isFavorite: true,
-    folder: '开发/GitHub',
-    tags: ['开发'],
+    folder: 'development/github',
+    tags: ['Development'],
     source: 'market',
     installs: { 'claude-desktop': true },
-    notes: 'Token 半年轮换一次。',
+    notes: 'Token is rotated every six months.',
     versions: [snap(1, daysAgo(6), { config: JSON.stringify({ transport: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-github'], env: { GITHUB_PERSONAL_ACCESS_TOKEN: '***' } }, null, 2) })],
     createdAt: daysAgo(6),
     updatedAt: daysAgo(6),
@@ -565,7 +565,7 @@ export const SEED_MCPS: McpServer[] = [
   {
     id: 'm-amap',
     name: 'amap-maps',
-    description: '高德地图：地理编码、POI 搜索、路线规划。',
+    description: 'Amap (Gaode Maps): geocoding, POI search, and route planning.',
     transport: 'stdio',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-amap'],
@@ -573,8 +573,8 @@ export const SEED_MCPS: McpServer[] = [
     requiredEnv: ['AMAP_API_KEY'],
     enabled: true,
     isFavorite: false,
-    folder: '外部服务/地图',
-    tags: ['地图'],
+    folder: 'external-services/maps',
+    tags: ['Maps'],
     source: 'market',
     installs: {},
     notes: '',
@@ -585,14 +585,14 @@ export const SEED_MCPS: McpServer[] = [
   {
     id: 'm-fetch',
     name: 'fetch',
-    description: '网页抓取与 Markdown 转换，供模型阅读网页内容。',
+    description: 'Fetch web pages and convert them to Markdown so the model can read web content.',
     transport: 'http',
     url: 'https://mcp.fetch-service.dev/sse',
     headers: { Authorization: 'Bearer fk_live_9f8e7d6c5b4a' },
     enabled: false,
     isFavorite: false,
-    folder: '外部服务/网络',
-    tags: ['网络'],
+    folder: 'external-services/web',
+    tags: ['Web'],
     source: 'import',
     installs: { cursor: true },
     notes: '',
@@ -603,15 +603,15 @@ export const SEED_MCPS: McpServer[] = [
   {
     id: 'm-sqlite',
     name: 'sqlite-explorer',
-    description: '只读查询 SQLite 数据库并解释执行计划。',
+    description: 'Run read-only queries against SQLite databases and explain execution plans.',
     transport: 'stdio',
     command: 'uvx',
     args: ['mcp-server-sqlite', '--db-path', './data/app.db'],
     env: {},
     enabled: true,
     isFavorite: false,
-    folder: '本地工具/数据',
-    tags: ['数据'],
+    folder: 'local-tools/data',
+    tags: ['Data'],
     source: 'manual',
     installs: { claude: true },
     notes: '',
@@ -622,7 +622,7 @@ export const SEED_MCPS: McpServer[] = [
   {
     id: 'm-slack',
     name: 'slack',
-    description: 'Slack 频道消息收发与历史检索。',
+    description: 'Send and receive Slack channel messages and search message history.',
     transport: 'stdio',
     command: '',
     args: [],
@@ -630,82 +630,82 @@ export const SEED_MCPS: McpServer[] = [
     requiredEnv: ['SLACK_BOT_TOKEN'],
     enabled: false,
     isFavorite: false,
-    folder: '外部服务/办公',
-    tags: ['办公'],
+    folder: 'external-services/office',
+    tags: ['Office'],
     source: 'manual',
     installs: {},
-    notes: '待申请 Bot Token 后启用。',
+    notes: 'Enabled once a Bot Token is issued.',
     versions: [snap(1, daysAgo(8), { config: JSON.stringify({ transport: 'stdio', command: '', env: { SLACK_BOT_TOKEN: '', SLACK_TEAM_ID: 'T024K92XP' } }, null, 2) })],
     createdAt: daysAgo(8),
     updatedAt: daysAgo(8),
   },
 ]
 
-/* ---------------- MCP 商店 ---------------- */
+/* ---------------- MCP Store ---------------- */
 
 export const SEED_MCP_STORE: McpStoreItem[] = [
   {
     id: 'ms-notion',
     name: 'notion',
-    description: '连接 Notion 工作区，搜索与读写页面、数据库。',
-    whatItDoes: '以 Integration 身份访问授权页面：全文搜索、创建页面、追加块、查询数据库视图。',
-    useCases: ['把会议纪要写入 Notion', '跨库检索项目资料'],
+    description: 'Connect to a Notion workspace to search and read/write pages and databases.',
+    whatItDoes: 'Access shared pages as an integration: full-text search, page creation, block appends, and database view queries.',
+    useCases: ['Write meeting notes to Notion', 'Search project material across databases'],
     installCommand: 'npx -y @mcp/notion',
     transport: 'stdio',
     command: 'npx',
     args: ['-y', '@mcp/notion'],
     envDocs: [
-      { key: 'NOTION_API_KEY', desc: '在 Notion「Integrations」创建 Internal Integration Token', placeholder: 'ntn_xxxxxxxx' },
+      { key: 'NOTION_API_KEY', desc: 'Create an Internal Integration Token under Notion "Integrations"', placeholder: 'ntn_xxxxxxxx' },
     ],
   },
   {
     id: 'ms-postgres',
     name: 'postgres',
-    description: '连接 PostgreSQL，执行只读查询与结构浏览。',
-    whatItDoes: '列出表结构、执行只读 SQL、解释查询计划，默认禁止写操作。',
-    useCases: ['让 AI 查业务数据', '审查慢查询'],
+    description: 'Connect to PostgreSQL for read-only queries and schema browsing.',
+    whatItDoes: 'List table schemas, run read-only SQL, and explain query plans; writes are disabled by default.',
+    useCases: ['Let AI query business data', 'Review slow queries'],
     installCommand: 'npx -y @mcp/postgres',
     transport: 'stdio',
     command: 'npx',
     args: ['-y', '@mcp/postgres'],
     envDocs: [
-      { key: 'DATABASE_URL', desc: 'PostgreSQL 连接串，建议使用只读账号', placeholder: 'postgres://user:pass@host:5432/db' },
+      { key: 'DATABASE_URL', desc: 'PostgreSQL connection string; a read-only account is recommended', placeholder: 'postgres://user:pass@host:5432/db' },
     ],
   },
   {
     id: 'ms-brave-search',
     name: 'brave-search',
-    description: 'Brave 搜索 API 封装，网页与新闻检索。',
-    whatItDoes: '执行网页 / 新闻 / 图片搜索，返回标题、摘要与链接。',
-    useCases: ['实时信息检索', '竞品动态追踪'],
+    description: 'Brave Search API wrapper for web and news search.',
+    whatItDoes: 'Run web / news / image searches and return titles, snippets, and links.',
+    useCases: ['Real-time information lookup', 'Track competitor updates'],
     installCommand: 'npx -y @mcp/brave-search',
     transport: 'stdio',
     command: 'npx',
     args: ['-y', '@mcp/brave-search'],
     envDocs: [
-      { key: 'BRAVE_API_KEY', desc: '在 brave.com/search/api 申请 Free 计划即可', placeholder: 'BSAxxxxxxxx' },
+      { key: 'BRAVE_API_KEY', desc: 'Apply for the Free plan at brave.com/search/api', placeholder: 'BSAxxxxxxxx' },
     ],
   },
   {
     id: 'ms-firecrawl',
     name: 'firecrawl',
-    description: '把任意网页爬取为干净的 Markdown / 结构化数据。',
-    whatItDoes: '单页抓取、整站爬取、JS 渲染，自动转 Markdown。',
-    useCases: ['文档站抓取', '为 RAG 准备语料'],
+    description: 'Crawl any web page into clean Markdown / structured data.',
+    whatItDoes: 'Single-page scraping, whole-site crawling, and JS rendering, automatically converted to Markdown.',
+    useCases: ['Scrape documentation sites', 'Prepare corpora for RAG'],
     installCommand: 'npx -y @mcp/firecrawl',
     transport: 'stdio',
     command: 'npx',
     args: ['-y', '@mcp/firecrawl'],
     envDocs: [
-      { key: 'FIRECRAWL_API_KEY', desc: '在 firecrawl.dev 控制台获取', placeholder: 'fc-xxxxxxxx' },
+      { key: 'FIRECRAWL_API_KEY', desc: 'Get it from the firecrawl.dev console', placeholder: 'fc-xxxxxxxx' },
     ],
   },
   {
     id: 'ms-memory',
     name: 'memory',
-    description: '本地知识图谱记忆：跨会话记住实体与关系。',
-    whatItDoes: '把对话中的实体、关系写入本地知识图谱文件，下次会话可召回。',
-    useCases: ['记住项目上下文', '长期偏好记忆'],
+    description: 'Local knowledge graph memory: remember entities and relationships across sessions.',
+    whatItDoes: 'Write entities and relationships from the conversation into a local knowledge graph file and recall them in later sessions.',
+    useCases: ['Remember project context', 'Long-term preference memory'],
     installCommand: 'npx -y @mcp/memory',
     transport: 'stdio',
     command: 'npx',
@@ -715,9 +715,9 @@ export const SEED_MCP_STORE: McpStoreItem[] = [
   {
     id: 'ms-puppeteer',
     name: 'puppeteer',
-    description: '浏览器自动化：导航、点击、截图与执行脚本。',
-    whatItDoes: '驱动无头 Chromium 完成网页操作并截图回传。',
-    useCases: ['端到端冒烟验证', '自动填写表单'],
+    description: 'Browser automation: navigate, click, take screenshots, and run scripts.',
+    whatItDoes: 'Drive headless Chromium to perform page actions and return screenshots.',
+    useCases: ['End-to-end smoke verification', 'Auto-fill forms'],
     installCommand: 'npx -y @mcp/puppeteer',
     transport: 'stdio',
     command: 'npx',
@@ -726,10 +726,10 @@ export const SEED_MCP_STORE: McpStoreItem[] = [
   },
 ]
 
-/* ---------------- Agent MCP 外部条目（反向导入演示） ---------------- */
+/* ---------------- Agent MCP external entries (reverse-import demo) ---------------- */
 
 export const AGENT_EXTERNAL_ENTRIES: Record<string, { name: string; hint: string }[]> = {
-  cursor: [{ name: 'figma-developer-mcp', hint: '外部安装 · 读取设计稿数据' }],
-  'claude-desktop': [{ name: 'notion-api', hint: '外部安装 · 未纳入我的库' }],
-  cline: [{ name: 'time-server', hint: '外部安装 · 本地时间查询' }],
+  cursor: [{ name: 'figma-developer-mcp', hint: 'Installed externally · reads design file data' }],
+  'claude-desktop': [{ name: 'notion-api', hint: 'Installed externally · not in My Library' }],
+  cline: [{ name: 'time-server', hint: 'Installed externally · local time lookup' }],
 }

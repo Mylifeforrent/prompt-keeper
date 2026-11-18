@@ -55,28 +55,28 @@ export function PromptSyncModal({
       open={open}
       onClose={onClose}
       width="max-w-xl"
-      title={`同步设置 — ${prompt.title}`}
-      subtitle="Prompt 只通过 Git 在机器 / 团队之间流转；不会写入 Agent 默认目录"
+      title={`Sync settings — ${prompt.title}`}
+      subtitle="Prompts travel between machines and teammates only through Git; they are never written to default Agent directories"
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            取消
+            Cancel
           </Button>
           <Button
             onClick={() => {
               setPromptSyncPolicy(prompt.id, policy)
               toast.success(
                 policy === 'local'
-                  ? '已设为仅本机；后续编辑不会产生待推送'
+                  ? 'Set to local only; future edits create no pending pushes'
                   : policy === 'sync'
-                    ? '已加入仓库同步；推送仍需在同步中心确认'
-                    : '已跟随仓库策略',
+                    ? 'Added to repo sync; pushes still need confirmation in Sync Center'
+                    : 'Following repo policy',
               )
               onClose()
             }}
           >
             <Icon name="check" />
-            保存范围
+            Save scope
           </Button>
         </>
       }
@@ -84,17 +84,17 @@ export function PromptSyncModal({
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2.5">
           <Badge variant={effective ? 'info' : 'outline'}>
-            {effective ? '参与仓库同步' : '仅本机'}
+            {effective ? 'In repo sync' : 'Local only'}
           </Badge>
           <Badge variant={stateMeta.variant}>{stateMeta.label}</Badge>
           <span className="text-[11px] text-muted-foreground">
             {connected
               ? globalOn
-                ? '仓库已连接 · Prompt 同步已开启'
-                : '仓库已连接 · Prompt 同步未开启'
-              : '未连接仓库'}
+                ? 'Repo connected · Prompt sync on'
+                : 'Repo connected · Prompt sync off'
+              : 'No repo connected'}
           </span>
-          <span className="ml-auto text-[11px] text-muted-foreground">{pending} 条待处理变更</span>
+          <span className="ml-auto text-[11px] text-muted-foreground">{pending} pending changes</span>
         </div>
 
         <div className="space-y-2">
@@ -125,11 +125,11 @@ export function PromptSyncModal({
                 <span className="min-w-0">
                   <span className="flex items-center gap-1.5 text-sm font-medium">
                     {meta.label}
-                    {option === 'local' && <Badge variant="outline">推荐给私密 Prompt</Badge>}
+                    {option === 'local' && <Badge variant="outline">Recommended for private prompts</Badge>}
                   </span>
                   <span className="mt-0.5 block text-[11px] leading-5 text-muted-foreground">
                     {meta.desc}
-                    {disabled ? ' 需先在同步中心开启 Prompt 同步。' : ''}
+                    {disabled ? ' Enable Prompt sync in Sync Center first.' : ''}
                   </span>
                 </span>
               </button>
@@ -138,30 +138,30 @@ export function PromptSyncModal({
         </div>
 
         <div className="rounded-lg border border-border px-3 py-2">
-          <div className="text-[11px] text-muted-foreground">仓库文件</div>
+          <div className="text-[11px] text-muted-foreground">Repo file</div>
           <div className="mt-0.5 break-all font-mono text-xs">{promptFilePath(prompt, state.repo.layout.prompts)}</div>
           <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
-            元数据（标题 / 标签 / 变量定义）在 frontmatter，正文分 System / User 两段；变量填值永远不落盘。
+            Metadata (title / tags / variable definitions) lives in frontmatter; the body is split into System and User sections; variable values are never written to disk.
           </p>
         </div>
 
         {policy === 'local' && pending > 0 && (
           <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs leading-5 text-warning">
             <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            当前有 {pending} 条未处理变更。保存后会撤回这些待同步项，但不会删除仓库中已有的文件。
+            {pending} unresolved changes. Saving withdraws these pending items, but existing repo files are not deleted.
           </div>
         )}
 
         {!globalOn && (
           <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
             <Icon name="cloud" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            Prompt 同步目前由仓库设置统一关闭；这里的选择只会保存为本机偏好。
+            Prompt sync is currently turned off in repo settings; your choice here is saved as a local preference only.
           </div>
         )}
 
         <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
           <Icon name="shield" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          同步不等于分发：Prompt 只写入本机资产库；规则型内容请使用独立的「Agent 指令」工作区，按项目投影或全局目录分发。
+          Sync is not dispatch: prompts are written only to the local asset library. For rule-like content, use the separate Agent Instructions workspace and distribute via project projection or the global directory.
         </div>
       </div>
     </Modal>

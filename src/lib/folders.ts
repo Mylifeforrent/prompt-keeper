@@ -1,8 +1,8 @@
 /**
- * 文件夹即仓库结构：
- * - 库内 folder 使用 `/` 表示层级（例如 编程/前端）
- * - 仓库路径由同一 folder 直接生成，保证不用平台也能在 Git 中按目录浏览
- * - 单层文件夹是特例，多级文件夹不需要额外配置
+ * Folders are repo directories:
+ * - A library folder uses `/` to express hierarchy (e.g. engineering/code-quality)
+ * - The repository path is generated directly from the same folder, so directories can be browsed in Git without opening the app
+ * - Single-level folders are a special case; nested folders need no extra configuration
  */
 
 export const UNFILED_KEY = '__unfiled__'
@@ -17,9 +17,9 @@ export function normalizeFolder(value: string | null | undefined): string | null
 }
 
 export function folderLabel(folder: string | null | undefined): string {
-  if (folder === UNFILED_KEY) return '未分类'
+  if (folder === UNFILED_KEY) return 'Uncategorized'
   const normalized = normalizeFolder(folder)
-  return normalized ?? '未分类'
+  return normalized ?? 'Uncategorized'
 }
 
 export function folderDepth(folder: string | null | undefined): number {
@@ -35,7 +35,7 @@ export function folderMatches(folder: string | null | undefined, selected: strin
   return normalized === selected || normalized.startsWith(`${selected}/`)
 }
 
-/** 仓库目录段：保留中文，替换路径分隔符与文件系统保留字符 */
+/** Repo path segment: preserves the folder name, replacing path separators and filesystem-reserved characters */
 export function safePathSegment(input: string, fallback = 'untitled'): string {
   const name = input
     .trim()
@@ -76,7 +76,7 @@ export function folderOptions<T>(
       set.add(path)
     }
   }
-  return [...set].sort((a, b) => a.localeCompare(b, 'zh'))
+  return [...set].sort((a, b) => a.localeCompare(b, 'en'))
 }
 
 export interface FolderNode {
@@ -86,7 +86,7 @@ export interface FolderNode {
   children: FolderNode[]
 }
 
-/** 构建多级文件夹树；count 表示该目录及其子目录下的资产总数 */
+/** Build the nested folder tree; count is the number of assets in that directory and its subdirectories */
 export function buildFolderTree<T>(
   items: T[],
   getFolder: (item: T) => string | null | undefined,
@@ -114,7 +114,7 @@ export function buildFolderTree<T>(
   }
 
   const sortNodes = (nodes: FolderNode[]) => {
-    nodes.sort((a, b) => a.name.localeCompare(b.name, 'zh'))
+    nodes.sort((a, b) => a.name.localeCompare(b.name, 'en'))
     nodes.forEach((node) => sortNodes(node.children))
   }
   sortNodes(roots)
@@ -126,8 +126,8 @@ export function countUnfiled<T>(items: T[], getFolder: (item: T) => string | nul
 }
 
 /**
- * 从仓库路径反推库内文件夹。
- * tailSegments：文件本身占用的段数（prompt/contract/mcp 为 1，skill 为 2：<skill>/SKILL.md）
+ * Derive the library folder from a repository path.
+ * tailSegments: number of path segments occupied by the file itself (1 for prompt/contract/mcp, 2 for skill: <skill>/SKILL.md)
  */
 export function folderFromRepoPath(
   repoPath: string,

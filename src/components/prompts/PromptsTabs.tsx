@@ -29,8 +29,8 @@ export function PromptsTabs({
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5">
         <Tabs
           tabs={[
-            { value: 'mine', label: '我的 Prompt', count: state.prompts.length },
-            { value: 'platform', label: '平台发现' },
+            { value: 'mine', label: 'My Prompts', count: state.prompts.length },
+            { value: 'platform', label: 'Platform Discovery' },
           ]}
           value={tab}
           onChange={(v) => setTab(v as typeof tab)}
@@ -39,17 +39,17 @@ export function PromptsTabs({
           {tab === 'mine' ? (
             <>
               <Badge variant={state.repo.policies.prompts ? 'info' : 'outline'}>
-                {state.repo.policies.prompts ? 'Git 可选同步' : 'Git 未启用'}
+                {state.repo.policies.prompts ? 'Git sync optional' : 'Git not enabled'}
               </Badge>
               <span className="whitespace-nowrap">
-                {state.prompts.filter((p) => p.syncPolicy === 'local' || !state.repo.policies.prompts).length} 条仅本机 ·
-                不写入 Agent 目录
+                {state.prompts.filter((p) => p.syncPolicy === 'local' || !state.repo.policies.prompts).length} local only ·
+                not written to Agent dirs
               </span>
             </>
           ) : (
             <>
-              <Badge variant="info">平台来源</Badge>
-              <span className="whitespace-nowrap">按需搜索、复制或保存到本地</span>
+              <Badge variant="info">Platform source</Badge>
+              <span className="whitespace-nowrap">Search, copy, or save locally as needed</span>
             </>
           )}
         </span>

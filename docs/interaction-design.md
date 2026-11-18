@@ -1,700 +1,698 @@
-# Prompt Keeper 交互设计文档
+# Prompt Keeper Interaction Design Document
 
-| 项 | 内容 |
+| Item | Content |
 | --- | --- |
-| 产品名 | Prompt Keeper（暂定名 `[ASSUMPTION]`，以工作目录命名；上线前需产品确认） |
-| 版本 | v0.5（文件夹即仓库目录：四类资产目录结构对齐 + Agent 全局目录分发 + Skill / MCP 双向同步补全） |
-| 日期 | 2026-11-18 |
-| 功能提取来源 | github.com/legeling/PromptHub @ main（v0.6.2），提取脚本化扫描 renderer 组件、packages/core、shared/types、spec/knowledge 与 i18n 词条 |
-| 原型代码 | 本仓库 `src/`（React + TypeScript + Vite + Tailwind，shadcn/ui 风格组件源码内置） |
+| Product name | Prompt Keeper (working name `[ASSUMPTION]`; named after the working directory; requires product confirmation before launch) |
+| Version | v0.5 (folders are repo directories: directory structure alignment across the four asset types + Agent global directory dispatch + Skill / MCP two-way sync completed) |
+| Date | 2026-11-18 |
+| Feature source | github.com/legeling/PromptHub @ main (v0.6.2); extracted by a scripted scan of renderer components, packages/core, shared/types, spec/knowledge, and i18n entries |
+| Prototype code | This repo's `src/` (React + TypeScript + Vite + Tailwind; shadcn/ui-style component source included) |
 
 ---
 
-## 1. 设计目标与范围
+## 1. Design goals and scope
 
-### 1.1 产品定位
+### 1.1 Product positioning
 
-本地优先的 AI 编程资产工作台：把 **Prompt**、**Agent 指令（AGENTS.md / CLAUDE.md / .cursor/rules 等）**、**Skill（SKILL.md）**、**MCP 服务器配置** 四类资产放进同一个工作区，统一完成「组织 → 创作 → 分发 / 投影到 AI 编程工具 → 版本追溯」的闭环。
+A local-first workspace for AI coding assets: **Prompt**, **Agent Instructions (AGENTS.md / CLAUDE.md / .cursor/rules, etc.)**, **Skill (SKILL.md)**, and **MCP server configuration** live in one workspace, closing the loop "organize → author → distribute / project into AI coding tools → trace versions."
 
-v0.4 新增**Agent 指令契约域**。它不是一个 Prompt 子分类，也不是按厂商拆成的多个模块，而是一个独立资产域：用一份 canonical 契约描述「范围 / 激活方式 / 优先级 / 目标」，再由目标适配器编译为各工具的原生文件。判断依据是三个维度——**发现方式、生效语义、交付路径**：在这三点上，常驻指令和 Prompt 都不同；而各厂商之间只是同一件事的不同方言。
+v0.4 added the **Agent Instructions contract domain**. It is not a Prompt subcategory, nor a set of per-vendor modules, but an independent asset domain: one canonical contract describes "scope / activation / priority / targets", and target adapters compile it into each tool's native files. The rationale rests on three dimensions — **discovery, activation semantics, and delivery path**: persistent instructions and Prompts differ on all three, while vendors are merely different dialects of the same thing.
 
-v0.2 起增加一条跨资产的供给链：**Git 仓库（共享事实源）⇄ 本地资产库（本机控制面）→ 各 Agent 默认目录（投递目标）**。Git 负责跨机器 / 跨团队共享；本机负责审核、冲突解决、投影与分发；Agent 目录只是最终消费者，不被当作事实源。
+Since v0.2 there has been a cross-asset supply chain: **Git repo (shared source of truth) ⇄ local asset library (local control plane) → each Agent's default directory (delivery target)**. Git handles cross-machine / cross-team sharing; the local machine handles review, conflict resolution, projection, and dispatch; Agent directories are only final consumers and are never treated as a source of truth.
 
-v0.3 明确把 **Prompt 纳入 Git 同步**，但采用与 Skill / MCP 不同的边界：Prompt 以「一条一个 `.prompt.md`」的结构化文件同步，默认跟随仓库策略，允许逐条设为仅本机；Prompt 不在本期进入 Agent 分发矩阵，只在本机库与仓库之间流转。
+v0.3 explicitly brought **Prompts into Git sync**, but with a boundary different from Skill / MCP: Prompts sync as structured "one `.prompt.md` per Prompt" files, follow the repo policy by default, and can be set to local-only individually; Prompts do not enter the Agent dispatch matrix in this phase and only move between the local library and the repo.
 
-v0.5 修正了上一版最关键的四个结构性问题：**目录结构没有成为一等公民**、**Agent 指令只能投影到项目级目标**、**Skill / MCP 缺少稳定的本地编辑 → 待推送出口**、**文件夹只有单层且与仓库路径脱节**。新版把「文件夹即仓库目录」作为四类资产共同的组织协议，并把 Agent 指令的交付拆成「项目投影」与「本机全局目录投影」两条独立通道。
+v0.5 fixed the four most critical structural problems of the previous version: **directory structure was not a first-class citizen**, **Agent Instructions could only project to project-level targets**, **Skill / MCP lacked a stable local edit → pending push exit**, and **folders were single-level and disconnected from repo paths**. The new version makes "folders are repo directories" the shared organizational protocol for all four asset types and splits Agent Instructions delivery into two independent channels: "project projection" and "local global directory projection".
 
-### 1.2 设计目标
+### 1.2 Design goals
 
-1. 四类资产同一套「列表-详情」交互范式，学会一个就会四个。
-2. 所有「分发 / 投影」动作（Skill 安装到平台、MCP 应用到 Agent 配置、指令契约写入 AGENTS.md 等）必须显式确认，且展示将写入什么、写到哪。
-3. 所有「读取敏感内容」的位置（MCP 凭据）默认脱敏展示（`[REDACTED]`）。
-4. 破坏性操作（删除、恢复版本覆盖、批量移除）必须二次确认并明确后果。
-5. **Git 同步禁止「远端覆盖本地」的静默策略**：任何双向改动必须走三方合并（远端 / 本地 / 基线），冲突逐项解决。
-6. **MCP 密钥不得进入 Git**：仓库只存 `${VAR}` 占位，真实值只在本机钥匙串；推送前必须扫描并阻断明文。
-7. **技能脚本按代码执行对待**：拉取含 scripts 的新技能必须先审核内容与文件清单，再写入本地库，更不自动分发。
-8. **分发必须可追溯**：记录「哪个版本、何时、以 symlink/copy 写到哪个 Agent」，并支持回滚。
-9. **Prompt 同步必须结构化且可逐条排除**：每个 Prompt 一个 `.prompt.md`（frontmatter 存元数据与变量定义，正文分 System / User 两段）；私人 / 私密 Prompt 必须能一键设为仅本机，而不是靠「不要提交」的自觉。
-10. **Prompt 拉取必须逐条预览**：Prompt 会作为指令输入，即使不含脚本也不进入批量接受；拉取前必须看到全文或本地 → 仓库 diff。
-11. **Prompt 同步不等于 Agent 分发**：Prompt 只写入本机资产库；规则型 Prompt → `AGENTS.md` / `CLAUDE.md` / `.cursor/rules` 的投影由独立的 Agent 指令域承担。
-12. **Agent 指令必须独立成域**：常驻指令有 scope（用户 / 项目 / 路径）、activation（always / glob / model / manual）、priority、imports 等字段，不能塞进 Prompt 的 System / User / 变量模型。
-13. **厂商差异必须是数据，不是模块**：Copilot / Claude / Cursor / Windsurf / Codex 等的路径、frontmatter、优先级规则收敛到目标注册表；禁止为每个厂商复制一套 CRUD、版本与同步逻辑。
-14. **生效预览是核心能力**：给定「目标工具 + 当前文件路径」，必须能解释哪些契约进入上下文、按什么顺序、合计多少字节、哪些被跳过以及原因。
-15. **投影必须可追溯且不静默覆盖**：单文件目标使用 managed block 合并；目标文件被手工修改时标记漂移，禁止批量覆盖，只能逐项确认。
-16. **Agent 指令拉取必须逐条预览**：指令会在每次会话自动进入上下文，风险高于 Prompt；不得进入批量接受。
-17. **文件夹即仓库目录**：Prompt / Agent 指令 / Skill / MCP 的库内文件夹必须直接映射为 Git 目录；目录内可继续建子文件夹，最后一级保持单文件或单技能目录约定。用户不打开平台也能在仓库中按目录浏览。
-18. **四类资产同构组织**：四类资产都必须有文件夹树、搜索、仓库路径回显；Skill / MCP 的本地编辑必须产生稳定的「待推送」变更，形成真正的双向同步闭环。
-19. **Agent 指令全局目录可配置**：用户必须能勾选多条指令与多个本机 Agent，投影到各自的用户级目录；每个工具的全局目录路径必须可二次修改、可恢复默认，修改后相关投影标记为待更新。
-20. **全局目录写入必须可解释且可回滚**：写入前展示目标路径与文件内容；目标文件被手工修改时标记漂移，禁止批量覆盖，只能逐项确认。
+1. All four asset types share one "list-detail" interaction pattern: learn one, know all four.
+2. Every "dispatch / projection" action (installing a Skill to a platform, applying MCP to an Agent config, writing an instruction contract into AGENTS.md, etc.) must be explicitly confirmed and show what will be written and where.
+3. Every place that "reads sensitive content" (MCP credentials) is redacted by default (`[REDACTED]`).
+4. Destructive actions (delete, restore-version overwrite, bulk remove) must require confirmation and state the consequences.
+5. **Git sync must never use a silent "remote overwrites local" policy**: any two-sided change must go through a three-way merge (remote / local / base), with conflicts resolved item by item.
+6. **MCP secrets must never enter Git**: the repo stores only `${VAR}` placeholders; real values live only in the local keychain; plaintext must be scanned and blocked before push.
+7. **Skill scripts are treated as executable code**: pulling a new Skill that contains scripts must first review its content and file list before writing it to the local library, let alone auto-distributing it.
+8. **Dispatch must be traceable**: record "which version, when, written to which Agent, via symlink/copy", and support rollback.
+9. **Prompt sync must be structured and individually excludable**: one `.prompt.md` per Prompt (frontmatter holds metadata and variable definitions, body split into System / User sections); private / confidential Prompts must be one click away from local-only rather than relying on the honor system of "don't commit".
+10. **Prompt pulls must be previewed item by item**: Prompts feed instructions, so even without scripts they never enter batch accept; the full text or the local → repo diff must be visible before pulling.
+11. **Prompt sync is not Agent dispatch**: Prompts are written only to the local asset library; projection of rule-like Prompts into `AGENTS.md` / `CLAUDE.md` / `.cursor/rules` is handled by the separate Agent Instructions domain.
+12. **Agent Instructions must be an independent domain**: persistent instructions have scope (user / project / path), activation (always / glob / model / manual), priority, imports, and other fields, which cannot be squeezed into Prompt's System / User / variable model.
+13. **Vendor differences must be data, not modules**: paths, frontmatter, and priority rules for Copilot / Claude / Cursor / Windsurf / Codex, etc. converge into the target registry; duplicating a CRUD, versioning, and sync stack per vendor is prohibited.
+14. **Resolution preview is a core capability**: given "target tool + current file path", the product must explain which contracts enter the context, in what order, totaling how many bytes, which are skipped, and why.
+15. **Projections must be traceable and never silently overwrite**: single-file targets use managed block merging; if a target file is modified by hand it is marked Drifted, bulk overwrite is prohibited, and only per-item confirmation is allowed.
+16. **Agent Instructions pulls must be previewed item by item**: instructions automatically enter the context of every session, so their risk is higher than Prompts; batch accept is prohibited.
+17. **Folders are repo directories**: library folders for Prompt / Agent Instructions / Skill / MCP must map directly to Git directories; directories can contain nested subfolders, while the last level keeps the single-file or single-skill-directory convention. Users can browse by directory in the repo without opening the platform.
+18. **Homogeneous organization across the four asset types**: all four types must have a folder tree, search, and repo path echo; local edits to Skill / MCP must produce stable pending-push changes, forming a real two-way sync loop.
+19. **Agent Instructions global directories are configurable**: users must be able to select multiple instructions and multiple local Agents and project them to their respective user-level directories; each tool's global directory path must be editable again and restorable to default, and changes mark related projections as Stale.
+20. **Global directory writes must be explainable and rollback-able**: show the target path and file content before writing; if the target file is modified by hand it is marked Drifted, bulk overwrite is prohibited, and only per-item confirmation is allowed.
 
-### 1.3 本期范围
+### 1.3 Scope for this phase
 
-本期交付可点击高保真原型，覆盖四大资产工作区 + 同步中心 + Prompt 平台发现 + **Prompt / Agent 指令结构化同步** 的核心闭环（见 §8 原型范围）。WebDAV / S3 快照作为 Git 之外的备份选项、CLI、多语言、图片/视频 Prompt 专项测试、关系图谱等标记为后续迭代，不进入本期原型。
+This phase delivers a clickable high-fidelity prototype covering the four asset workspaces + Sync Center + Prompt Platform Discovery + the core loop of **structured Prompt / Agent Instructions sync** (see §8 prototype scope). WebDAV / S3 snapshots as a backup option alongside Git, CLI, multilingual support, dedicated image/video Prompt testing, relationship graphs, etc. are marked for later iterations and are not part of this phase's prototype.
 
-### 1.4 同步域的设计判断（对「Git 仓库 + 多 Agent」理解的修正）
+### 1.4 Design decisions for the sync domain (corrections to the "Git repo + multi-Agent" understanding)
 
-原始理解中「用 Git 维护 Skill / MCP、拉取后按各 Agent 默认目录分发、Prompt 很少同步」方向基本正确，但需要补以下判断，否则真实产品会出现数据丢失或安全事故：
+The original understanding — "maintain Skill / MCP with Git, after pulling dispatch to each Agent's default directory, Prompts are rarely synced" — is broadly right, but the following judgments must be added, or the real product will suffer data loss or security incidents:
 
-| # | 原始理解 | 判断 | 修正后的设计 |
+| # | Original understanding | Judgment | Revised design |
 | --- | --- | --- | --- |
-| 1 | Git 是 Skill / MCP 的维护仓库 | ✅ 正确 | Git 适合文件树型资产（SKILL.md、脚本、MCP JSON/TOML），也确实是最常见的团队共享方式 |
-| 2 | Prompt 基本靠复制粘贴，很少同步 | ⚠️ 部分正确，需修正 | Prompt 不是不能同步，而是同步单位不同：**库型 Prompt**（可复用模板）以一条一个 `.prompt.md` 同步，默认跟随仓库策略、可逐条设为仅本机；**私密 Prompt** 设仅本机；**规则型内容** 已独立为 Agent 指令域（见 §6.2），不再塞进 Prompt |
-| 3 | 拉取仓库后同步到多个 Agent 目录 | ✅ 正确，但漏了中间层 | 必须是 **仓库 ⇄ 本地库 → Agent** 三层：仓库不能直连 Agent 目录，否则没有审核、冲突、漂移与审计 |
-| 4 | 双向同步 | ⚠️ 需要细化 | 不是 pull + push，而是**三方合并**：远端 / 本地 / 上次同步基线；双方都改时进入冲突，禁止静默覆盖 |
-| 5 | — | ➕ 必须补 | **MCP 密钥**：明文 Token 禁止进 Git，仓库只存 `${VAR}`，真实值留本机钥匙串 |
-| 6 | — | ➕ 必须补 | **信任门禁**：技能可能带可执行脚本、MCP 会启动本机进程，拉取后必须先审核再入库 / 分发 |
-| 7 | — | ➕ 必须补 | **Agent 检测与适配**：只向本机已安装的工具分发；各工具目录、格式、symlink 支持不同，需要 per-target adapter |
-| 8 | — | ➕ 必须补 | **自动策略边界**：自动 fetch / 只读提示可以做；自动合并、自动提交、自动覆盖工作区禁止 |
-| 9 | — | ➕ 必须补 | **Prompt 同步格式**：不能把整库 JSON 塞进仓库。每条 Prompt 一个 Markdown 文件，frontmatter 存元数据与变量定义，正文分 System / User，保证 diff 可读、冲突可合并 |
-| 10 | — | ➕ 必须补 | **Prompt 拉取预览与凭据扫描**：Prompt 是指令输入，拉取必须逐条预览，不进入批量接受；推送前扫描正文中的高置信度凭据，命中后要求替换为 `{{变量}}` |
-| 11 | — | ➖ 明确排除 | **Prompt 不分发到 Agent 目录**：本期没有通用 Prompt 目录约定；只做 Git 共享；规则型内容由 Agent 指令域承担（见 §6.2） |
-| 12 | — | ➕ 必须补 | **Agent 指令是第四类资产**：AGENTS.md / CLAUDE.md / copilot-instructions / .cursor/rules / .windsurf rules 共享「常驻、范围、激活、优先级」语义，必须独立建模 |
-| 13 | — | ➕ 必须补 | **厂商差异用目标注册表承载**：路径模板、frontmatter、合并方式、能力开关（glob / 模型判断 / 手动 / @import）都是数据；新增工具只加一条配置 |
-| 14 | — | ➕ 必须补 | **生效预览与投影漂移**：同一份契约在不同工具下会得到不同上下文，必须能按路径预览；投影到目标文件后必须检测外部手工修改 |
+| 1 | Git is the maintenance repo for Skill / MCP | ✅ Correct | Git suits file-tree assets (SKILL.md, scripts, MCP JSON/TOML) and is indeed the most common way for teams to share |
+| 2 | Prompts are mostly copy-paste and rarely synced | ⚠️ Partly correct, needs revision | Prompts can be synced; only the sync unit differs: **library Prompts** (reusable templates) sync as one `.prompt.md` per Prompt, follow repo policy by default, and can be local-only individually; **private Prompts** are set to local-only; **rule-like content** has moved to the Agent Instructions domain (see §6.2) and is no longer shoved into Prompts |
+| 3 | After pulling the repo, sync to multiple Agent directories | ✅ Correct, but missing the middle layer | It must be three layers: **repo ⇄ local library → Agent**; the repo must not connect directly to Agent directories, otherwise review, conflicts, drift, and auditing all disappear |
+| 4 | Two-way sync | ⚠️ Needs refinement | Not pull + push but a **three-way merge**: remote / local / last-sync base; if both sides changed, it becomes a conflict and silent overwrite is prohibited |
+| 5 | — | ➕ Must add | **MCP secrets**: plaintext tokens must never enter Git; the repo stores only `${VAR}`, and real values stay in the local keychain |
+| 6 | — | ➕ Must add | **Trust gate**: Skills may carry executable scripts and MCP starts local processes; after pulling, review before writing to the library / distributing |
+| 7 | — | ➕ Must add | **Agent detection and adaptation**: distribute only to tools installed on this machine; directories, formats, and symlink support differ per tool, so a per-target adapter is required |
+| 8 | — | ➕ Must add | **Automation boundaries**: automatic fetch / read-only notifications are fine; automatic merge, automatic commit, and automatic workspace overwrite are prohibited |
+| 9 | — | ➕ Must add | **Prompt sync format**: never stuff the whole library JSON into the repo. One Markdown file per Prompt, frontmatter holds metadata and variable definitions, body split into System / User, so diffs are readable and conflicts mergeable |
+| 10 | — | ➕ Must add | **Prompt pull preview and credential scanning**: Prompts are instruction inputs, so pulls must be previewed item by item and never batch-accepted; before push, scan the body for high-confidence credentials and require replacement with `{{variable}}` |
+| 11 | — | ➖ Explicitly excluded | **Prompts are not distributed to Agent directories**: there is no general Prompt directory convention in this phase; Git sharing only; rule-like content is handled by the Agent Instructions domain (see §6.2) |
+| 12 | — | ➕ Must add | **Agent Instructions are the fourth asset type**: AGENTS.md / CLAUDE.md / copilot-instructions / .cursor/rules / .windsurf rules share "persistent, scope, activation, priority" semantics and must be modeled independently |
+| 13 | — | ➕ Must add | **Vendor differences live in the target registry**: path templates, frontmatter, merge strategy, and capability switches (glob / model decision / manual / @import) are all data; adding a tool means adding one config entry |
+| 14 | — | ➕ Must add | **Resolution preview and projection drift**: the same contract yields different contexts in different tools and must be previewable per path; after projecting to a target file, external manual modifications must be detected |
 
-因此本期同步中心同时承担四类资产的仓库同步，但 Prompt 与 Agent 指令都有独立的同步范围与预览规则；Skill / MCP 继续走分发矩阵，Agent 指令走「投影与漂移」。
+Therefore this phase's Sync Center handles repo sync for all four asset types, but Prompts and Agent Instructions each have their own sync scope and preview rules; Skill / MCP continue through the dispatch matrix, while Agent Instructions go through "projection and drift".
 
-### 1.5 v0.5 差距分析与修正（对当前原型的复盘）
+### 1.5 v0.5 gap analysis and fixes (retrospective on the current prototype)
 
-| # | 当前原型 | 问题 | v0.5 修正 |
+| # | Current prototype | Problem | v0.5 fix |
 | --- | --- | --- | --- |
-| 1 | Prompt 只有单层 `folder` 下拉，仓库路径固定 `prompts/<slug>.prompt.md` | 文件夹只是平台内的筛选字段，仓库里仍是平铺文件；无法用目录分类，也不满足「脱离平台也能浏览」 | `folder` 改为可多级路径；仓库路径统一为 `prompts/<folder>/<slug>.prompt.md`，文件夹树、分组卡片、表格列、详情路径四处回显 |
-| 2 | Agent 指令只有项目级目标（AGENTS.md / CLAUDE.md / .cursor/rules） | 无法把指令同步到 Claude Code、Codex、Cursor 等工具的**用户级全局目录**；也没有全局目录的可视化配置 | 新增「全局分发」Tab：勾选多条指令 × 多个工具，写入各工具用户级目录；每个工具的路径可改写、可恢复默认，并记录全局投影状态 |
-| 3 | Skill / MCP 只有拉取与分发，本地编辑没有稳定的待推送出口 | 「双向同步」只完成了远端 → 本地；本地改完不会进入待推送，闭环不成立 | Skill 增加编辑弹窗与版本快照；MCP 保存即生成待推送；删除/改名/移动文件夹都会同步更新仓库路径与待同步项 |
-| 4 | 仓库布局中 MCP 固定 `mcp/servers.json` | 单个大 JSON 让多人同时新增 server 必然冲突，也无法按目录分类 | 改为 `mcp/<folder>/<name>.json`，一个 server 一个文件；凭据仍只存 `${VAR}` 占位 |
-| 5 | Prompt / Skill / MCP 列表没有文件夹树，只有下拉或分类字段 | 用户只能按「当前筛选」理解资产，看不到仓库层级，也无法为子文件夹建立心智模型 | 四类工作区统一增加可折叠文件夹树；选中父目录包含全部子目录；卡片/表格与仓库路径使用同一层级 |
-| 6 | 全局目录路径写死在目标注册表或文档里 | 不同机器安装路径不同；用户无法适配自己的目录，写入会失败 | 全局目标路径变成可编辑状态，保存在本机；路径变化会让相关投影进入「待更新」，避免静默写到旧路径 |
+| 1 | Prompts only have a single-level `folder` dropdown, repo path fixed at `prompts/<slug>.prompt.md` | Folder is only a filter field inside the platform; files remain flat in the repo; directories cannot be used for classification, and "browse without the platform" is not met | `folder` becomes a multi-level path; repo path unified as `prompts/<folder>/<slug>.prompt.md`, echoed in four places: folder tree, grouped cards, table column, detail path |
+| 2 | Agent Instructions only have project-level targets (AGENTS.md / CLAUDE.md / .cursor/rules) | Instructions cannot be synced to the **user-level global directories** of Claude Code, Codex, Cursor, etc.; there is no visual configuration for global directories | New "Global dispatch" tab: select multiple instructions × multiple tools, write to each tool's user-level directory; each tool's path is editable and restorable to default, and global projection status is recorded |
+| 3 | Skill / MCP only have pull and dispatch; local edits have no stable pending-push exit | "Two-way sync" only completed remote → local; local edits never become pending push, so the loop doesn't close | Skills gain an edit dialog and version snapshots; MCP creates a pending push on save; deleting/renaming/moving folders all update repo paths and pending-sync items |
+| 4 | MCP is fixed at `mcp/servers.json` in the repo layout | One large JSON inevitably conflicts when several people add servers at once, and cannot be classified by directory | Changed to `mcp/<folder>/<name>.json`, one file per server; credentials still stored only as `${VAR}` placeholders |
+| 5 | Prompt / Skill / MCP lists have no folder tree, only dropdowns or category fields | Users can only understand assets through the "current filter"; they cannot see the repo hierarchy or form a mental model of subfolders | All four workspaces gain a collapsible folder tree; selecting a parent directory includes all subdirectories; cards/tables and repo paths use the same hierarchy |
+| 6 | Global directory paths are hard-coded in the target registry or docs | Install paths differ per machine; users cannot adapt their own directories, and writes fail | Global target paths become editable and are stored locally; path changes put related projections into "Stale" to avoid silently writing to the old path |
 
-设计结论：**平台的组织模型必须与 Git 仓库的组织模型同构**。平台只是更方便的编辑器与分发控制面，而不是唯一入口。任何在平台里新建的文件夹，都必须能在仓库里看到同名目录；任何在仓库里新增的子文件夹，拉取后也必须能在平台的文件夹树中出现。
+Design conclusion: **the platform's organizational model must be isomorphic to the Git repository's model**. The platform is just a more convenient editor and dispatch control plane, not the only entry point. Any folder created in the platform must appear as a same-named directory in the repo; any subfolder added in the repo must appear in the platform's folder tree after a pull.
 
 ---
 
-## 2. 用户与核心场景
+## 2. Users and core scenarios
 
-| # | 场景 | 用户故事 | 涉及工作区 |
+| # | Scenario | User story | Workspace |
 | --- | --- | --- | --- |
-| S1 | 存一段好用的 Prompt | 我写了一段调优过的 Prompt，想存起来打标签，下次一键复制并填变量 | Prompts |
-| S2 | 找到并安装一个技能 | 我在技能商店看到一个 commit 技能，想预览内容后装到 Claude Code 和 Cursor | Skills |
-| S3 | 统一管理 MCP 配置 | 我在 5 个工具里各配了一份 MCP，想在一个地方改，一键同步出去，还能看哪些被外部改过 | MCP |
-| S4 | 改坏了想回滚 | 我改了一版 Prompt/技能/MCP 配置，效果变差，想对比历史版本并回滚 | 三者通用 |
-| S5 | 新机器/新工具迁移 | 我换了电脑或新装了一个 AI 工具，想把已有资产快速分发过去 | Skills / MCP |
-| S6 | 团队共享技能与 MCP | 团队用 Git 仓库维护技能和 MCP 模板，我想拉取更新、审核后用到本机，再把本地改进推回仓库 | 同步 |
-| S7 | 拉取后分发到多个 Agent | 我刚从仓库拉了一批技能，本机装了 Claude Code / Codex / Cursor，想一次看清哪些已同步、哪些过时、哪些被手工改过，再决定分发 | 同步 |
-| S8 | 跨机器 / 团队共享 Prompt 模板 | 我在公司和家里都用同一批 Prompt，想把可复用的模板放进仓库维护，同时保留本机变量填值习惯 | Prompts / 同步 |
-| S9 | 私密 Prompt 不外泄 | 我有一段带内部接口信息或私人上下文的 Prompt，只想留在本机；其他 Prompt 仍要正常同步 | Prompts / 同步 |
-| S10 | 拉取别人的 Prompt 前先看清内容 | 团队仓库更新了几条 Prompt，我想先看全文或 diff，确认没有恶意指令或我的私密信息，再决定接受 | 同步 |
-| S11 | 写一次规则，多工具生效 | 我把构建、测试、安全约定写成一条契约，希望同时投影到 AGENTS.md、CLAUDE.md 和 Copilot，而不是维护三份 | Agent 指令 |
-| S12 | 看清某个路径到底会读哪些指令 | 我改了 `src` 下的组件，想知道 Cursor / Copilot / Claude 实际会读到哪些规则、顺序如何、是否超上下文预算 | Agent 指令 |
-| S13 | 投影文件被人手工改过 | 同事直接改了仓库里的 CLAUDE.md，我不想在重新投影时静默覆盖，需要先看到漂移再逐项确认 | Agent 指令 / 同步 |
-| S14 | 个人 Git 仓库就是长期资产库 | 我想让 Prompt / 指令 / Skill / MCP 都按文件夹放进同一个个人仓库，换电脑或不用平台时也能按目录找到 | 全工作区 / 同步 |
-| S15 | 多级文件夹分类 | 我的 Prompt 需要「编程 / 前端 / React」这样的层级，不想只靠标签；仓库里也应该出现同样的目录 | Prompts / 同步 |
-| S16 | 把选中的指令同步到本机全局目录 | 我选 3 条通用规则，想同时写进 Claude Code 和 Codex 的用户级目录；Cursor 的规则目录在我机器上不是默认路径 | Agent 指令 → 全局分发 |
-| S17 | 全局目录路径改了 | 我把 Cursor 安装到了自定义目录，平台应该能改路径，并提示之前投影的文件需要重新同步 | Agent 指令 → 全局分发 / 设置 |
+| S1 | Save a useful Prompt | I wrote a tuned Prompt and want to save it, tag it, and next time copy it with one click and fill in the variables | Prompts |
+| S2 | Find and install a Skill | I see a commit Skill in the Skill Store and want to preview it before installing it into Claude Code and Cursor | Skills |
+| S3 | Manage MCP configuration centrally | I have one MCP config in each of 5 tools; I want to edit in one place, sync everywhere with one click, and see which were changed externally | MCP |
+| S4 | Roll back a bad change | I changed a Prompt/Skill/MCP config and it got worse; I want to compare versions and roll back | All three |
+| S5 | Migrate to a new machine / tool | I got a new computer or installed a new AI tool and want to distribute existing assets quickly | Skills / MCP |
+| S6 | Share Skills and MCP with the team | The team maintains Skills and MCP templates in a Git repo; I want to pull updates, review them, use them locally, then push local improvements back to the repo | Sync |
+| S7 | Dispatch to multiple Agents after pulling | I just pulled a batch of Skills from the repo and have Claude Code / Codex / Cursor locally; I want to see at once what's Synced, Stale, and hand-modified before dispatching | Sync |
+| S8 | Share Prompt templates across machines / teams | I use the same Prompts at work and at home; I want reusable templates maintained in the repo while keeping local variable-filling habits | Prompts / Sync |
+| S9 | Keep private Prompts from leaking | I have a Prompt with internal API details or personal context that should stay on my machine; other Prompts should still sync normally | Prompts / Sync |
+| S10 | Review others' Prompts before pulling | The team repo updated a few Prompts; I want the full text or diff first to confirm there are no malicious instructions or my private info before accepting | Sync |
+| S11 | Write a rule once, apply it in many tools | I write build, test, and security conventions as one contract and want it projected into AGENTS.md, CLAUDE.md, and Copilot at once instead of maintaining three copies | Agent Instructions |
+| S12 | See which instructions a given path actually reads | I changed components under `src`; I want to know which rules Cursor / Copilot / Claude actually read, in what order, and whether the context budget is exceeded | Agent Instructions |
+| S13 | Projected files were modified by hand | A colleague edited CLAUDE.md in the repo directly; I don't want it silently overwritten on re-projection and need to see the drift and confirm item by item | Agent Instructions / Sync |
+| S14 | A personal Git repo as a long-term asset library | I want Prompts / instructions / Skills / MCP all placed in one personal repo by folder, so I can find them by directory after switching machines or without the platform | All workspaces / Sync |
+| S15 | Multi-level folder classification | My Prompts need hierarchies like "engineering / frontend / React", not just tags; the repo should show the same directories | Prompts / Sync |
+| S16 | Sync selected instructions to local global directories | I select 3 general rules and want them written into the user-level directories of Claude Code and Codex at once; the Cursor rules directory on my machine is not at the default path | Agent Instructions → Global dispatch |
+| S17 | The global directory path changed | I installed Cursor in a custom directory; the platform should let me change the path and warn that previously projected files need re-syncing | Agent Instructions → Global dispatch / Settings |
 
 ---
 
-## 3. 功能提取汇总
+## 3. Feature extraction summary
 
-以下为从 PromptHub 提取并归纳的功能全集。**「原型」列 = 本期原型是否实现**：✅ 实现；⚪ 静态示意/占位；✖ 后续迭代。
+Below is the complete feature set extracted and consolidated from PromptHub. **The "Prototype" column = whether this phase's prototype implements it**: ✅ implemented; ⚪ static mock/placeholder; ✖ later iteration.
 
-### 3.1 Prompt 域
+### 3.1 Prompt domain
 
-| 功能 | 说明 | 原型 |
+| Feature | Description | Prototype |
 | --- | --- | --- |
-| 平台 Prompt 发现 | 搜索平台收录的 Prompt，预览、填变量复制、保存到本地；平台来源本身不进仓库 | ✅ |
-| Git 同步（可选） | 每个 Prompt 一个 `.prompt.md`，与仓库走三方合并；可逐条设为仅本机 | ✅ |
-| 同步范围三态 | 跟随仓库策略 / 参与同步 / 仅本机；仓库全局开关关闭时一律退回本机 | ✅ |
-| 结构化文件 | frontmatter 存稳定 id、标题、描述、文件夹、标签、变量定义；正文分 System / User 两段 | ✅ |
-| 拉取预览 | Prompt 变更必须预览全文或「本地 → 仓库」diff，不进入批量接受 | ✅ |
-| 正文凭据扫描 | 推送前扫描高置信度 Token / 私钥；命中后替换为 `{{变量}}` 才能推送 | ✅ |
-| 删除边界 | 删除已同步 Prompt 只删本地副本，不改仓库；对话框中必须写明 | ✅ |
-| 文件夹 + 标签 + 收藏三层组织 | **多级文件夹**（文件夹树、父目录包含子目录）、多标签、收藏置顶 | ✅ |
-| 文件夹即仓库目录 | `folder` 直接映射 `prompts/<folder>/<slug>.prompt.md`；卡片分组、表格列与详情均回显路径 | ✅ |
-| 多视图列表 | 卡片 / 表格视图切换，偏好持久化；卡片按文件夹分组 | ✅（卡片+表格） |
-| 全文搜索 | 标题/描述/正文/标签命中高亮（PromptHub 用 SQLite FTS5，原型为内存过滤） | ✅ |
-| 模板变量 `{{var}}` | text/textarea/number/select 四类，复制/测试时弹表单填值，值 30 天记忆 | ✅ |
-| 新建/编辑 | 标题、描述、System/User Prompt、变量自动识别、标签、文件夹 | ✅ |
-| 详情 inline 编辑 | 详情卡双击进入就地编辑 | ✅ |
-| 版本历史 | 每次保存自动快照，两版对比、恢复、删除、变更说明 | ✅ |
-| AI 测试 | 选模型、填变量、流式响应、测试历史（原型为模拟流） | ✅（模拟） |
-| 复制即用 | 复制走变量表单 → 渲染成正文 → 写入剪贴板，用量 +1 | ✅ |
-| 批量操作 | 多选、批量收藏/打标签/移动/删除 | ⚪ |
-| 关系与图谱 | related_to / variant_of 等关系、力导向图谱视图 | ✖ |
-| 图片/视频 Prompt | 生图工作台、图片反推、视频任务轮询 | ✖ |
-| 双语 Prompt / AI 改写 | sidecar 英文版、四类预设改写指令 | ⚪（仅按钮示意） |
-| 私密文件夹 | 主密码解锁，应用内隐藏 | ⚪ |
-| 剪贴板导入 | 检测剪贴板内容邀请导入 | ✖ |
+| Platform Prompt discovery | Search Prompts collected by the platform, preview, copy with variables filled, save locally; platform sources themselves do not enter the repo | ✅ |
+| Git sync (optional) | One `.prompt.md` per Prompt, three-way merge with the repo; each can be set to local-only | ✅ |
+| Three-state sync scope | Follow repo policy / Participate in sync / Local only; when the repo-wide switch is off everything falls back to local | ✅ |
+| Structured files | frontmatter stores stable id, title, description, folder, tags, and variable definitions; body split into System / User | ✅ |
+| Pull preview | Prompt changes must be previewed in full or as a "local → repo" diff; batch accept is not offered | ✅ |
+| Body credential scanning | Before push, scan for high-confidence tokens / private keys; hits must be replaced with `{{variable}}` before pushing | ✅ |
+| Delete boundary | Deleting a synced Prompt only removes the local copy, not the repo; the dialog must state this | ✅ |
+| Three-layer organization: folders + tags + favorites | **Nested folders** (folder tree, parent includes children), multiple tags, favorites pinned | ✅ |
+| Folders are repo directories | `folder` maps directly to `prompts/<folder>/<slug>.prompt.md`; card groups, table column, and details all echo the path | ✅ |
+| Multi-view lists | Card / table view toggle with persisted preference; cards grouped by folder | ✅ (cards + table) |
+| Full-text search | Hits in title/description/body/tags are highlighted (PromptHub uses SQLite FTS5; the prototype uses in-memory filtering) | ✅ |
+| Template variables `{{var}}` | text/textarea/number/select types; a form appears on copy/test; values remembered for 30 days | ✅ |
+| New/edit | Title, description, System/User Prompt, automatic variable detection, tags, folder | ✅ |
+| Inline detail editing | Double-click the detail card to edit in place | ✅ |
+| Version history | Auto-snapshot on every save, two-version comparison, restore, delete, change notes | ✅ |
+| AI test | Pick a model, fill variables, streaming response, test history (simulated stream in the prototype) | ✅ (simulated) |
+| Copy and use | Copy runs the variable form → renders the body → writes to the clipboard, usage +1 | ✅ |
+| Bulk operations | Multi-select, bulk favorite/tag/move/delete | ⚪ |
+| Relationships and graphs | related_to / variant_of relationships, force-directed graph view | ✖ |
+| Image/video Prompts | Image generation workbench, image-to-prompt, video task polling | ✖ |
+| Bilingual Prompts / AI rewrite | Sidecar English version, four preset rewrite instructions | ⚪ (button mock only) |
+| Private folders | Unlock with a master password, hidden in-app | ⚪ |
+| Clipboard import | Detect clipboard content and offer import | ✖ |
 
-### 3.2 Skill 域
+### 3.2 Skill domain
 
-| 功能 | 说明 | 原型 |
+| Feature | Description | Prototype |
 | --- | --- | --- |
-| 技能商店 | 内置官方/社区等多个来源，分类筛选、搜索、分页 | ✅（2 个内置源） |
-| 安装前审核 | 展示 SKILL.md 全文与文件清单，确认后才写入 | ✅ |
-| 一键安装到平台 | Claude Code、Cursor 等 37 个目标；symlink / copy 双模式 | ✅（8 个代表平台） |
-| 平台状态回显 | 每平台显示：已安装 / 由本应用管理 / 外部 / 未安装 | ✅ |
-| 本地扫描导入 | 发现本机已有 SKILL.md，预览后导入 | ⚪ |
-| 版本历史 | 时间线、diff、命名快照、回滚、删除版本 | ✅（复用通用版本弹窗） |
-| 文件夹树 | 多级分类，按 `skills/<folder>/<skill>/SKILL.md` 映射仓库目录 | ✅ |
-| 本地编辑 | 编辑名称 / 图标 / 描述 / 标签 / 文件夹 / SKILL.md；保存生成版本并进入待推送 | ✅ |
-| 来源更新对账 | in-sync / remote-ahead / local-ahead / diverged / blocked 五状态，详情页显示徽标 | ✅ |
-| AI 翻译 / 润色 | sidecar 译文、失效徽标、重新翻译 | ⚪ |
-| 项目级工作区 | 注册项目目录、独立技能空间、双向导入 | ⚪ |
-| 安全扫描 | 内容/AI 扫描三维评分，高风险二次确认 | ⚪ |
-| 自定义商店源 | marketplace-json / git-repo / local-dir 三类 | ✖ |
-| 批量安装/更新/移除 | 商店批量工具栏 | ✖ |
+| Skill Store | Built-in official/community and other sources, category filtering, search, pagination | ✅ (2 built-in sources) |
+| Pre-install review | Show the full SKILL.md and file list; write only after confirmation | ✅ |
+| One-click install to platform | 37 targets including Claude Code, Cursor; symlink / copy modes | ✅ (8 representative platforms) |
+| Platform status echo | Per platform: Installed / Managed by this app / External / Not installed | ✅ |
+| Local scan import | Discover existing SKILL.md files on the machine, preview then import | ⚪ |
+| Version history | Timeline, diff, named snapshots, rollback, delete version | ✅ (reuses the shared version dialog) |
+| Folder tree | Multi-level classification, mapping repo directories as `skills/<folder>/<skill>/SKILL.md` | ✅ |
+| Local editing | Edit name / icon / description / tags / folder / SKILL.md; saving creates a version and a pending push | ✅ |
+| Source update reconciliation | Five states in-sync / remote-ahead / local-ahead / diverged / blocked, badge on the detail page | ✅ |
+| AI translation / polishing | Sidecar translation, stale badge, retranslate | ⚪ |
+| Project-level workspaces | Register project directories, independent Skill spaces, two-way import | ⚪ |
+| Security scan | Three-dimension content/AI scan score, high-risk second confirmation | ⚪ |
+| Custom store sources | marketplace-json / git-repo / local-dir | ✖ |
+| Bulk install/update/remove | Store bulk toolbar | ✖ |
 
-### 3.3 MCP 域
+### 3.3 MCP domain
 
-| 功能 | 说明 | 原型 |
+| Feature | Description | Prototype |
 | --- | --- | --- |
-| 我的 MCP 库 | server 列表（画廊/列表）、启用/停用、收藏、标签筛选、**文件夹树** | ✅ |
-| 文件夹即仓库目录 | `mcp/<folder>/<name>.json`，一个 server 一个文件；保存即进入待推送 | ✅ |
-| 三种新建方式 | 从来源添加（命令/URL/路径自动识别）、粘贴 JSON 配置、手动表单 | ✅（识别为模拟） |
-| 凭据脱敏 | env/header 值 AES-256-GCM 加密存储；展示一律 `[REDACTED]`，编辑未改则沿用原值 | ✅（展示层） |
-| 健康检查 | stdio 缺命令 / URL 非法 / 缺 env / env 值格式非法 → ok / warning / error 徽标 | ✅ |
-| 应用到 Agent 配置 | 预览投影内容 → 应用到所选平台 → 原子写入；卡片显示服务器数/未创建/外部 | ✅ |
-| 目标同步状态 | 在「同步 → 分发」矩阵中显示 synced / stale / drifted / missing，并支持修复 | ✅ |
-| 版本历史 | 配置变更自动出版本；对比、备注、恢复（生成新版本）、当前版禁删 | ✅ |
-| MCP 商店 | 官方目录 + MCP Registry，详情含概述/环境变量/安装命令，一键装到我的库 | ✅ |
-| Agent 反向导入 | 读取各工具现有 MCP 配置，把外部条目导入我的库 | ⚪ |
-| 拖拽/粘贴导入 | 文件、源码目录、GitHub URL 自动转命令；.env 按需导入 | ⚪ |
-| 项目级 MCP | 按已登记项目派生目标 | ✖ |
+| My MCP library | Server list (gallery/list), enable/disable, favorites, tag filter, **folder tree** | ✅ |
+| Folders are repo directories | `mcp/<folder>/<name>.json`, one file per server; save → pending push | ✅ |
+| Three creation methods | Add from source (auto-detect command/URL/path), paste JSON config, manual form | ✅ (detection simulated) |
+| Credential redaction | env/header values stored AES-256-GCM encrypted; always displayed as `[REDACTED]`; unchanged fields keep the original value | ✅ (display layer) |
+| Health check | stdio missing command / invalid URL / missing env / invalid env value format → ok / warning / error badge | ✅ |
+| Apply to Agent config | Preview projected content → apply to selected platforms → atomic write; cards show server count / not created / external | ✅ |
+| Target sync status | Shows synced / stale / drifted / missing in the Sync → Dispatch matrix, with repair support | ✅ |
+| Version history | Config changes create versions automatically; compare, notes, restore (creates a new version), current version cannot be deleted | ✅ |
+| MCP Store | Official catalog + MCP Registry; details include overview / environment variables / install command; one-click add to My Library | ✅ |
+| Agent reverse import | Read existing MCP configs from each tool and import external entries into My Library | ⚪ |
+| Drag/paste import | Files, source directories, and GitHub URLs converted to commands; .env imported on demand | ⚪ |
+| Project-level MCP | Derive targets from registered projects | ✖ |
 
-### 3.4 Git 同步与分发域
+### 3.4 Git sync and dispatch domain
 
-| 功能 | 说明 | 原型 |
+| Feature | Description | Prototype |
 | --- | --- | --- |
-| 仓库连接向导 | 四步：连接仓库 → 目录映射 → 同步策略 → 首次预检；认证复用系统 Git 凭据 / SSH Key | ✅ |
-| 资产同步策略 | Skill 双向、MCP 模板双向、Prompt 结构化双向且可逐条排除、Agent 指令结构化双向且可逐条排除；Prompt 与指令全局开关默认开启 | ✅ |
-| 三方同步状态 | `in-sync` / `remote-ahead` / `local-ahead` / `diverged` / `blocked` / `ignored` | ✅ |
-| Prompt 同步文件 | `prompts/<folder>/<slug>.prompt.md`；稳定 id 绑定资产，重命名不拆成删 + 增 | ✅ |
-| 仓库目录结构 | 四类资产的文件夹层级直接映射仓库目录；目录内可继续建子文件夹，最后一级保持单文件约定 | ✅ |
-| Prompt 同步范围 | 跟随仓库 / 参与同步 / 仅本机三态；列表与详情均回显状态 | ✅ |
-| Prompt 拉取预览 | 新增看全文、修改看本地 → 仓库 diff；必须勾选确认后才能接受 | ✅ |
-| Prompt 凭据扫描 | 推送前扫描正文；命中后替换为 `{{变量}}`，真实值不落盘 | ✅ |
-| Prompt 删除边界 | 只删本地副本并撤回待同步项；不改仓库，下次远端仍在会重新出现 | ✅ |
-| Prompt 分发边界 | Prompt 不进入 Agent 分发矩阵，只在本机库与仓库之间流转 | ✅（按设计不出现） |
-| 待拉取审核 | 新增 / 修改；含可执行脚本或新增技能必须逐项审核；Prompt 与 Agent 指令一律逐条预览全文 / diff，不进入批量接受 | ✅ |
-| 待推送 | 提交信息、分支 + PR 或直接推送；推送前扫描 Prompt / 指令正文与 MCP 凭据并阻断 | ✅ |
-| 冲突解决 | 远端 / 本地 / 基线三方对比，采用仓库、保留本地或手动合并；Prompt / 指令手动合并需通过文件结构校验 | ✅ |
-| Agent 检测 | 扫描各工具默认目录与配置文件，默认只展示已安装工具 | ✅（模拟） |
-| 分发矩阵 | Skill / MCP × Agent 的 synced / stale / drifted / missing / unsupported 总览；Prompt 不在此列 | ✅ |
-| 分发详情 | 目标路径、安装模式、MCP 写入预览、重新同步、移除、回滚上一版本 | ✅ |
-| 同步历史 | fetch / pull / push / 冲突 / 分发 / 安全阻断 / 回滚的本地审计 | ✅ |
-| 自动 fetch | 只读拉取元数据并提示差异，可配置间隔；不自动合并 | ⚪（设置项） |
-| 多仓库 | 同一工作区绑定多个仓库、按资产订阅 | ✖ |
-| Agent 指令项目投影 | 把常驻规则编译为 AGENTS.md / CLAUDE.md / .github/instructions / .cursor/rules / .windsurf rules | ✅（独立域，见 §6.2） |
-| Agent 全局目录分发 | 勾选多条指令 × 多个本机 Agent，写入用户级全局目录；路径可改写、可恢复默认、可逐项覆盖漂移 | ✅（见 §6.2.6） |
-| Git LFS / 大文件 | 技能附带大模型或数据文件 | ✖ |
+| Connect repository wizard | Four steps: Connect repository → directory mapping → sync policy → first preflight; authentication reuses system Git credentials / SSH keys | ✅ |
+| Asset sync policy | Skill two-way, MCP templates two-way, Prompt structured two-way with per-item exclusion, Agent Instructions structured two-way with per-item exclusion; global Prompt and instruction switches on by default | ✅ |
+| Three-way sync status | `in-sync` / `remote-ahead` / `local-ahead` / `diverged` / `blocked` / `ignored` | ✅ |
+| Prompt sync files | `prompts/<folder>/<slug>.prompt.md`; stable id binds the asset so a rename doesn't split into delete + add | ✅ |
+| Repo directory structure | Folder hierarchies of the four asset types map directly to repo directories; directories can contain nested subfolders, and the last level keeps the single-file convention | ✅ |
+| Prompt sync scope | Follow repo / Participate in sync / Local only; status echoed in both list and details | ✅ |
+| Prompt pull preview | New items show the full text, modifications show the local → repo diff; confirmation checkbox required before accepting | ✅ |
+| Prompt credential scanning | Scan the body before push; hits must be replaced with `{{variable}}`; real values never touch disk | ✅ |
+| Prompt delete boundary | Only deletes the local copy and withdraws pending sync items; the repo is untouched, and the item reappears on the next pull if still present remotely | ✅ |
+| Prompt dispatch boundary | Prompts do not enter the Agent dispatch matrix and only move between the local library and the repo | ✅ (by design, absent) |
+| Incoming review | Added / Modified; new or script-containing Skills must be reviewed item by item; Prompts and Agent Instructions always preview full text / diff and never batch-accept | ✅ |
+| Pending push | Commit message, branch + PR or direct push; before pushing, scan Prompt / instruction bodies and MCP credentials and block | ✅ |
+| Conflict resolution | Remote / local / base three-way comparison; take repo, keep local, or manual merge; manual merges of Prompt / instruction files must pass file structure validation | ✅ |
+| Agent detection | Scan each tool's default directory and config files; by default show only installed tools | ✅ (simulated) |
+| Dispatch matrix | Skill / MCP × Agent overview of synced / stale / drifted / missing / unsupported; Prompts are not included | ✅ |
+| Dispatch details | Target path, install mode, MCP write preview, re-sync, remove, roll back previous version | ✅ |
+| Sync history | Local audit of fetch / pull / push / conflicts / dispatch / security blocks / rollback | ✅ |
+| Auto fetch | Read-only metadata fetch with difference notices, configurable interval; never auto-merges | ⚪ (setting only) |
+| Multiple repositories | Bind multiple repos to one workspace, subscribe per asset | ✖ |
+| Agent Instructions project projection | Compile persistent rules into AGENTS.md / CLAUDE.md / .github/instructions / .cursor/rules / .windsurf rules | ✅ (independent domain, see §6.2) |
+| Agent global directory dispatch | Select multiple instructions × multiple local Agents and write to user-level global directories; paths editable, restorable to default, drifted items overwritten only after item-by-item confirmation | ✅ (see §6.2.6) |
+| Git LFS / large files | Skills shipping large models or data files | ✖ |
 
-### 3.5 Agent 指令域
+### 3.5 Agent Instructions domain
 
-| 功能 | 说明 | 原型 |
+| Feature | Description | Prototype |
 | --- | --- | --- |
-| 指令契约库 | 统一管理常驻规则：标题、描述、正文、scope、activation、priority、imports、targets、标签 | ✅ |
-| 统一资产模型 | 一份 canonical 契约，不按厂商拆资产；同一契约可同时选择多个目标 | ✅ |
-| 目标注册表 | AGENTS.md / CLAUDE.md / copilot-instructions / copilot 路径级 / .cursor/rules / .windsurf rules 六种目标 | ✅ |
-| 范围与激活 | 用户 / 项目 / 路径级；always / glob / model / manual 四种激活方式 | ✅ |
-| 能力开关 | 目标是否支持 glob、模型判断、手动引用、@import；不兼容时明确提示而非静默丢弃 | ✅ |
-| 生效预览 | 目标 × 当前文件路径 → 按优先级排序的命中链、来源、字节数、超限 / 重复 / 忽略提示 | ✅ |
-| 编译预览 | 生成 AGENTS.md / CLAUDE.md / .mdc / .instructions.md / Windsurf rule 的实际内容 | ✅ |
-| 单文件合并 | 多条契约合并进 AGENTS.md / CLAUDE.md / copilot-instructions，使用 managed block 标记 | ✅ |
-| 投影状态 | synced / stale / drifted / missing；单文件目标按文件整体标记 | ✅ |
-| 漂移保护 | 目标文件被手工修改时标记漂移，禁止批量覆盖，逐项确认后才重写 | ✅ |
-| 投影操作 | 投影 / 重新投影 / 移除 / 回滚上一版本；写入内容预览 | ✅ |
-| 全局目录配置 | 8 个本机 Agent 的用户级指令目标；路径编辑 / 恢复默认 / 路径变化标记待更新 | ✅ |
-| 全局批量分发 | 多选指令 × 多选工具；不兼容组合明确跳过；漂移项不参与批量覆盖 | ✅ |
-| Git 结构化同步 | 每个契约一个 `.contract.md`，frontmatter 存元数据，正文即规范内容 | ✅ |
-| 拉取预览 | 新增看全文、修改看本地 → 仓库 diff；不进入批量接受 | ✅ |
-| 正文凭据扫描 | 推送前扫描 `sk-…` / `ghp_…` / `AKIA…` / 私钥头；命中后替换为 `{{api_key}}` | ✅ |
-| 冲突解决 | 远端 / 本地 / 基线三方对比；手动合并必须通过 frontmatter + 正文结构校验 | ✅ |
-| 更多目标 | Gemini CLI / Aider / Warp / Junie 等更多发现路径与格式 | ⚪ |
-| 工具行为精确模拟 | 调用各工具 CLI 或解析其真实配置，校验合并结果 | ✖ |
-| Commands / subagents / hooks | slash command、子代理、hooks 等非「常驻指令」产物 | ✖ |
-| 项目级 / 多仓库 | 按注册项目目录投影、同一工作区订阅多个仓库 | ✖ |
+| Instruction contract library | Manage persistent rules centrally: title, description, body, scope, activation, priority, imports, targets, tags | ✅ |
+| Unified asset model | One canonical contract, not split per vendor; one contract can select multiple targets | ✅ |
+| Target registry | Six targets: AGENTS.md / CLAUDE.md / copilot-instructions / copilot path-level / .cursor/rules / .windsurf rules | ✅ |
+| Scope and activation | User / Project / Path; four activation modes: always / glob / model / manual | ✅ |
+| Capability switches | Whether a target supports glob, model decision, manual reference, @import; incompatibility is stated explicitly rather than silently dropped | ✅ |
+| Resolution preview | Target × current file path → match chain ordered by priority, sources, byte counts, over-limit / duplicate / ignored notices | ✅ |
+| Compiled preview | Generate the actual content of AGENTS.md / CLAUDE.md / .mdc / .instructions.md / Windsurf rule | ✅ |
+| Single-file merging | Multiple contracts merged into AGENTS.md / CLAUDE.md / copilot-instructions using managed block markers | ✅ |
+| Projection status | synced / stale / drifted / missing; single-file targets are marked as a whole | ✅ |
+| Drift protection | Target files modified by hand are marked Drifted, bulk overwrite is prohibited, and rewriting requires per-item confirmation | ✅ |
+| Projection actions | Project / re-project / remove / roll back previous version; preview written content | ✅ |
+| Global directory configuration | User-level instruction targets for 8 local Agents; path editing / restore default / path changes marked Stale | ✅ |
+| Global batch dispatch | Multi-select instructions × multi-select tools; incompatible combinations explicitly skipped; drifted items excluded from bulk overwrite | ✅ |
+| Git structured sync | One `.contract.md` per contract, frontmatter stores metadata, body is the specification content | ✅ |
+| Pull preview | New items show the full text, modifications show local → repo diff; never batch accept | ✅ |
+| Body credential scanning | Before push, scan for `sk-...` / `ghp_...` / `AKIA...` / private key headers; hits must be replaced with `{{api_key}}` | ✅ |
+| Conflict resolution | Remote / local / base three-way comparison; manual merges must pass frontmatter + body structure validation | ✅ |
+| More targets | More discovery paths and formats, e.g. Gemini CLI / Aider / Warp / Junie | ⚪ |
+| Exact tool behavior simulation | Invoke each tool's CLI or parse its real config to verify merge results | ✖ |
+| Commands / subagents / hooks | Non-persistent artifacts such as slash commands, subagents, and hooks | ✖ |
+| Project-level / multiple repositories | Project by registered project directories, subscribe one workspace to multiple repos | ✖ |
 
-### 3.6 通用域
+### 3.6 Common domain
 
-| 功能 | 说明 | 原型 |
+| Feature | Description | Prototype |
 | --- | --- | --- |
-| 全局 Toast 反馈 | 成功/失败/警告三态，右下角自动消失 | ✅ |
-| 破坏性操作确认 | 删除、恢复覆盖、批量移除二次确认 | ✅ |
-| 空状态 | 按筛选归因：有筛选给「清除筛选」；无数据给引导创建 | ✅ |
-| 设置 | 外观（亮/暗/跟随系统）、同步策略摘要、模拟数据重置 | ✅ |
-| 状态入口 | 顶栏仓库状态徽标（已连接 / 待处理数）与侧栏各域计数 | ✅ |
+| Global toast feedback | Success/error/warning states, auto-dismiss bottom right | ✅ |
+| Destructive action confirmation | Delete, restore overwrite, bulk remove require confirmation | ✅ |
+| Empty states | Attributed by filter: with filters show "Clear filters"; without data show a create prompt | ✅ |
+| Settings | Appearance (light/dark/system), sync policy summary, demo data reset | ✅ |
+| Status entry points | Top bar repo status badge (Connected / pending count) and per-domain counts in the sidebar | ✅ |
 
 ---
 
-## 4. 信息架构
+## 4. Information architecture
 
 ```text
 Prompt Keeper
-├── Prompts（默认落地页）
-│   ├── 我的 Prompt（文件夹树 + 列表区 / 详情区 / 同步范围弹窗 / 编辑与版本弹层）
-│   └── 平台发现（平台 Prompt 搜索、预览、复制、保存到本地）
-├── Agent 指令
-│   ├── 契约库（文件夹树 + 列表 + 详情 / 编辑 / 版本 / 同步范围）
-│   ├── 生效预览（目标工具 × 文件路径 → 命中链 + 编译文件）
-│   ├── 项目投影（项目级 AGENTS.md / CLAUDE.md / .cursor/rules 的投影与漂移）
-│   └── 全局分发（本机 Agent 用户级目录配置 + 多选批量投影 + 全局漂移）
+├── Prompts (default landing page)
+│   ├── My Prompts (folder tree + list / detail / sync scope dialog / edit and version popovers)
+│   └── Platform Discovery (platform Prompt search, preview, copy, save locally)
+├── Agent Instructions
+│   ├── Contract library (folder tree + list + details / edit / versions / sync scope)
+│   ├── Resolution preview (target tool × file path → match chain + compiled files)
+│   ├── Project projections (projection and drift for project-level AGENTS.md / CLAUDE.md / .cursor/rules)
+│   └── Global dispatch (local Agent user-level directory config + multi-select batch projection + global drift)
 ├── Skills
-│   ├── 我的 Skills（文件夹树 + 分组卡片 + 编辑 / 平台分发面板）
-│   ├── 技能商店（来源 Tab + 卡片网格 + 安装审核流）
-│   └── 项目工作区（占位）
+│   ├── My Skills (folder tree + grouped cards + edit / platform dispatch panel)
+│   ├── Skill Store (source tabs + card grid + install review flow)
+│   └── Project workspaces (placeholder)
 ├── MCP
-│   ├── 我的 MCP（文件夹树 + 库列表 + 详情：配置/凭据/健康/版本）
-│   ├── Agent MCP（各工具配置文件现状 + 反向导入）
-│   └── MCP 商店（目录 + 详情 + 一键入库）
-├── 同步
-│   ├── 概览（仓库卡 / 四类资产策略 / 待处理统计 / Agent 状态 / 最近事件）
-│   ├── 变更（待拉取：Prompt 与指令必预览 / 待推送 / 冲突）
-│   ├── 分发（Skill / MCP × Agent 矩阵；Prompt 与指令不在此列）
-│   └── 历史（仓库同步 / Agent 分发 / 投影 / 安全审核）
-└── 设置（外观 / 同步策略 / 数据 / 关于）
+│   ├── My MCP (folder tree + library list + details: config/credentials/health/versions)
+│   ├── Agent MCP (current config state of each tool + reverse import)
+│   └── MCP Store (catalog + details + one-click add to library)
+├── Sync
+│   ├── Overview (repo card / strategies for the four asset types / pending stats / Agent status / recent events)
+│   ├── Changes (incoming: Prompts and instructions always previewed / outgoing / conflicts)
+│   ├── Dispatch (Skill / MCP × Agent matrix; Prompts and instructions are not included)
+│   └── History (repo sync / Agent dispatch / projection / security review)
+└── Settings (appearance / sync policy / data / about)
 ```
 
-导航为左侧固定栏，五个工作区 + 设置；每工作区内用分段 Tab 切换子视图。同步中心是跨资产控制面：仓库拉取 / 推送 / 冲突统一在同步中心；单资产「同步范围」与「应用到平台」入口留在详情页，批量分发与漂移修复在同步中心完成。Prompt 只在详情页设置同步范围，不提供 Agent 分发入口。
+Navigation is a fixed left sidebar with five workspaces + Settings; each workspace switches subviews with segmented tabs. The Sync Center is the cross-asset control plane: repo pull / push / conflicts all live in the Sync Center; per-asset "sync scope" and "apply to platform" entries stay on detail pages, while bulk dispatch and drift repair happen in the Sync Center. Prompts only expose sync scope on the detail page and have no Agent dispatch entry.
 
-v0.5 起，Prompts / Agent 指令 / Skills / MCP 四个资产工作区都采用「文件夹树 + 列表/卡片 + 详情」三段式：文件夹树表达仓库目录层级，列表负责搜索与选择，详情展示内容与仓库路径。Agent 指令额外拆出「项目投影」与「全局分发」：前者写项目根目录的规则文件，后者写本机用户级目录，两者状态与漂移互不混合。
+Since v0.5, the four asset workspaces — Prompts / Agent Instructions / Skills / MCP — all use a three-part layout: "folder tree + list/cards + details": the folder tree expresses the repo directory hierarchy, the list handles search and selection, and the details show content and repo path. Agent Instructions additionally splits out "Project projections" and "Global dispatch": the former writes rule files in the project root, the latter writes user-level directories on this machine; their statuses and drift never mix.
 
-**Agent 指令是独立域，不是 Prompt 的子分类，也不是按厂商拆的多个工作区。** 厂商差异全部落在目标注册表与编译器里：同一份契约可以选择多个目标，生效预览负责解释不同工具下实际读到的上下文。Commands / subagents / hooks 不在本域，后续单列；slash command 属于 Prompt 的按需调用产物，不应混入常驻指令。
+**Agent Instructions are an independent domain, not a Prompt subcategory, nor multiple per-vendor workspaces.** All vendor differences live in the target registry and compiler: one contract can select multiple targets, and the resolution preview explains the context actually read under different tools. Commands / subagents / hooks are not part of this domain and will be listed separately; slash commands are on-demand invocations of Prompts and should not be mixed into persistent instructions.
 
 ---
 
-## 5. 全局布局
+## 5. Global layout
 
-### 5.1 布局结构（必须）
+### 5.1 Layout structure (required)
 
 ```text
-┌──────┬──────────────────────────────────────────┐
-│ 侧栏  │ 顶栏：面包屑 · 全局搜索 · 仓库状态 · 主题  │
-│ 导航  ├──────────────────────────────────────────┤
-│      │                                          │
-│ Prom │   工作区内容（列表-详情双栏 或 网格）        │
-│ pts  │                                          │
-│ 指令  │                                          │
-│ Skil │                                          │
-│ ls   │                                          │
-│ MCP  │                                          │
-│ 同步  │                                          │
-│ 设置  │                                          │
-└──────┴──────────────────────────────────────────┘
+┌──────────┬────────────────────────────────────────────────────────────┐
+│ Sidebar  │ Top bar: breadcrumbs · global search · repo status · theme │
+│ nav      ├────────────────────────────────────────────────────────────┤
+│          │                                                            │
+│ Prompts  │   Workspace content (list-detail split view or grid)       │
+│ Instr.   │                                                            │
+│ Skills   │                                                            │
+│ MCP      │                                                            │
+│ Sync     │                                                            │
+│ Settings │                                                            │
+└──────────┴────────────────────────────────────────────────────────────┘
 ```
 
-- 侧栏宽 220px，可折叠为图标栏（原型固定展开）。
-- 列表-详情双栏：列表 340px，详情自适应；小屏退化为「列表 → 点击进入详情页」。
-- 顶栏常驻全局搜索，`/` 键聚焦；仓库状态徽标显示仓库名与待处理数，点击进入同步中心。
+- The sidebar is 220px wide and can collapse into an icon rail (fixed expanded in the prototype).
+- List-detail split view: list 340px, details flexible; on small screens it degrades to "list → tap to open detail page".
+- The top bar always hosts global search, focused with `/`; the repo status badge shows the repo name and pending count, and clicking it opens the Sync Center.
 
-### 5.2 视觉基调
+### 5.2 Visual tone
 
-- shadcn/ui 风格：中性色 + 单一主色（indigo）、圆角 8px、细边框、低阴影。
-- 支持亮/暗主题，跟随系统为默认。
-- 状态色语义：成功 `emerald`、警告 `amber`、错误 `red`、信息 `sky`，不得挪作他用。
+- shadcn/ui style: neutral colors + a single primary color (indigo), 8px radius, thin borders, low shadows.
+- Light/dark themes supported; follow system is the default.
+- Status color semantics: success `emerald`, warning `amber`, error `red`, info `sky`; must not be used for anything else.
 
 ---
 
-## 6. 各工作区交互设计
+## 6. Interaction design per workspace
 
-### 6.1 Prompts 工作区
+### 6.1 Prompts workspace
 
-#### 6.1.1 入口与同步边界
+#### 6.1.1 Entry points and sync boundary
 
-- 顶部两个 Tab：**我的 Prompt**（本地库，可选 Git 同步）与**平台发现**（平台收录）。
-- 「我的 Prompt」是可参与 Git 同步的本机资产：默认「跟随仓库策略」；仓库开启 Prompt 同步时参与，关闭时自动退回仅本机。每条 Prompt 还可以显式设为「参与同步」或「仅本机」。
-- 详情页固定显示同步状态徽标（已同步 / 仓库有更新 / 本地有未推送 / 双向冲突 / 推送被阻断 / 仅本机）与「同步」按钮；按钮打开同步范围弹窗，不允许在详情页直接推送。
-- 列表卡片与表格都显示同步状态，让用户不用逐条打开详情就能发现「意外参与同步」或「本应同步却仅本机」。
-- 「平台发现」是 Prompt 的主要复用入口：全局搜索、分类筛选、预览全文、填变量后直接复制；保存到本地后，是否参与 Git 由该 Prompt 的同步范围决定。平台来源本身不进仓库。
-- 平台卡片需显示「已在本地」角标；保存到本地时若存在同名 Prompt，阻断并提示先重命名或直接复制，避免重复资产。
-- **Prompt 本期不分发到 Agent 目录**：工具没有通用的 Prompt 目录约定，强行分发只会制造多份副本。规则型内容（AGENTS.md / CLAUDE.md / .cursor/rules）由独立的「Agent 指令」工作区承载，见 §6.2；不要把 Prompt 复制成规则文件。
+- Two tabs at the top: **My Prompts** (local library, optional Git sync) and **Platform Discovery** (platform collection).
+- "My Prompts" are local assets eligible for Git sync: default "Follow repo policy"; they participate when Prompt sync is enabled for the repo, and automatically fall back to local-only when disabled. Each Prompt can also be explicitly set to "Participate in sync" or "Local only".
+- The detail page always shows a sync status badge (Synced / Repository updated / Local unpushed / Two-way conflict / Push blocked / Local only) and a "Sync" button; the button opens the sync scope dialog, and direct push from the detail page is not allowed.
+- List cards and the table both show sync status, so users can spot "accidentally participating in sync" or "should sync but is local-only" without opening each item.
+- "Platform Discovery" is the main reuse entry for Prompts: global search, category filtering, full-text preview, fill variables and copy directly; after saving locally, whether it participates in Git is determined by that Prompt's sync scope. Platform sources themselves never enter the repo.
+- Platform cards must show an "Already local" badge; if a Prompt with the same name exists when saving locally, block the save and prompt the user to rename first or copy directly, avoiding duplicate assets.
+- **Prompts are not distributed to Agent directories in this phase**: tools have no general Prompt directory convention, and forcing distribution would only create multiple copies. Rule-like content (AGENTS.md / CLAUDE.md / .cursor/rules) is handled by the independent "Agent Instructions" workspace, see §6.2; do not copy Prompts into rule files.
 
-#### 6.1.2 列表
+#### 6.1.2 List
 
-- **文件夹树（必须）**：位于列表左侧，展示多级文件夹与每层资产数；选中父目录时包含全部子目录；「全部」与「未分类」固定入口；文件夹路径直接等价于仓库目录。树底部常驻一句「文件夹会原样映射为仓库目录」，避免用户把它当成普通标签。
-- **筛选栏**：搜索框（防抖 300ms，命中高亮）、标签多选下拉、收藏开关、排序下拉（最新/最旧/标题/最常用）、视图切换（卡片/表格）。选中文件夹时在列表顶部显示目录面包屑与「返回全部」。
-- **卡片**：按文件夹分组，组头显示文件夹名、数量与 `prompts/<folder>` 路径；卡片本身显示标题、描述单行截断、正文预览两行、标签、徽标（收藏 ⭐ / 置顶 📌 / 变量数 / 版本号 / 同步状态）。点击进详情。
-- **表格**：列 = 标题、文件夹、标签、变量数、同步状态、更新时间；行点击进详情。同步状态在仓库未连接时不显示，避免噪声；「仅本机」始终显示。
-- **仓库路径回显**：详情头部必须显示完整仓库文件路径；卡片组件与编辑弹窗的文件夹输入下方显示「→ 仓库路径」预览。
-- **空状态**：有筛选 → 「未找到匹配结果」+ 清除筛选按钮；无数据 → 「新建第一个 Prompt」引导按钮。
+- **Folder tree (required)**: on the left of the list, showing nested folders and the asset count at each level; selecting a parent directory includes all subdirectories; "All" and "Uncategorized" are fixed entries; the folder path is exactly the repo directory. A persistent line at the bottom of the tree says "Folders map 1:1 to repo directories" so users don't mistake them for ordinary tags.
+- **Filter bar**: search box (300ms debounce, hit highlighting), tag multi-select dropdown, favorites toggle, sort dropdown (newest/oldest/title/most used), view toggle (cards/table). When a folder is selected, the list header shows the directory breadcrumb and "Back to all".
+- **Cards**: grouped by folder; the group header shows the folder name, count, and `prompts/<folder>` path; each card shows title, a one-line truncated description, a two-line body preview, tags, and badges (favorite ⭐ / pinned 📌 / variable count / version / sync status). Click opens details.
+- **Table**: columns = title, folder, tags, variable count, sync status, last updated; clicking a row opens details. Sync status is hidden when no repo is connected to reduce noise; "Local only" is always shown.
+- **Repo path echo**: the detail header must show the full repo file path; the card component and the folder input in the edit dialog show a "→ repo path" preview below.
+- **Empty states**: with filters → "No matching results" + clear filters button; no data → "Create your first Prompt" call-to-action button.
 
-#### 6.1.3 详情（双栏右侧）
+#### 6.1.3 Details (right pane)
 
-- 头部：标题、描述、标签（可增删）、操作按钮组：**复制**、**测试**、**编辑**、**同步**、**收藏**、**版本**、**删除**。
-- 正文区：System Prompt 与 User Prompt 分块，Markdown 渲染；**双击正文块进入 inline 编辑**，`Esc` 取消 / `⌘S` 保存。
-- 复制流程（必须走变量表单）：检测到 `{{var}}` → 弹变量表单（必填校验、默认值、textarea 类型给大框）→ 确认后渲染 → 写入剪贴板 → Toast「已复制，用量 +1」。无变量则直接复制。
-- 编辑同步型 Prompt 后，本地库立即生成新版本，同时在同步中心出现「待推送」；不会自动 commit / push。若该 Prompt 同时有远端更新，编辑会把状态升级为冲突，禁止静默覆盖。
+- Header: title, description, tags (add/remove), action button group: **Copy**, **Test**, **Edit**, **Sync**, **Favorite**, **Version**, **Delete**.
+- Body area: System Prompt and User Prompt in separate blocks, rendered as Markdown; **double-click a body block to edit inline**, `Esc` cancels / `⌘S` saves.
+- Copy flow (must go through the variable form): detect `{{var}}` → show the variable form (required validation, defaults, larger textarea fields) → render after confirm → write to clipboard → toast "Copied, usage +1". Copy directly when there are no variables.
+- After editing a synced Prompt, the local library immediately creates a new version and a pending push appears in the Sync Center; no automatic commit / push. If the same Prompt also has a remote update, the edit escalates the state to a conflict, and silent overwrite is prohibited.
 
-#### 6.1.4 新建 / 编辑弹窗
+#### 6.1.4 New / edit dialog
 
-- 字段：标题（必填）、描述、System Prompt、User Prompt（至少一个非空，校验失败阻止提交并红字提示）、标签输入（回车添加）、所属文件夹、同步范围（跟随仓库策略 / 参与同步 / 仅本机）。
-- 文件夹是可自由输入的多级路径（如 `编程/前端/React`），带已有目录补全；下方实时显示对应的仓库路径。移动文件夹等价于在仓库中移动文件，保存后同步更新待推送项的路径。
-- 全局 Prompt 同步关闭时，「参与同步」禁用并说明原因；新建 Prompt 默认跟随仓库策略。
-- 正文下方实时解析 `{{var}}` 预览变量清单，`{{var:示例}}` 语法取冒号后为示例值。
+- Fields: title (required), description, System Prompt, User Prompt (at least one non-empty; validation failure blocks submission with an inline error), tag input (press Enter to add), folder, sync scope (follow repo policy / participate in sync / local only).
+- The folder is a free-form multi-level path (e.g. `engineering/frontend/React`) with autocomplete from existing directories; the corresponding repo path is shown live below. Moving a folder is equivalent to moving the file in the repo; saving updates the paths of pending push items.
+- When global Prompt sync is off, "Participate in sync" is disabled with an explanation; new Prompts follow repo policy by default.
+- Below the body, the `{{var}}` variable list is parsed live; the `{{var:example}}` syntax takes the text after the colon as the example value.
 
-#### 6.1.5 版本历史弹窗
+#### 6.1.5 Version history dialog
 
-- 左侧版本时间线（版本号、时间、变更说明），右侧选中版本全文预览。
-- 「与当前版本对比」：逐字段 diff，变更行高亮（增=绿底 / 删=红底）。
-- 「恢复此版本」→ 确认弹窗明示「将用 v{n} 覆盖当前内容，当前内容会先保存为新版本」→ 确认后 Toast。
-- 同步型 Prompt 恢复后同时生成一条待推送；若与远端更新同时存在，升级为冲突。
+- Left: version timeline (version number, time, change note); right: full-text preview of the selected version.
+- "Compare with current version": field-by-field diff with changed lines highlighted (additions = green background / deletions = red background).
+- "Restore this version" → confirmation dialog explicitly states "v{n} will overwrite the current content, and the current content will first be saved as a new version" → toast after confirmation.
+- Restoring a synced Prompt also creates a pending push; if a remote update exists at the same time, it escalates to a conflict.
 
-#### 6.1.6 AI 测试抽屉
+#### 6.1.6 AI test drawer
 
-- 右侧滑出全高抽屉。步骤：选模型（下拉，来自设置中的模拟模型池）→ 若有变量先填变量表单 → 「运行」→ 模拟流式逐字输出到响应区。
-- 响应区下方「测试历史」Tab：历史运行列表（模型、耗时、时间），点击回看响应。
-- 运行中「运行」按钮变「停止」；关闭抽屉保留状态。
+- A full-height drawer slides out from the right. Steps: pick a model (dropdown from the simulated model pool in Settings) → if there are variables, fill the variable form first → "Run" → simulated streaming output appears character by character in the response area.
+- Below the response area, the "Test history" tab: list of past runs (model, duration, time); click to review the response.
+- While running, the "Run" button becomes "Stop"; closing the drawer preserves state.
 
-#### 6.1.7 Prompt 同步（Git，可选）
+#### 6.1.7 Prompt sync (Git, optional)
 
-**同步范围弹窗（必须）**
+**Sync scope dialog (required)**
 
-- 从详情页「同步」按钮打开，展示：当前生效状态、仓库连接 / 全局 Prompt 开关、待处理变更数、仓库文件路径。
-- 三个选项：
-  - **跟随仓库策略**（默认）：全局开启时参与，关闭时退回仅本机。
-  - **参与同步**：显式加入；全局开关关闭时禁用并说明原因。
-  - **仅本机**：不产生待推送、不拉取远端更新；若存在未处理变更，保存前提示「将撤回 N 条待同步项，不删除仓库文件」。
-- 保存范围后：
-  - 从「仅本机 / 跟随关闭」→「参与」：若仓库中尚无该文件，生成一条「待推送 · 新增」；有远端副本则进入正常三方比较。
-  - 从「参与」→「仅本机」：撤回该 Prompt 的未处理待同步项，并写一条审计事件；仓库文件保持原样。
-- 同步范围只控制 Git 边界，不影响复制、变量、版本、AI 测试。
+- Opened from the "Sync" button on the detail page; shows: current effective state, repo connection / global Prompt switch, number of pending changes, repo file path.
+- Three options:
+  - **Follow repo policy** (default): participates when globally enabled; falls back to local-only when disabled.
+  - **Participate in sync**: explicitly opt in; disabled with an explanation when the global switch is off.
+  - **Local only**: no pending pushes, no pulling remote updates; if there are unprocessed changes, warn before saving that "N pending sync items will be withdrawn, repo files will not be deleted".
+- After saving the scope:
+  - From "Local only / Follow policy (global off)" → "Participate": if the repo has no such file yet, create a "Pending push · Added" item; if a remote copy exists, go through the normal three-way comparison.
+  - From "Participate" → "Local only": withdraw that Prompt's unprocessed pending sync items and write an audit event; the repo file stays as is.
+- Sync scope only controls the Git boundary and does not affect copy, variables, versions, or AI testing.
 
-**文件格式（必须）**
+**File format (required)**
 
 ```markdown
 ---
-id: "p-review"                 # 稳定标识；重命名不拆成删 + 增
-title: "代码审查助手"
-description: "按正确性 / 可读性 / 性能 / 安全四个维度审查代码"
-folder: "编程"
-tags: ["编程", "代码审查"]
+id: "p-review"                 # stable identifier; renames don't split into delete + add
+title: "Code Review Assistant"
+description: "Review code across correctness / readability / performance / security"
+folder: "engineering"
+tags: ["Engineering", "Code Review"]
 variables: [{"name":"code","type":"textarea","required":true}]
 ---
 
 ## System Prompt
 
-你是一位资深代码审查专家…
+You are a senior code review expert...
 
 ## User Prompt
 
-请审查以下 {{language}} 代码：{{code}}
+Please review the following {{language}} code: {{code}}
 ```
 
-- 一条 Prompt 一个文件，路径 `prompts/<folder>/<slug>.prompt.md`；子文件夹可以继续嵌套；禁止把整库导出为单个 JSON，否则 diff 不可读、冲突不可合并。
-- `folder` frontmatter 与目录必须一致；从仓库拉取时优先使用 frontmatter，缺失时按文件所在目录反推。移动文件夹时仓库文件随之移动，稳定 `id` 保证不会拆成「删除 + 新增」。
-- 变量只同步定义（名称 / 类型 / 选项 / 是否必填），**变量填值永远不进文件、版本或仓库**。
-- 文件夹与标签是 frontmatter 元数据，不映射为目录移动；避免「改标签 = 文件重命名」的噪音。
-- 解析失败的文件不得静默写入：进入「格式异常」并提示在仓库中修正。
+- One Prompt per file, path `prompts/<folder>/<slug>.prompt.md`; subfolders can nest further; exporting the whole library as a single JSON is prohibited, since diffs become unreadable and conflicts unmergeable.
+- The `folder` frontmatter must match the directory; when pulling from the repo, prefer frontmatter and fall back to the containing directory if missing. Moving a folder moves the repo file with it, and the stable `id` ensures it doesn't split into "delete + add".
+- Only variable definitions sync (name / type / options / required); **variable values never enter files, versions, or the repo**.
+- Folders and tags are frontmatter metadata and do not map to directory moves; this avoids the noise of "changing a tag = renaming a file".
+- Files that fail to parse must not be written silently: they go into "Malformed" with a prompt to fix them in the repo.
 
-**本地编辑与推送**
+**Local editing and pushing**
 
-- 编辑标题、描述、正文、标签、文件夹或变量定义都会更新同步文件；内容变更同时生成版本快照。
-- 本地改动进入「待推送」，推送仍需在同步中心确认提交信息与方式。
-- 推送前再次扫描正文；命中高置信度凭据（`sk-…` / `ghp_…` / `AKIA…` / 私钥头等）时阻断整个提交。
-- 凭据处理弹窗必须展示「原文位置 → 替换结果」，Prompt 使用 `{{api_key}}` 模板变量，而不是 MCP 的 `${VAR}`。
+- Editing the title, description, body, tags, folder, or variable definitions updates the sync file; content changes also create a version snapshot.
+- Local changes become "Pending push"; pushing still requires confirming the commit message and method in the Sync Center.
+- Before push, the body is scanned again; high-confidence credentials (`sk-...` / `ghp_...` / `AKIA...` / private key headers, etc.) block the entire commit.
+- The credential handling dialog must show "original location → replacement result"; Prompts use the `{{api_key}}` template variable, not MCP's `${VAR}`.
 
-**拉取与冲突**
+**Pulling and conflicts**
 
-- 所有 Prompt 拉取都必须打开预览弹窗：新增看全文，修改看「本地 → 仓库」diff；确认勾选后才能接受。
-- Prompt 不进入「接受所选」批量操作；这是硬规则，不因风险为 `none` 而例外。
-- 冲突仍按远端 / 本地 / 基线三方展示；手动合并结果必须保留 frontmatter 与两个正文标题，结构不完整时禁止提交。
-- 「采用仓库」直接覆盖本地并生成新版本；「保留本地」「手动合并」都会自动生成一条待推送，避免忘记把结果推回仓库。
+- Every Prompt pull must open a preview dialog: new items show the full text, modifications show the "local → repo" diff; a confirmation checkbox is required before accepting.
+- Prompts never enter the "Accept selected" batch operation; this is a hard rule with no exception even when the risk is `none`.
+- Conflicts are still shown as a remote / local / base three-way comparison; manually merged results must preserve the frontmatter and both body headings, and submission is blocked when the structure is incomplete.
+- "Take repo" directly overwrites the local copy and creates a new version; "Keep local" and "Manual merge" both automatically create a pending push, so the result isn't forgotten on the way back to the repo.
 
-**删除与撤回**
+**Deletion and withdrawal**
 
-- 删除已同步 Prompt 只删除本地副本，并撤回该 Prompt 的未处理同步项；**不改动仓库**。
-- 确认弹窗必须写明「远端文件若仍在，下次拉取会重新出现」；本期不提供 tombstone 删除推送。
+- Deleting a synced Prompt removes only the local copy and withdraws that Prompt's unprocessed sync items; **the repo is not modified**.
+- The confirmation dialog must state "If the remote file still exists, it will reappear on the next pull"; this phase does not provide tombstone deletion pushes.
 
-**明确不做**
+**Explicitly out of scope**
 
-- Prompt 不进入 Agent 分发矩阵，不写 `~/.claude`、`~/.codex` 等目录。
-- 规则型内容（AGENTS.md / CLAUDE.md / .cursor/rules）由「Agent 指令」工作区单独管理，不复用 Prompt 的 `.prompt.md` 格式与变量模型；两者的边界见 §6.2.7。
+- Prompts do not enter the Agent dispatch matrix and are not written to `~/.claude`, `~/.codex`, or similar directories.
+- Rule-like content (AGENTS.md / CLAUDE.md / .cursor/rules) is managed separately by the "Agent Instructions" workspace and does not reuse the Prompt `.prompt.md` format or variable model; the boundary is described in §6.2.7.
 
-### 6.2 Agent 指令工作区
+### 6.2 Agent Instructions workspace
 
-Agent 指令域解决的是「每次会话自动进入上下文」的规则：`AGENTS.md`、`CLAUDE.md`、`.github/copilot-instructions.md`、`.github/instructions/*.instructions.md`、`.cursor/rules/*.mdc`、`.windsurf/rules/*.md`。它与 Prompt 的区别不是文案长短，而是**发现方式、生效语义、交付路径**三件事都不同。
+The Agent Instructions domain handles rules that "automatically enter the context of every session": `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.cursor/rules/*.mdc`, `.windsurf/rules/*.md`. Its difference from Prompts is not prose length but that **discovery, activation semantics, and delivery path** are all different.
 
-#### 6.2.1 领域模型与目标适配器（必须）
+#### 6.2.1 Domain model and target adapters (required)
 
-| 对象 | 职责 |
+| Object | Responsibility |
 | --- | --- |
-| `AgentContract` | canonical 契约：标题、描述、正文、scope、activation、priority、imports、targets、标签、同步范围、版本 |
-| `ContractTarget` | 目标方言：文件路径模板、格式、单文件 / 一契约一文件、优先级语义、能力开关、大小上限 |
-| `ContractProjection` | 某契约在某目标上的投影记录：状态、版本、上一版本、时间、漂移备注 |
-| `ResolvedPreview` | 给定目标 + 文件路径后的命中链、跳过原因、字节数、告警 |
+| `AgentContract` | canonical contract: title, description, body, scope, activation, priority, imports, targets, tags, sync scope, version |
+| `ContractTarget` | target dialect: file path templates, format, single-file / one-contract-per-file, priority semantics, capability switches, size limits |
+| `ContractProjection` | projection record of a contract on a target: status, version, previous version, time, drift note |
+| `ResolvedPreview` | match chain, skip reasons, byte counts, warnings for a given target + file path |
 
-目标注册表（本期六种，全部由数据描述，不在组件里写厂商分支）：
+Target registry (six in this phase, all described by data; no vendor branches in components):
 
-| 目标 | 原生文件 | 合并方式 | 支持的激活 | 优先级 / 上限 |
+| Target | Native file | Merge strategy | Supported activation | Priority / limit |
 | --- | --- | --- | --- | --- |
-| `agents-md` | `AGENTS.md` | 单文件合并 | always | 就近优先；Codex 默认 32 KiB |
-| `claude` | `CLAUDE.md` | 单文件合并 | always；支持 `@import` | 根 → 当前目录拼接 |
-| `copilot` | `.github/copilot-instructions.md` | 单文件合并 | always | 仓库级 + 路径级同时提供 |
-| `copilot-path` | `.github/instructions/{slug}.instructions.md` | 一契约一文件 | glob（`applyTo`） | 路径匹配后与仓库级叠加 |
-| `cursor` | `.cursor/rules/{slug}.mdc` | 一契约一文件 | always / glob / model / manual | `alwaysApply` / `globs` / `description` |
-| `windsurf` | `.windsurf/rules/{slug}.md` | 一契约一文件 | always / glob / model / manual | `trigger` 四态 |
+| `agents-md` | `AGENTS.md` | single-file merge | always | nearest wins; Codex defaults to 32 KiB |
+| `claude` | `CLAUDE.md` | single-file merge | always; supports `@import` | root → current directory concatenation |
+| `copilot` | `.github/copilot-instructions.md` | single-file merge | always | repository-level + path-level provided together |
+| `copilot-path` | `.github/instructions/{slug}.instructions.md` | one contract per file | glob (`applyTo`) | layered on top of repository-level after path match |
+| `cursor` | `.cursor/rules/{slug}.mdc` | one contract per file | always / glob / model / manual | `alwaysApply` / `globs` / `description` |
+| `windsurf` | `.windsurf/rules/{slug}.md` | one contract per file | always / glob / model / manual | `trigger` four states |
 
-**必须**：
+**Required**:
 
-- 厂商差异只允许出现在目标注册表与编译器；禁止新增 `components/copilot/`、`components/claude/` 之类的厂商工作区。
-- 目标不支持某种激活方式时，UI 必须明确提示「投影时会跳过」，禁止静默把 glob 降级为 always。
-- `@import` 只写入支持 import 的目标；不支持的目标必须忽略并说明。
-- 同一契约可以同时选择多个目标，但每个目标独立计算命中、独立记录投影状态。
+- Vendor differences may appear only in the target registry and compiler; adding vendor workspaces such as `components/copilot/` or `components/claude/` is prohibited.
+- When a target doesn't support an activation mode, the UI must explicitly say "will be skipped during projection"; silently downgrading glob to always is prohibited.
+- `@import` is written only to targets that support imports; unsupported targets must ignore it with an explanation.
+- One contract can select multiple targets, but each target computes matches and records projection status independently.
 
-#### 6.2.2 契约库
+#### 6.2.2 Contract library
 
-- 顶部三个 Tab：**契约库**、**生效预览**、**投影与漂移**；契约库默认落地。
-- 列表筛选：搜索（标题 / 描述 / 正文 / 标签 / 路径）、范围、目标、排序（更新时间 / 优先级 / 标题）。
-- 列表卡片：标题、描述两行、范围徽标、激活方式徽标、目标数、版本、Git 同步状态、标签。
-- 详情：
-  - 头部：标题、描述、版本、Git 状态、范围、激活方式、优先级、标签、更新时间。
-  - 操作：编辑、生效预览、版本、同步、复制正文、删除。
-  - 信息卡：生效范围说明、激活方式说明、仓库文件路径、Claude `@import`。
-  - 目标卡：每个目标显示原生路径、单文件 / 独立文件、投影状态、漂移备注、激活方式不兼容提示。
-  - 正文 Markdown 渲染；正文即规范内容，不拆分 System / User。
-- 新建 / 编辑字段：
-  - 标题（必填）、描述、优先级、范围（用户 / 项目 / 路径）、路径前缀（仅路径级）。
-  - 激活方式四选一；glob 模式必须至少一个 glob；模型判断模式必须填写「何时应用」。
-  - 目标多选；每个目标显示能力标签与不兼容警告。
-  - `@import` 每行一个；正文（必填）；标签；同步范围三态。
-- 校验失败必须阻止保存并给出字段级原因；目标不兼容不是保存错误，但必须在保存前显示「投影时会跳过」清单。
-- 版本历史：每次保存生成快照；恢复生成新版本，并把相关投影标记为「待更新」，不自动覆盖 Agent 目录。
+- Three tabs at the top: **Contract library**, **Resolution preview**, **Projections and drift**; the contract library is the default landing.
+- List filters: search (title / description / body / tags / path), scope, target, sort (last updated / priority / title).
+- List cards: title, two-line description, scope badge, activation badge, target count, version, Git sync status, tags.
+- Details:
+  - Header: title, description, version, Git status, scope, activation, priority, tags, last updated.
+  - Actions: edit, resolution preview, versions, sync, copy body, delete.
+  - Info cards: effective scope explanation, activation explanation, repo file path, Claude `@import`.
+  - Target cards: for each target, native path, single-file / standalone file, projection status, drift note, activation incompatibility notice.
+  - Body rendered as Markdown; the body is the specification content, not split into System / User.
+- New / edit fields:
+  - Title (required), description, priority, scope (user / project / path), path prefix (path-level only).
+  - One of four activation modes; glob mode requires at least one glob; model-decision mode requires "when to apply".
+  - Multi-select targets; each target shows capability tags and incompatibility warnings.
+  - `@import` one per line; body (required); tags; three-state sync scope.
+- Validation failure must block saving and give field-level reasons; target incompatibility is not a save error but must show the "will be skipped during projection" list before saving.
+- Version history: each save creates a snapshot; restoring creates a new version and marks related projections as "Stale" without automatically overwriting Agent directories.
 
-#### 6.2.3 生效预览（必须）
+#### 6.2.3 Resolution preview (required)
 
-**输入**：目标格式 + 当前处理的文件路径（例如 `src/components/PromptDetail.tsx`）。
+**Input**: target format + the file path currently being worked on (e.g. `src/components/PromptDetail.tsx`).
 
-**输出**：
+**Output**:
 
-1. **命中的常驻契约**：按该目标的优先级语义排序，每条显示标题、命中原因（项目级始终生效 / 路径级命中 glob）、来源文件、正文字节数。
-2. **告警**：正文合计超过目标上限（如 Codex 32 KiB）、常驻契约过多（> 5 条）、跨契约重复行、`@import` 被不支持的目标忽略。
-3. **未计入常驻上下文**：逐条给出原因——路径范围不匹配、glob 未命中、目标不支持该激活方式、模型判断、手动引用。
-4. **编译后的目标文件**：单文件目标显示合并结果（含 managed block），一契约一文件目标逐文件显示带 frontmatter 的完整内容。
+1. **Matched persistent contracts**: sorted by that target's priority semantics; each shows title, match reason (project-level always on / path-level matched glob), source file, body byte count.
+2. **Warnings**: total body size exceeds the target limit (e.g. Codex 32 KiB), too many persistent contracts (> 5), duplicate lines across contracts, `@import` ignored by an unsupported target.
+3. **Not included in persistent context**: with a reason per item — path scope mismatch, glob miss, target doesn't support the activation mode, model decision, manual reference.
+4. **Compiled target files**: single-file targets show the merged result (including managed blocks); one-contract-per-file targets show each file's full content with frontmatter.
 
-**必须**：
+**Required**:
 
-- 预览是静态模拟，不调用各工具 CLI；界面必须写明「近似结果，最终以工具实际行为为准」。
-- 同一份契约在不同目标下允许得到不同结果；不得为了 UI 一致而伪造统一顺序。
-- 模型判断 / 手动引用不计入「常驻上下文」，但必须说明它们仍会部署为独立文件（若目标支持）。
-- 路径级契约必须同时满足「目录前缀」和「glob」才命中；只满足其一的，在跳过原因里说清楚是哪一条不满足。
-- 预览必须可直接切换示例路径（组件文件 / 文档 / README / 脚本），让用户直观看到命中差异。
+- The preview is a static simulation and does not invoke any tool CLI; the UI must state "approximate result; the tool's actual behavior is authoritative".
+- The same contract may yield different results under different targets; a uniform order must not be fabricated for UI consistency.
+- Model decision / manual reference are not counted in "persistent context", but the UI must explain that they are still deployed as standalone files (if the target supports it).
+- Path-level contracts must satisfy both "directory prefix" and "glob"; if only one matches, the skip reason must state which condition failed.
+- The preview must allow switching sample paths directly (component file / doc / README / script) so users can see match differences at a glance.
 
-#### 6.2.4 投影与漂移（必须）
+#### 6.2.4 Projections and drift (required)
 
-**投影状态**：
+**Projection status**:
 
-| 状态 | 含义 | 批量策略 |
+| Status | Meaning | Batch policy |
 | --- | --- | --- |
-| `synced` | 目标文件与当前契约一致 | 可跳过 |
-| `stale` | 契约已更新，目标文件未更新 | 可批量重新投影 |
-| `drifted` | 目标文件被手工修改 | **禁止批量覆盖**，逐项确认 |
-| `missing` | 该目标尚未投影 | 按需投影 |
+| `synced` | Target file matches the current contract | May skip |
+| `stale` | Contract updated, target file not updated | May batch re-project |
+| `drifted` | Target file modified by hand | **Bulk overwrite prohibited**; confirm item by item |
+| `missing` | Not projected to this target yet | Project on demand |
 
-**写入规则**：
+**Write rules**:
 
-- 单文件目标（AGENTS.md / CLAUDE.md / copilot-instructions）使用 managed block：
-  `<!-- pk:begin <contract-id> -->` … `<!-- pk:end <contract-id> -->`，文件头写生成标记。
-- 一契约一文件目标按各自格式生成 frontmatter：Copilot 路径级用 `applyTo`；Cursor 用 `description / globs / alwaysApply`；Windsurf 用 `trigger / globs / description`。
-- 同一契约投影到单文件目标时，重新投影会重写整个 managed block 区域；其他契约的块保持不变。
-- 目标文件被手工修改后，只能通过「覆盖投影」显式确认；确认弹窗必须展示目标路径、漂移备注、是否为合并文件。
-- 操作：投影 / 重新投影、移除投影、回滚上一版本。回滚只影响目标文件，不回滚本地库与仓库。
-- 目标不支持契约的激活方式时，投影表必须显示「不支持」并禁用投影按钮，不能生成一个实际不会生效的投影记录。
-- 删除本地契约不会删除已投影的目标文件；投影记录保留为「已删除」孤儿项，可移除或回滚，但不能再重新生成内容。
-- 不允许「同步全部过时」之类的批量操作覆盖 drifted。
+- Single-file targets (AGENTS.md / CLAUDE.md / copilot-instructions) use managed blocks:
+  `<!-- pk:begin <contract-id> -->` ... `<!-- pk:end <contract-id> -->`, with a generation marker at the top of the file.
+- One-contract-per-file targets generate frontmatter in their own formats: Copilot path-level uses `applyTo`; Cursor uses `description / globs / alwaysApply`; Windsurf uses `trigger / globs / description`.
+- When the same contract is projected to a single-file target, re-projecting rewrites the entire managed block region; other contracts' blocks stay unchanged.
+- After a target file is modified by hand, only an explicit "Overwrite projection" confirmation is allowed; the confirmation dialog must show the target path, drift note, and whether the file is a merged file.
+- Actions: project / re-project, remove projection, roll back previous version. Rollback affects only the target file, not the local library or repo.
+- When a target doesn't support the contract's activation mode, the projection table must show "Unsupported" and disable the projection button; it must not create a projection record that will never take effect.
+- Deleting a local contract does not delete already-projected target files; the projection record remains as a "Deleted" orphan that can be removed or rolled back but can no longer regenerate content.
+- Bulk operations such as "sync all stale" must not overwrite drifted items.
 
-#### 6.2.5 Git 同步与安全
+#### 6.2.5 Git sync and security
 
-每个契约一个 `.contract.md`，路径 `instructions/<folder>/<slug>.contract.md`；`folder` 同时写入 frontmatter，允许子文件夹继续嵌套：
+One `.contract.md` per contract, path `instructions/<folder>/<slug>.contract.md`; `folder` is also written into frontmatter, and subfolders can nest further:
 
 ```markdown
 ---
 id: "c-frontend"
-title: "前端代码规范"
-description: "对 src 下的 TypeScript / TSX 文件生效"
+title: "Frontend Code Standards"
+description: "Applies to TypeScript / TSX files under src"
 scope: "path"
 path: "src"
 activation: {"mode":"glob","globs":["src/**/*.{ts,tsx}"]}
 priority: 60
 imports: []
 targets: ["copilot-path","cursor","agents-md"]
-tags: ["前端","规范"]
+tags: ["Frontend","Standards"]
 ---
 
-# 前端代码规范
+# Frontend Code Standards
 
-- 函数组件 + hooks；不要新增 class 组件。
-- 使用 Tailwind token，禁止散落十六进制颜色。
+- Function components + hooks; do not add class components.
+- Use Tailwind tokens; no scattered hex colors.
 ```
 
-**必须**：
+**Required**:
 
-- 同步范围三态：跟随仓库策略 / 参与同步 / 仅本机；全局开关关闭时一律退回仅本机。
-- 拉取必须逐条预览：新增看全文，修改看「本地 → 仓库」diff；不进入批量接受。
-- 推送前扫描正文中的高置信度凭据；命中后替换为 `{{api_key}}`，真实值不落盘。
-- 冲突走远端 / 本地 / 基线三方对比；手动合并必须通过 frontmatter + 正文结构校验，结构不完整时禁止应用。
-- 采用仓库 / 手动合并后，相关投影标记为「待更新」，不自动写入 Agent 目录。
-- 删除已同步契约只删本地副本并撤回待同步项，不改仓库；远端仍在时下次拉取会重新出现。
-- 仓库默认只提交 canonical `.contract.md`；各工具投影是否提交由团队另行决定，禁止把生成物当作第二个事实源。
+- Three-state sync scope: follow repo policy / participate in sync / local only; when the global switch is off everything falls back to local-only.
+- Pulling must be previewed item by item: new items show the full text, modifications show the "local → repo" diff; batch accept is not offered.
+- Before push, scan the body for high-confidence credentials; hits must be replaced with `{{api_key}}`, and real values never touch disk.
+- Conflicts go through a remote / local / base three-way comparison; manual merges must pass frontmatter + body structure validation, and application is blocked when the structure is incomplete.
+- After "Take repo" / manual merge, related projections are marked "Stale" and are not written to Agent directories automatically.
+- Deleting a synced contract removes only the local copy and withdraws pending sync items, without modifying the repo; if the remote copy still exists it reappears on the next pull.
+- By default the repo only commits the canonical `.contract.md`; whether to commit tool projections is decided separately by the team, and generated artifacts must not be treated as a second source of truth.
 
-#### 6.2.6 全局目录分发（v0.5 新增，必须）
+#### 6.2.6 Global directory dispatch (new in v0.5, required)
 
-项目级投影回答「这个仓库该读什么规则」；全局目录分发回答「这台机器上所有项目默认该读什么规则」。两者共用 canonical `.contract.md`，但目标、路径、状态与审批完全分开。
+Project-level projection answers "which rules should this repo read"; global directory dispatch answers "which rules should every project on this machine read by default". Both share the canonical `.contract.md`, but targets, paths, status, and approval are completely separate.
 
-**入口**：Agent 指令 → 全局分发。页面自上而下四段：
+**Entry**: Agent Instructions → Global dispatch. The page has four sections top to bottom:
 
-1. **全局目录配置**：每个本机 Agent 一张卡，展示目标名称、格式（单文件 / 独立文件）、是否检测到、已投影数量、当前路径。路径是输入框，可编辑、可恢复默认。
-2. **选择指令**：按文件夹过滤 + 全局搜索；每行可勾选，显示标题、文件夹、激活方式、版本与「已在 N 个全局目录」。
-3. **投影操作条**：显示「已选 X 条 × Y 个目录」、不兼容组合数、漂移组合数；提供「预览写入内容」与「投影所选」。
-4. **全局投影记录**：逐行显示指令、目标、写入路径、状态、版本 / 时间与操作（重新投影 / 覆盖 / 移除 / 回滚）。
+1. **Global directory configuration**: one card per local Agent showing target name, format (single file / standalone files), whether detected, number projected, and current path. The path is an input field, editable and restorable to default.
+2. **Select instructions**: filter by folder + global search; each row is selectable and shows title, folder, activation, version, and "in N global directories".
+3. **Projection action bar**: shows "X selected × Y directories", number of incompatible combinations, number of drifted combinations; offers "Preview written content" and "Project selected".
+4. **Global projection records**: each row shows instruction, target, written path, status, version / time, and actions (re-project / overwrite / remove / roll back).
 
-**全局目标注册表（本期 8 个，全部可改路径）**：
+**Global target registry (8 in this phase, all paths editable)**:
 
-| 目标 | 默认路径 | 写入方式 | 支持的激活 |
+| Target | Default path | Write method | Supported activation |
 | --- | --- | --- | --- |
-| Claude Code | `~/.claude/CLAUDE.md` | 单文件合并，支持 `@import` | always |
-| Codex CLI | `~/.codex/AGENTS.md` | 单文件合并 | always |
-| Cursor | `~/.cursor/rules/` | 一契约一 `.mdc` | always / glob / model / manual |
-| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | 单文件合并 | always |
-| OpenCode | `~/.config/opencode/AGENTS.md` | 单文件合并 | always |
-| Cline | `~/Documents/Cline/Rules/` | 一契约一 `.md` | always |
-| Kiro | `~/.kiro/steering/` | 一契约一 `.md` | always |
-| Qoder | `~/.qoder/rules/` | 一契约一 `.md` | always |
+| Claude Code | `~/.claude/CLAUDE.md` | single-file merge, supports `@import` | always |
+| Codex CLI | `~/.codex/AGENTS.md` | single-file merge | always |
+| Cursor | `~/.cursor/rules/` | one `.mdc` per contract | always / glob / model / manual |
+| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | single-file merge | always |
+| OpenCode | `~/.config/opencode/AGENTS.md` | single-file merge | always |
+| Cline | `~/Documents/Cline/Rules/` | one `.md` per contract | always |
+| Kiro | `~/.kiro/steering/` | one `.md` per contract | always |
+| Qoder | `~/.qoder/rules/` | one `.md` per contract | always |
 
-**路径编辑（必须）**：
+**Path editing (required)**:
 
-- `pathMode=file` 时输入框是完整文件路径；`pathMode=dir` 时是目录，平台按 `<slug>.mdc` / `<slug>.md` 生成文件名。
-- 路径必须是以 `~` 或 `/` 开头的绝对路径；非法路径就地红字，不写入状态。
-- 路径保存后，该目标下所有非漂移投影立即从 `synced` 变为 `stale`，备注写明「全局目录路径已修改，等待重新投影」。
-- 「恢复默认」同样触发待更新，不自动写文件。
-- 路径保存在本机状态，不进入 Git；界面明确写「这是本机路径，不会同步给其他机器」。
+- When `pathMode=file` the input is a full file path; when `pathMode=dir` it is a directory, and the platform generates file names as `<slug>.mdc` / `<slug>.md`.
+- Paths must be absolute, starting with `~` or `/`; invalid paths show an inline error and are not written to state.
+- After saving a path, all non-drifted projections under that target immediately change from `synced` to `stale`, with a note "Global directory path changed, waiting to be re-projected".
+- "Restore default" also triggers Stale and does not write files automatically.
+- Paths are stored in local state and never enter Git; the UI explicitly says "This is a local machine path and will not be synced to other machines".
 
-**批量投影规则**：
+**Batch projection rules**:
 
-- 用户勾选多条指令与多个工具；不兼容组合（例如把 glob 指令写入只支持 always 的 AGENTS.md）显示为「跳过」，禁止静默降级。
-- 单文件目标一次重写整个文件，包含本次勾选与该目标下已有投影的全部契约；预览必须按最终文件内容展示。
-- 漂移项不参与批量覆盖。若所选组合全部漂移，「投影所选」禁用；若有部分漂移，批量只写入其余组合，并在结果中明确「N 个漂移项未覆盖」。
-- 每次批量投影写一条审计事件，包含「N 条指令 × M 个全局目录 / 跳过 / 漂移」。
+- Users select multiple instructions and multiple tools; incompatible combinations (e.g. writing a glob instruction into an AGENTS.md that only supports always) are shown as "Skipped"; silent downgrade is prohibited.
+- A single-file target rewrites the entire file in one pass, including all contracts selected this time and all existing projections for that target; the preview must show the final file content.
+- Drifted items are excluded from bulk overwrite. If all selected combinations are drifted, "Project selected" is disabled; if only some are drifted, the batch writes only the remaining combinations and the result explicitly says "N drifted items not overwritten".
+- Each batch projection writes one audit event containing "N instructions × M global directories / skipped / drifted".
 
-**全局投影状态**：
+**Global projection status**:
 
-| 状态 | 含义 | 批量策略 |
+| Status | Meaning | Batch policy |
 | --- | --- | --- |
-| `synced` | 文件与当前契约一致 | 可跳过 |
-| `stale` | 契约更新或路径改变，文件未更新 | 可批量重新投影 |
-| `drifted` | 全局文件被手工修改 | **禁止批量覆盖**，逐项确认 |
+| `synced` | File matches the current contract | May skip |
+| `stale` | Contract updated or path changed, file not updated | May batch re-project |
+| `drifted` | Global file modified by hand | **Bulk overwrite prohibited**; confirm item by item |
 
-**安全与边界（必须）**：
+**Security and boundaries (required)**:
 
-- 全局目录写入是单向写出，不回写 Git，也不修改本地契约。
-- 目标文件被手工修改时只标记漂移，不自动覆盖；覆盖必须由用户逐项确认。
-- 删除本地契约不会删除全局文件；投影记录保留为「已删除」孤儿项，只能移除或回滚。
-- 修改全局目录路径不等于移动文件；平台只更新记录并标记待更新，真实移动由用户或下一次投影完成（原型为模拟）。
-- 不声称精确模拟工具的合并顺序；界面必须写明「近似结果，最终以工具实际行为为准」。
+- Global directory writes are one-way writes: they never write back to Git or modify local contracts.
+- When a target file is modified by hand, only mark drift; never overwrite automatically; overwrites require per-item user confirmation.
+- Deleting a local contract does not delete global files; projection records remain as "Deleted" orphans that can only be removed or rolled back.
+- Changing a global directory path is not the same as moving files; the platform only updates the record and marks it Stale, leaving the actual move to the user or the next projection (simulated in the prototype).
+- Do not claim to simulate a tool's merge order exactly; the UI must state "approximate result; the tool's actual behavior is authoritative".
 
-#### 6.2.7 明确不做
+#### 6.2.7 Explicitly out of scope
 
-- 不为每个厂商建立独立工作区、独立 Store 或独立同步逻辑。
-- 不在本期纳入 slash command（属于 Prompt 的按需调用产物）、subagent / chat mode、hooks / settings。
-- 不自动投影、不自动覆盖 drifted、不自动提交 / 推送。
-- 不声称精确模拟各工具 CLI 的合并结果；只做可解释的静态近似。
-- 不把 Prompt 的 System / User / 变量模型复用到常驻指令上。
+- No standalone workspace, store, or sync logic per vendor.
+- Slash commands (on-demand invocations of Prompts), subagents / chat modes, and hooks / settings are not included in this phase.
+- No automatic projection, no automatic overwrite of drifted items, no automatic commit / push.
+- No claim of exactly simulating each tool CLI's merge results; only explainable static approximations.
+- Do not reuse the Prompt System / User / variable model for persistent instructions.
 
-### 6.3 Skills 工作区
+### 6.3 Skills workspace
 
-#### 6.3.1 我的 Skills
+#### 6.3.1 My Skills
 
-- **文件夹树（必须）**：按 `skills/<folder>/<skill>` 的层级展示；选中父目录包含子目录；卡片按文件夹分组，组头显示 `skills/<folder>` 路径。
-- 网格卡片：图标（icon_url → emoji → 首字母降级）、名称、一句话描述、版本、已分发平台小图标组、来源徽标（官方/社区/导入）、待推送徽标。
-- 点击卡片 → **详情**：指令内容 Markdown 渲染 + 右侧「分发平台」面板；头部显示文件夹与仓库文件 `skills/<folder>/<name>/SKILL.md`。
-- **编辑（必须）**：名称、图标、描述、标签、文件夹、SKILL.md 均可编辑；保存生成版本并进入待推送。名称变更会改变仓库目录，必须提示冲突风险；名称与现有技能重复时阻止保存。
-- 详情标题旁显示仓库同步徽标（已同步 / 仓库有更新 / 本地有未推送 / 双向冲突 / 推送被阻断）；徽标只读，操作统一去同步中心。
-- 分发平台面板（必须）：
-  - 每平台一行：图标、名称、状态徽标（`未安装` / `已安装·本应用管理` / `外部安装` / `不支持`）。
-  - 点某平台 → 弹「安装到平台」对话框：模式单选 **symlink（同步编辑）** / **copy（独立副本）**，附一句模式差异说明 → 确认 → 模拟写入 → 状态徽标刷新 → Toast。
-  - 已安装平台 hover 出现「移除」。
-- 版本历史：与 Prompt 版本弹窗同范式（时间线 + diff + 恢复）。
-- 删除边界：删除本地技能只删除本地副本并撤回待同步项，不删除仓库目录，也不自动移除已分发到 Agent 的文件。
+- **Folder tree (required)**: displayed by the `skills/<folder>/<skill>` hierarchy; selecting a parent directory includes subdirectories; cards are grouped by folder and the group header shows the `skills/<folder>` path.
+- Grid cards: icon (icon_url → emoji → first-letter fallback), name, one-line description, version, small icon group of distributed platforms, source badge (Official/Community/Imported), pending push badge.
+- Click a card → **Details**: instruction content rendered as Markdown + a "Dispatch platforms" panel on the right; the header shows the folder and repo file `skills/<folder>/<name>/SKILL.md`.
+- **Edit (required)**: name, icon, description, tags, folder, and SKILL.md are all editable; saving creates a version and a pending push. Changing the name changes the repo directory and must warn about conflict risk; duplicate names block saving.
+- Next to the detail title, a repo sync badge is shown (Synced / Repository updated / Local unpushed / Two-way conflict / Push blocked); the badge is read-only, and operations go through the Sync Center.
+- Dispatch platforms panel (required):
+  - One row per platform: icon, name, status badge (`Not installed` / `Installed · managed by this app` / `External install` / `Unsupported`).
+  - Click a platform → "Install to platform" dialog: mode radio **symlink (synced editing)** / **copy (independent copy)** with a one-line explanation of the difference → confirm → simulated write → status badge refresh → toast.
+  - Hovering an installed platform reveals "Remove".
+- Version history: same pattern as the Prompt version dialog (timeline + diff + restore).
+- Delete boundary: deleting a local Skill removes only the local copy and withdraws pending sync items; it does not delete the repo directory or automatically remove files already distributed to Agents.
 
-#### 6.3.2 技能商店
+#### 6.3.2 Skill Store
 
-- 顶部：来源 Tab（官方精选 / 社区）+ 分类筛选 + 搜索。
-- 卡片：图标、名称、作者、下载量、已安装态角标。
-- **安装审核流（必须三步）**：
-  1. 点「安装」→ 审核对话框展示 SKILL.md 全文渲染 + 文件清单 + 大小。
-  2. 底部选择目标平台（多选 chips）+ 模式（symlink/copy）。
-  3. 「确认安装」→ 逐平台进度 → 结果清单（成功/失败明细）→ Toast。
-- 「更新」入口仅在商店版本 > 本地版本时出现，同样走审核流并附逐文件变更摘要。
+- Top: source tabs (Official picks / Community) + category filter + search.
+- Cards: icon, name, author, download count, installed-state badge.
+- **Install review flow (must be three steps)**:
+  1. Click "Install" → review dialog shows the full rendered SKILL.md + file list + size.
+  2. At the bottom, select target platforms (multi-select chips) + mode (symlink/copy).
+  3. "Confirm install" → per-platform progress → result list (success/failure details) → toast.
+- The "Update" entry appears only when the store version > local version; it also goes through the review flow with a per-file change summary.
 
-### 6.4 MCP 工作区
+### 6.4 MCP workspace
 
-#### 6.4.1 我的 MCP
+#### 6.4.1 My MCP
 
-- **文件夹树（必须）**：按 `mcp/<folder>` 的层级展示；选中父目录包含子目录；列表项显示文件夹名。
-- 列表行/卡片：名称、传输类型徽标（stdio / http）、启用开关、健康徽标（✓ ok / ⚠ warning / ✕ error，hover 显示问题明细）、标签、收藏。
-- 详情标题旁显示仓库同步徽标与文件夹徽标；头部显示仓库文件 `mcp/<folder>/<name>.json`。
-- 仓库同步动作统一在「同步」工作区，MCP 详情不重复提供 pull / push；但本地保存会立即生成「待推送」，无需再手动触发。
-- 新建 / 编辑时提供文件夹输入与仓库路径预览；一个 server 一个 JSON 文件，避免多人同时新增时在单个 `servers.json` 中冲突。
-- **详情**三区：
-  1. **配置**：JSON 预览（凭据字段显示 `[REDACTED]`）+「复制配置」+「编辑」；编辑态 JSON 校验失败阻止保存并定位错误。
-  2. **健康检查**：问题列表（级别、字段、人话描述）+「重新检查」。
-  3. **版本历史**：同通用版本弹窗；当前版本禁删；恢复生成新版本并 Toast 说明「不会自动写回 Agent 配置，需手动应用」。
-- 新建弹窗：三个 Tab——**从来源添加**（输入命令 / URL / 路径，自动识别类型并回填表单）、**粘贴配置**（粘贴 mcpServers JSON / Codex TOML，解析预览）、**手动配置**（名称、传输类型、command/args/env 或 url/headers、文件夹）。env 值输入框带遮罩切换，保存即标注为加密存储。
-- 保存后：配置变化生成版本与待推送；文件夹决定仓库路径；凭据在仓库文件中只保留 `${VAR}`，真实值仍在本机。
+- **Folder tree (required)**: displayed by the `mcp/<folder>` hierarchy; selecting a parent directory includes subdirectories; list items show the folder name.
+- List rows/cards: name, transport badge (stdio / http), enable switch, health badge (✓ ok / ⚠ warning / ✕ error; hover shows problem details), tags, favorite.
+- Next to the detail title, a repo sync badge and folder badge are shown; the header shows the repo file `mcp/<folder>/<name>.json`.
+- Repo sync actions live in the "Sync" workspace; MCP details do not repeat pull / push, but saving locally immediately creates a pending push without manual triggering.
+- New / edit provides a folder input and repo path preview; one server per JSON file, avoiding conflicts in a single `servers.json` when several people add servers concurrently.
+- **Details** has three sections:
+  1. **Configuration**: JSON preview (credential fields shown as `[REDACTED]`) + "Copy config" + "Edit"; in edit mode, JSON validation failure blocks saving and locates the error.
+  2. **Health check**: problem list (severity, field, plain-language description) + "Re-check".
+  3. **Version history**: same as the shared version dialog; the current version cannot be deleted; restoring creates a new version and the toast explains "Agent configs will not be updated automatically; apply manually".
+- New dialog: three tabs — **Add from source** (enter command / URL / path; auto-detect type and fill the form), **Paste config** (paste mcpServers JSON / Codex TOML, parse and preview), **Manual configuration** (name, transport, command/args/env or url/headers, folder). env value inputs have a mask toggle and are marked as encrypted storage on save.
+- After saving: config changes create a version and a pending push; the folder determines the repo path; credentials remain only as `${VAR}` in the repo file, with real values staying local.
 
-#### 6.4.2 应用到 Agent（分发）
+#### 6.4.2 Apply to Agent (dispatch)
 
-- 详情或列表多选 →「应用到平台」对话框：
-  - 平台卡片多选，卡片上显示当前状态（未创建 / 已同步 / 外部修改 / 冲突）。
-  - 「预览写入内容」可展开目标配置文件的投影 JSON。
-  - 确认 → 原子写入模拟 → 结果明细 → Toast。
-- 停用的 server 不允许分发，按钮禁用并提示原因。
+- Details or list multi-select → "Apply to platforms" dialog:
+  - Multi-select platform cards; each card shows current state (Not created / Synced / Externally modified / Conflict).
+  - "Preview written content" expands the projected JSON for the target config file.
+  - Confirm → simulated atomic write → result details → toast.
+- Disabled servers cannot be distributed; the button is disabled with the reason shown.
 
 #### 6.4.3 Agent MCP
 
-- 各工具配置现状卡片：该工具配置文件中的 server 数、来源（本应用管理 / 外部）。
-- 外部条目「导入到我的库」按钮 → 确认后入库并标记来源=导入。
+- Cards showing each tool's current config: server count in that tool's config file, source (managed by this app / external).
+- External entries have an "Import to My Library" button → after confirmation, add to the library and mark source = Imported.
 
-#### 6.4.4 MCP 商店
+#### 6.4.4 MCP Store
 
-- 官方目录卡片网格 + 搜索；详情弹窗：概述、能做什么、适用场景、必填环境变量（含说明与占位提示）、安装命令。
-- 「安装到我的 MCP」→ 名称唯一性校验（重复则 Toast 错误）→ 入库。
+- Official catalog card grid + search; detail dialog: overview, what it can do, use cases, required environment variables (with descriptions and placeholder hints), install command.
+- "Install to My MCP" → name uniqueness check (duplicate → error toast) → add to library.
 
-### 6.5 同步工作区（Git ⇄ 本地库 → Agent）
+### 6.5 Sync workspace (Git ⇄ local library → Agent)
 
-#### 6.5.1 三层模型与状态字典
+#### 6.5.1 Three-layer model and status dictionary
 
 ```text
-Git 仓库（共享事实源）
-   ⇅  拉取 / 推送（三方合并）
-本地资产库（本机控制面，SQLite + 克隆目录）
-   →  分发（单向写出，per-Agent adapter）
-各 Agent 默认目录（~/.claude/skills、~/.codex/config.toml …）
+Git repo (shared source of truth)
+   ⇅  pull / push (three-way merge)
+Local asset library (local control plane, SQLite + clone directory)
+   →  dispatch (one-way write, per-Agent adapter)
+Each Agent's default directories (~/.claude/skills, ~/.codex/config.toml ...)
 ```
 
-**必须**遵守：仓库不直接写 Agent 目录；Agent 目录不回写仓库。否则审核、冲突、漂移与审计全部失效。
+**Must** follow: the repo never writes directly to Agent directories; Agent directories never write back to the repo. Otherwise review, conflicts, drift, and auditing all break down.
 
-**Prompt 与 Agent 指令只走上半段**：仓库 ⇄ 本地库；不进入「本地库 → Agent 目录」这一段。Skill 与 MCP 进入分发矩阵；Agent 指令进入本域自己的「项目投影」与「全局分发」，写入的是 `AGENTS.md` / `CLAUDE.md` / `.cursor/rules` 等规则文件，而不是 Skill / MCP 的安装目录。
+**Prompts and Agent Instructions only use the upper segment**: repo ⇄ local library; they never enter the "local library → Agent directories" segment. Skills and MCP enter the dispatch matrix; Agent Instructions enter this domain's own "project projection" and "global dispatch", writing rule files such as `AGENTS.md` / `CLAUDE.md` / `.cursor/rules` rather than Skill / MCP install directories.
 
-**仓库目录结构（v0.5 必须）**：
+**Repo directory structure (required in v0.5)**:
 
 ```text
 prompts/<folder>/<slug>.prompt.md
@@ -703,243 +701,243 @@ skills/<folder>/<skill-name>/SKILL.md
 mcp/<folder>/<server-name>.json
 ```
 
-- 四类资产的文件夹路径直接复用为仓库目录；目录内可以继续建子文件夹。
-- 最后一级保持单文件 / 单技能目录约定：Prompt 与指令一条一个 `.md`，Skill 一个技能一个目录，MCP 一个 server 一个 `.json`。
-- 平台与仓库是同一套层级：在平台新建文件夹后，下一次推送会在仓库出现同名目录；在仓库新建子目录后，拉取会在文件夹树中出现。
-- MCP 不再使用单个 `servers.json`；避免多人同时新增时产生集中冲突。
+- Folder paths of the four asset types are reused directly as repo directories; directories can contain nested subfolders.
+- The last level keeps the single-file / single-skill-directory convention: one `.md` per Prompt and instruction, one directory per Skill, one `.json` per MCP server.
+- The platform and the repo share one hierarchy: after creating a folder in the platform, the next push creates a same-named directory in the repo; after adding a subdirectory in the repo, a pull makes it appear in the folder tree.
+- MCP no longer uses a single `servers.json`, avoiding concentrated conflicts when several people add servers concurrently.
 
-资产级同步状态（详情页徽标 + 变更列表）：
+Asset-level sync status (detail badge + changes list):
 
-| 状态 | 含义 | 允许动作 |
+| Status | Meaning | Allowed actions |
 | --- | --- | --- |
-| `in-sync` | 与仓库一致 | 无 |
-| `remote-ahead` | 仓库有新版本 | 审核后拉取 |
-| `local-ahead` | 本地有未推送改动 | 推送 |
-| `diverged` | 双方都改过（含同时存在 incoming / outgoing） | 解决冲突 |
-| `blocked` | 命中安全策略（明文密钥 / 凭据） | 先处理，再推送 |
-| `ignored` | Prompt / 指令设为仅本机，或该类型同步关闭 | 可在同步设置 / 仓库设置中显式开启 |
+| `in-sync` | Matches the repo | None |
+| `remote-ahead` | Repo has a newer version | Pull after review |
+| `local-ahead` | Local has unpushed changes | Push |
+| `diverged` | Both sides changed (including simultaneous incoming / outgoing) | Resolve conflict |
+| `blocked` | Hit a security policy (plaintext secret / credential) | Handle first, then push |
+| `ignored` | Prompt / instruction set to local-only, or sync disabled for that type | Can be explicitly enabled in sync settings / repo settings |
 
-Agent 分发状态（矩阵单元格）：
+Agent dispatch status (matrix cells):
 
-| 状态 | 含义 | 批量策略 |
+| Status | Meaning | Batch policy |
 | --- | --- | --- |
-| `synced` | Agent 目录与库一致 | 可跳过 |
-| `stale` | 库更新但 Agent 未更新 | 可批量同步 |
-| `drifted` | Agent 目录被手工改过 | **禁止批量覆盖**，需逐项确认 |
-| `missing` | 该 Agent 尚未分发 | 按需分发 |
-| `unsupported` | 该工具不支持此类资产 | 仅展示，不写入 |
+| `synced` | Agent directory matches the library | May skip |
+| `stale` | Library updated but Agent not updated | May batch sync |
+| `drifted` | Agent directory modified by hand | **Bulk overwrite prohibited**; confirm item by item |
+| `missing` | Not yet distributed to that Agent | Distribute on demand |
+| `unsupported` | The tool doesn't support this asset type | Display only, no write |
 
-风险标记：`none`（低风险）、`scripts`（含可执行脚本）、`secrets`（含明文密钥）、`network`（会访问网络）。
+Risk markers: `none` (low risk), `scripts` (contains executable scripts), `secrets` (contains plaintext secrets), `network` (network access).
 
-#### 6.5.2 仓库连接向导（必须四步）
+#### 6.5.2 Connect repository wizard (must be four steps)
 
-1. **连接仓库**：仓库地址（`owner/repo` 或完整 URL）、分支、认证方式（系统 Git 凭据 / SSH Key / 一次性令牌）、本地克隆模式（应用托管 / 绑定已有克隆）、本地路径。认证信息不写入应用数据库，复用系统凭据或 SSH agent。
-2. **目录映射**：自动识别 `skills/`、`mcp/`、`prompts/`、`instructions/`；允许改写。向导内必须展示目录示例：`prompts/编程/代码质量/review.prompt.md`、`instructions/团队/前端/frontend.contract.md`、`skills/开发流程/Git/commit-helper/SKILL.md`、`mcp/开发/GitHub/github.json`。Prompt 目录说明必须写明：可建多级子文件夹，每个 Prompt 一个 `.prompt.md`，frontmatter 存元数据与变量定义。Agent 指令目录说明必须写明：可建多级子文件夹，每个契约一个 `.contract.md`，frontmatter 存 folder / scope / activation / targets，正文即规范内容。MCP 目录说明必须写明：一个 server 一个 `<name>.json`，凭据只存 `${VAR}`。分别显示「让 Prompt 参与仓库同步」「让 Agent 指令参与仓库同步」开关，默认开启；单条仍可设为仅本机。未匹配资产进入「未归档」，不得静默丢弃。
-3. **同步策略**：只读 fetch 间隔（5 / 15 / 30 / 60 分钟，带开关）、推送方式（独立分支 + PR / 直接推送当前分支）、MCP / Prompt / Agent 指令凭据策略说明（必须原文展示，不允许折叠隐藏）。
-4. **首次预检**：远端资产数、含脚本技能、Prompt 与 `.contract.md` 文件结构校验、凭据扫描结果（Prompt / 指令正文 + MCP env / headers）、本地克隆未提交改动；必须勾选「我已确认仓库来源，并理解脚本与 MCP 命令会在本机执行」后才能完成连接。
+1. **Connect repository**: repo address (`owner/repo` or full URL), branch, authentication method (system Git credentials / SSH key / one-time token), local clone mode (app-managed / bind existing clone), local path. Authentication information is not written to the app database; system credentials or the SSH agent are reused.
+2. **Directory mapping**: auto-detect `skills/`, `mcp/`, `prompts/`, `instructions/`; allow overrides. The wizard must show directory examples: `prompts/engineering/code-quality/review.prompt.md`, `instructions/team/frontend/frontend.contract.md`, `skills/dev-workflow/git/commit-helper/SKILL.md`, `mcp/development/github/github.json`. The Prompt directory note must state: nested subfolders are allowed, one `.prompt.md` per Prompt, frontmatter holds metadata and variable definitions. The Agent Instructions directory note must state: nested subfolders are allowed, one `.contract.md` per contract, frontmatter holds folder / scope / activation / targets, and the body is the specification content. The MCP directory note must state: one `<name>.json` per server, credentials stored as `${VAR}` only. Show separate switches for "Include Prompts in repo sync" and "Include Agent Instructions in repo sync", both on by default; individual items can still be set to local-only. Unmatched assets go into "Unfiled" and must never be silently dropped.
+3. **Sync policy**: read-only fetch interval (5 / 15 / 30 / 60 minutes, with a toggle), push method (separate branch + PR / push directly to the current branch), credential policy notes for MCP / Prompt / Agent Instructions (must be shown in full; collapsing or hiding is not allowed).
+4. **First preflight**: remote asset count, script-containing Skills, Prompt and `.contract.md` file structure validation, credential scan results (Prompt / instruction bodies + MCP env / headers), uncommitted local clone changes; the user must check "I have confirmed the repo source and understand that scripts and MCP commands will execute on this machine" before the connection can be completed.
 
-断开连接只移除同步关系，不删除本地资产、版本历史与已分发文件；需二次确认并写明。
+Disconnecting removes only the sync relationship and does not delete local assets, version history, or distributed files; a confirmation with that statement is required.
 
-#### 6.5.3 概览
+#### 6.5.3 Overview
 
-- **仓库卡**：仓库名、私有标识、分支、上次 fetch / 上次合入、本地克隆路径、认证方式；操作 `立即 fetch`、`推送…`、`设置`；展示 ahead / behind 与推送方式。
-- **资产策略卡 × 4**：Skills「双向同步」、MCP「模板双向 · 密钥本机」、Prompts「按 Prompt 参与 · 可仅本机」、Agent 指令「按契约参与 · 投影独立确认」；每卡写明一句话原因、待处理数与仅本机数量。
-- **安全阻断横幅**：存在明文凭据（Prompt / 指令正文或 MCP env / headers）时置顶，点击直达变更列表。
-- **统计卡 × 4**：待拉取 / 待推送 / 冲突 / 分发待处理；前两者必须分别显示其中 Prompt 与 Agent 指令的数量，避免规则类变更被技能 / MCP 的数字淹没。
-- **本机 Agent**：只列已检测工具；每项显示默认目录、待处理数；提供「重新检测」与「管理分发」。未检测到的工具不出现在默认矩阵中。
-- **最近同步**：最近 5 条事件，点击进入历史。
+- **Repo card**: repo name, private indicator, branch, last fetch / last merge, local clone path, auth method; actions `Fetch now`, `Push...`, `Settings`; shows ahead / behind and push method.
+- **Asset strategy cards × 4**: Skills "two-way sync", MCP "templates both ways · secrets local", Prompts "per-Prompt participation · local-only allowed", Agent Instructions "per-contract participation · independent projection confirmation"; each card states a one-line reason, pending count, and local-only count.
+- **Security block banner**: shown at the top when plaintext credentials exist (Prompt / instruction bodies or MCP env / headers); clicking it jumps to the changes list.
+- **Stat cards × 4**: incoming / outgoing / conflicts / dispatch pending; the first two must separately show the counts for Prompts and Agent Instructions, so rule-related changes aren't drowned out by Skill / MCP numbers.
+- **Local Agents**: list only detected tools; each shows default directory and pending count; provide "Re-detect" and "Manage dispatch". Undetected tools do not appear in the default matrix.
+- **Recent sync**: the last 5 events; clicking opens History.
 
-#### 6.5.4 变更（待拉取 / 待推送 / 冲突）
+#### 6.5.4 Changes (incoming / outgoing / conflicts)
 
-- 顶部固定解释三方合并模型，禁止用户误以为「同步 = 覆盖」。
-- **待拉取**：每行显示资产类型、名称、变更类型（新增/修改）、版本变化、摘要、路径、增删行、风险徽标；低风险技能 / MCP 可直接「接受」，**Prompt、Agent 指令与含脚本 / 新增技能必须「预览并接受」**。
-  - 审核弹窗：风险说明、文件清单与大小、SKILL.md 全文（Markdown 渲染）、信任勾选；未勾选禁止接受。
-  - Prompt 预览弹窗：新增显示 `.prompt.md` 全文，修改显示「本地 → 仓库」diff；必须勾选「已预览全文，确认安全且不含私密信息」。
-  - Agent 指令预览弹窗：新增显示 `.contract.md` 全文，修改显示「本地 → 仓库」diff；文案必须说明「指令会在每次会话自动进入上下文」，勾选确认后才能接受。
-  - 批量「接受所选」只对低风险 Skill / MCP 生效；**Prompt 与 Agent 指令永不出现在批量接受中**，含脚本 / 新增技能也必须逐项审核。
-- **待推送**：每行可勾选；「推送所选」打开推送弹窗——提交信息、分支 + PR / 直接推送、二次凭据扫描说明。
-  - 被阻断行不显示复选框，只显示「处理凭据」。处理弹窗展示原文位置与替换结果：MCP 用 `${VAR}`，Prompt / Agent 指令用 `{{变量}}`；真实值留在钥匙串或由用户复制时临时填写。转换后转为普通待推送。
-- **冲突**：每行显示远端 / 本地 / 基线版本，操作「解决冲突」。
-  - 冲突弹窗：三张版本卡 + 三种策略（采用仓库 / 保留本地 / 手动合并）+ 对应 diff（远端相对基线、本地相对基线）或可编辑合并文本。
-  - 采用仓库：本地库更新，仓库成为基线；保留本地 / 手动合并：写入本地库并**自动生成一条待推送变更**，避免用户忘记把结果推回仓库。
-  - Prompt 手动合并必须保留 frontmatter 与 System / User 两段标题；Agent 指令手动合并必须保留 frontmatter 与正文；结构校验失败时禁用「应用并标记已解决」。
-  - 禁止静默 last-write-wins。
+- A fixed explanation of the three-way merge model at the top, so users don't mistake "sync = overwrite".
+- **Incoming**: each row shows asset type, name, change type (Added/Modified), version change, summary, path, added/deleted lines, risk badge; low-risk Skills / MCP can be accepted directly, while **Prompts, Agent Instructions, and new or script-containing Skills must be "Preview and accept"**.
+  - Review dialog: risk description, file list and sizes, full SKILL.md (Markdown rendered), trust checkbox; accepting is blocked until checked.
+  - Prompt preview dialog: new items show the full `.prompt.md` text, modifications show the "local → repo" diff; the user must check "I have previewed the full text and confirm it is safe and contains no private information".
+  - Agent Instructions preview dialog: new items show the full `.contract.md` text, modifications show the "local → repo" diff; the copy must explain that "instructions automatically enter the context of every session", and acceptance requires a confirmation checkbox.
+  - The bulk "Accept selected" action applies only to low-risk Skills / MCP; **Prompts and Agent Instructions never appear in batch accept**, and new or script-containing Skills must be reviewed item by item.
+- **Outgoing**: each row is selectable; "Push selected" opens the push dialog — commit message, branch + PR / direct push, and a note about the second credential scan.
+  - Blocked rows have no checkbox and only show "Handle credentials". The handling dialog shows the original location and replacement result: MCP uses `${VAR}`, Prompts / Agent Instructions use `{{variable}}`; real values stay in the keychain or are entered temporarily by the user when copying. After conversion, the item becomes a normal pending push.
+- **Conflicts**: each row shows remote / local / base versions; action "Resolve conflict".
+  - Conflict dialog: three version cards + three strategies (Take repo / Keep local / Manual merge) + the corresponding diff (remote vs. base, local vs. base) or an editable merged text.
+  - Take repo: the local library updates and the repo becomes the base; Keep local / Manual merge: write to the local library and **automatically create a pending push change**, so the user doesn't forget to push the result back to the repo.
+  - Manual merges of Prompts must preserve the frontmatter and both System / User headings; manual merges of Agent Instructions must preserve the frontmatter and body; "Apply and mark resolved" is disabled when structure validation fails.
+  - Silent last-write-wins is prohibited.
 
-#### 6.5.5 分发矩阵
+#### 6.5.5 Dispatch matrix
 
-- **Prompt 与 Agent 指令不出现在此矩阵**：Prompt 只做 Git 同步，Agent 指令走「Agent 指令 → 投影与漂移」；若用户在筛选器中寻找这两类资产，文案应分别指向「Prompts → 同步」与「Agent 指令 → 投影与漂移」。
-- 行 = 本地库中的 Skill / MCP；列 = 已检测 Agent（可切换「显示未检测到的 Agent」）。
-- 支持按资产类型（全部 / Skills / MCP）与「只看异常」筛选；顶部显示已检测数、过时数、漂移数。
-- 单元格状态色遵循全局语义：success / warning / danger / outline；不支持显示「不支持」，不显示为「缺失」。
-- 点击单元格打开分发详情：
-  - 目标路径（按工具规范生成）、当前版本、部署时间、模式（symlink / copy）、漂移备注。
-  - MCP 需展示写入预览，env / headers 一律 `[REDACTED]`；说明真实密钥在写入时注入。
-  - 操作：分发 / 重新同步、切换模式、移除分发、回滚到上一版本（仅当存在 previousVersion）。
-  - **已停用的 MCP 禁止分发与重新同步**，按钮禁用并给出原因。
-- 批量「同步全部过时」只处理 `stale`，不处理 `drifted`；完成后 Toast 明确「漂移项未自动覆盖」。
-- symlink 为默认模式；失败时回退 copy 必须逐条提示，禁止静默回退。
+- **Prompts and Agent Instructions do not appear in this matrix**: Prompts only do Git sync, and Agent Instructions go through "Agent Instructions → Projections and drift"; if users look for these two asset types in the filter, the copy should point to "Prompts → Sync" and "Agent Instructions → Projections and drift" respectively.
+- Rows = Skill / MCP in the local library; columns = detected Agents (toggle "Show undetected Agents").
+- Filter by asset type (All / Skills / MCP) and "Only anomalies"; the top shows detected count, stale count, drifted count.
+- Cell status colors follow the global semantics: success / warning / danger / outline; unsupported shows "Unsupported", not "Missing".
+- Clicking a cell opens dispatch details:
+  - Target path (generated per tool convention), current version, deployment time, mode (symlink / copy), drift note.
+  - MCP must show the write preview, with env / headers always `[REDACTED]`; explain that real secrets are injected at write time.
+  - Actions: dispatch / re-sync, switch mode, remove dispatch, roll back to previous version (only when previousVersion exists).
+  - **Disabled MCP servers cannot be dispatched or re-synced**; the button is disabled with a reason.
+- The bulk "Sync all stale" only handles `stale`, never `drifted`; afterwards the toast explicitly says "Drifted items were not overwritten".
+- symlink is the default mode; falling back to copy on failure must be reported item by item, never silently.
 
-#### 6.5.6 历史与回滚
+#### 6.5.6 History and rollback
 
-- 事件类型：fetch / pull / push / conflict / deploy / blocked / review / connect / rollback；每条包含时间、结果、摘要与目标。
-- 历史只存本机，用于追溯「哪个版本分发到了哪个 Agent」；Git 提交历史仍以仓库为准。
-- Prompt 同步范围的加入 / 撤回、删除已同步 Prompt、凭据替换都写入审核类事件，便于解释「为什么某条 Prompt 不再出现在待推送」。
-- Agent 指令的加入 / 撤回、删除、冲突处理、投影 / 重新投影 / 覆盖漂移 / 回滚也写入审核类事件，便于解释「哪条规则、哪个版本、写到了哪个目标文件」。
-- 支持按「仓库同步 / Agent 分发 / 安全与审核」筛选与导出日志。
-- 回滚分发只影响 Agent 目录，不回滚本地库与仓库；UI 必须写明。
+- Event types: fetch / pull / push / conflict / deploy / blocked / review / connect / rollback; each includes time, result, summary, and target.
+- History is stored locally only, to trace "which version was distributed to which Agent"; Git commit history remains authoritative in the repo.
+- Adding / withdrawing a Prompt sync scope, deleting a synced Prompt, and credential replacement all write review-type events, to explain "why a Prompt no longer appears in pending push".
+- Adding / withdrawing Agent Instructions, deleting, resolving conflicts, projecting / re-projecting / overwriting drift / rolling back also write review-type events, to explain "which rule, which version, written to which target file".
+- Supports filtering and log export by "repo sync / Agent dispatch / security and review".
+- Rollback of a dispatch affects only Agent directories, not the local library or the repo; the UI must state this.
 
-#### 6.5.7 自动同步与安全边界（必须）
+#### 6.5.7 Automatic sync and security boundaries (required)
 
-| 动作 | 策略 |
+| Action | Policy |
 | --- | --- |
-| 自动 fetch | 允许，只读；只提示差异，不自动合并 |
-| 自动 pull / 覆盖本地 | 禁止 |
-| 自动 commit / push | 禁止；推送必须由用户在推送弹窗确认 |
-| 自动写入 Agent 目录 | 禁止；分发与投影必须显式触发 |
-| 批量覆盖 drifted | 禁止；必须逐项确认 |
-| 明文密钥推送到 Git | 禁止；推送前扫描并阻断 |
-| Prompt / Agent 指令正文含疑似凭据推送到 Git | 禁止；必须替换为 `{{变量}}` |
-| Prompt / Agent 指令拉取进入批量接受 | 禁止；必须逐条预览全文 / diff |
-| 投影生成物成为第二事实源 | 禁止；默认只提交 canonical `.contract.md` |
-| 新技能 / 含脚本技能直接入库 | 禁止；必须先审核 |
+| Auto fetch | Allowed, read-only; only reports differences, never auto-merges |
+| Auto pull / overwrite local | Prohibited |
+| Auto commit / push | Prohibited; pushing must be confirmed by the user in the push dialog |
+| Auto write to Agent directories | Prohibited; dispatch and projection must be explicitly triggered |
+| Bulk overwrite drifted | Prohibited; item-by-item confirmation required |
+| Push plaintext secrets to Git | Prohibited; scanned and blocked before push |
+| Push Prompt / Agent Instructions bodies with suspected credentials to Git | Prohibited; must be replaced with `{{variable}}` |
+| Batch-accept Prompt / Agent Instructions pulls | Prohibited; full text / diff preview required item by item |
+| Projection artifacts becoming a second source of truth | Prohibited; only canonical `.contract.md` is committed by default |
+| New / script-containing Skills entering the library directly | Prohibited; review required first |
 
 ---
 
-## 7. 通用交互规范
+## 7. Common interaction specs
 
-### 7.1 反馈（必须）
+### 7.1 Feedback (required)
 
-| 场景 | 形式 |
+| Scenario | Form |
 | --- | --- |
-| 操作成功（复制/安装/应用/保存/恢复） | Toast 成功态，2.5s 自动消失，右下角堆叠 |
-| 操作失败 | Toast 错误态 + 具体原因；表单类错误就地红字 |
-| 耗时操作（模拟安装/分发/流式输出） | 按钮内 spinner，禁止二次点击 |
-| 后台状态刷新 | 徽标/计数就地更新，不整页刷新 |
+| Success (copy/install/apply/save/restore) | Success toast, auto-dismisses after 2.5s, stacked bottom right |
+| Failure | Error toast + specific reason; form errors shown inline |
+| Long-running actions (simulated install/dispatch/streaming) | Spinner inside the button; repeated clicks prohibited |
+| Background status refresh | Badges/counts update in place without a full page refresh |
 
-### 7.2 确认与破坏性操作（必须）
+### 7.2 Confirmation and destructive actions (required)
 
-- 删除 Prompt / Agent 指令 / Skill / MCP server、删除版本：确认弹窗，主按钮红色，文案写明对象名。
-- 删除已同步 Prompt 或 Agent 指令：必须额外说明「只删除本地副本，不改仓库；远端仍在时下次拉取会重新出现」。
-- 删除已投影的 Agent 指令：必须额外说明「不会自动删除 Agent 目录中已写入的文件」，并给出投影数量。
-- 把 Prompt / Agent 指令从「参与同步」改为「仅本机」：若有未处理变更，必须提示「将撤回 N 条待同步项，仓库文件不会删除」。
-- 替换 Prompt / Agent 指令正文中的凭据：处理弹窗必须展示原文位置与 `{{变量}}` 替换结果，且说明真实值不会落盘。
-- 覆盖漂移投影：确认弹窗必须展示目标路径、漂移备注，以及该目标是否为多契约合并文件；禁止批量覆盖。
-- 覆盖全局目录漂移：确认弹窗必须展示「本机用户级路径」与「只影响该 Agent 的全局文件」，并说明可回滚。
-- 修改 / 恢复全局目录路径：不弹破坏性确认，但必须就地提示「相关投影会标记为待更新」；路径非法时禁止保存。
-- 批量全局投影：结果必须写明成功数、跳过的不兼容组合数与未覆盖的漂移数；禁止用「全部成功」掩盖跳过项。
-- 移除单条投影：确认弹窗写明目标路径与「本地库 / 仓库不受影响」；合并文件还需说明其他契约保持不动。
-- 恢复版本：确认弹窗写明覆盖语义。
-- 批量移除分发：确认弹窗列出受影响平台数。
-- 断开仓库连接：确认弹窗写明「只移除同步关系，不删除本地资产、版本历史与已分发文件」。
-- 解决冲突：必须显式选择策略；采用仓库需提示「本地改动将被丢弃」，保留本地需提示「结果会进入待推送」。
-- 移除单个 Agent 分发：确认弹窗写明目标路径，且说明不影响本地库与仓库。
-- 回滚分发：确认弹窗写明只回滚 Agent 目录，不回滚仓库与本地库。
-- 推送：禁止一键静默推送；必须在推送弹窗确认提交信息与推送方式。
+- Deleting a Prompt / Agent Instructions / Skill / MCP server or a version: confirmation dialog with a red primary button that names the object in the copy.
+- Deleting a synced Prompt or Agent Instructions: must additionally state "Only the local copy is deleted; the repo is not changed; if the remote still exists it will reappear on the next pull".
+- Deleting a projected Agent Instructions item: must additionally state "Files already written to Agent directories will not be deleted automatically" and show the projection count.
+- Changing a Prompt / Agent Instructions from "Participate in sync" to "Local only": if there are unprocessed changes, must warn "N pending sync items will be withdrawn; repo files will not be deleted".
+- Replacing credentials in a Prompt / Agent Instructions body: the handling dialog must show the original location and the `{{variable}}` replacement result, and state that real values never touch disk.
+- Overwriting a drifted projection: the confirmation dialog must show the target path, drift note, and whether the target is a multi-contract merged file; bulk overwrite is prohibited.
+- Overwriting global directory drift: the confirmation dialog must show "local user-level path" and "only affects this Agent's global file", and note that it can be rolled back.
+- Editing / restoring a global directory path: no destructive confirmation, but an inline notice that "related projections will be marked Stale" is required; invalid paths cannot be saved.
+- Batch global projection: the result must state the success count, the number of skipped incompatible combinations, and the number of drifted items not overwritten; masking skips with "all succeeded" is prohibited.
+- Removing a single projection: the confirmation dialog states the target path and that "the local library / repo are unaffected"; for merged files, it also notes that other contracts remain untouched.
+- Restoring a version: the confirmation dialog states the overwrite semantics.
+- Bulk removing dispatches: the confirmation dialog lists the number of affected platforms.
+- Disconnecting the repo: the confirmation dialog states "Only the sync relationship is removed; local assets, version history, and distributed files are not deleted".
+- Resolving a conflict: a strategy must be explicitly chosen; Take repo must warn "local changes will be discarded", and Keep local must warn "the result will become a pending push".
+- Removing a single Agent dispatch: the confirmation dialog states the target path and notes that the local library and repo are unaffected.
+- Rolling back a dispatch: the confirmation dialog states that only Agent directories are rolled back, not the repo or local library.
+- Pushing: one-click silent push is prohibited; commit message and push method must be confirmed in the push dialog.
 
-### 7.3 快捷键
+### 7.3 Keyboard shortcuts
 
-| 键 | 行为 |
+| Key | Behavior |
 | --- | --- |
-| `/` | 聚焦全局搜索 |
-| `N`（列表态） | 新建当前域资产 |
-| `Esc` | 关闭最上层弹层 / 退出 inline 编辑 |
-| `⌘Enter` | 弹窗内提交 |
-| 双击详情正文 | 进入 inline 编辑 |
+| `/` | Focus global search |
+| `N` (in list view) | Create an asset in the current domain |
+| `Esc` | Close the topmost overlay / exit inline editing |
+| `⌘Enter` | Submit inside a dialog |
+| Double-click detail body | Enter inline editing |
 
-### 7.4 空状态与加载
+### 7.4 Empty states and loading
 
-- 空状态区分「无数据」（引导创建）与「无匹配」（清除筛选），禁止只显示灰色插画。
-- 同步相关空状态必须归因：未连接仓库 → 引导连接；已连接但无变更 → 说明「fetch 后差异会出现在这里」；无冲突 → 说明「双方改动同一文件时才会出现」；分发筛选为空 → 提示放宽筛选。
-- Prompt 同步空状态：全部 Prompt 仅本机时，策略卡说明「当前没有参与仓库同步的 Prompt」并给出「去 Prompts 设置同步范围」；仓库未启用 Prompt 同步时，详情页同步弹窗说明全局开关位置，而不是显示「已同步」。
-- Agent 指令空状态：无契约时引导新建；生效预览无命中时说明「当前路径没有命中的常驻契约」，并提示检查 scope / glob / 目标能力；投影为空时引导到契约库选择目标；漂移筛选为空时说明「目标文件未被手工修改」。
-- 首次进入各工作区允许 300ms 骨架屏（原型直接渲染，真实产品接 SQLite）。
+- Empty states distinguish "no data" (guide creation) from "no matches" (clear filters); showing only a gray illustration is prohibited.
+- Sync-related empty states must explain the cause: repo not connected → guide to connect; connected but no changes → "differences will appear here after fetch"; no conflicts → "appears only when both sides change the same file"; empty dispatch filter → suggest relaxing the filter.
+- Prompt sync empty state: when all Prompts are local-only, the strategy card says "No Prompts are currently participating in repo sync" and offers "Go to Prompts to set sync scope"; when the repo has Prompt sync disabled, the sync dialog on the detail page explains where the global switch is, instead of showing "Synced".
+- Agent Instructions empty states: with no contracts, guide to create one; when the resolution preview has no matches, explain "No persistent contracts match the current path" and suggest checking scope / glob / target capabilities; when projections are empty, guide to the contract library to select targets; when the drift filter is empty, explain "Target files have not been modified by hand".
+- A 300ms skeleton screen is allowed on first entry to each workspace (the prototype renders directly; the real product connects to SQLite).
 
 ---
 
-## 8. 原型范围与实现说明
+## 8. Prototype scope and implementation notes
 
-### 8.1 技术栈
+### 8.1 Tech stack
 
-React 19 + TypeScript + Vite + Tailwind CSS v4；shadcn/ui 风格组件源码内置（`src/components/ui/`），不引运行时组件库。状态用 React 内置 hooks + Context；数据为内存种子数据 + localStorage 持久化（键 `pk_state_v1`），设置里可一键重置。
+React 19 + TypeScript + Vite + Tailwind CSS v4; shadcn/ui-style component source included (`src/components/ui/`), no runtime component library. State uses React built-in hooks + Context; data is in-memory seed data + localStorage persistence (key `pk_state_v1`), resettable with one click in Settings.
 
-同步域种子集中在 `src/data/syncSeed.ts`：一个已连接仓库、15 条三方变更（含 1 个技能冲突、1 个 Prompt 冲突、1 个指令冲突、2 个凭据阻断）、13 条分发记录、9 条历史、6 个本机 Agent、6 条平台 Prompt。Agent 指令种子集中在 `src/data/contractSeed.ts`：6 条契约、10 条项目投影记录、3 条指令同步变更；目标注册表在 `src/data/contractTargets.ts`。全局目录目标与全局投影种子在 `src/data/globalTargets.ts`：8 个本机 Agent 目标、5 条全局投影。文件夹树、仓库路径与目录反推在 `src/lib/folders.ts`；Prompt / 指令 / Skill / MCP 的仓库路径分别由 `promptSync.ts` / `contracts.ts` / `skills.ts` / `mcp.ts` 生成。`load()` 会把旧版本 localStorage 迁移到 v0.5（`schemaVersion=4`）：补 `folder`、补全局目录与全局投影、把旧 `mcp/servers.json` 迁移为 `mcp/` 目录、按当前文件夹重算待同步路径，避免升级后白屏或资产路径错位。
+Sync domain seeds are centralized in `src/data/syncSeed.ts`: one connected repo, 15 three-way changes (including 1 Skill conflict, 1 Prompt conflict, 1 instruction conflict, 2 credential blocks), 13 dispatch records, 9 history entries, 6 local Agents, 6 platform Prompts. Agent Instructions seeds are centralized in `src/data/contractSeed.ts`: 6 contracts, 10 project projection records, 3 instruction sync changes; the target registry is in `src/data/contractTargets.ts`. Global directory targets and global projection seeds are in `src/data/globalTargets.ts`: 8 local Agent targets, 5 global projections. The folder tree, repo paths, and reverse directory mapping live in `src/lib/folders.ts`; repo paths for Prompt / instructions / Skill / MCP are generated by `promptSync.ts` / `contracts.ts` / `skills.ts` / `mcp.ts` respectively. `load()` migrates older localStorage to v0.5 (`schemaVersion=4`): fills in `folder`, adds global directories and global projections, migrates the old `mcp/servers.json` to an `mcp/` directory, and recomputes pending-sync paths from current folders, preventing blank screens or mislocated asset paths after upgrades.
 
-### 8.2 与真实产品的差异（必须知晓）
+### 8.2 Differences from the real product (must know)
 
-- 原型无后端：不连 SQLite / Electron / 真实文件系统；「安装到平台」「应用到 Agent」仅改变原型内状态并给出结果反馈。
-- **Git 操作全为模拟**：不 clone / fetch / pull / commit / push，不创建真实 PR；仓库卡上的 ahead / behind、提交 hash、PR 编号均为演示数据。
-- **Prompt 与 Agent 指令同步文件已真实序列化**：`.prompt.md` 与 `.contract.md` 的 frontmatter / 正文、解析、diff 与「本地 → 仓库」内容在前端内存中生成；但不读写真实仓库文件。
-- **文件夹树与仓库路径为真实计算**：`folder` 到仓库目录的映射、从路径反推文件夹、多级目录树计数均在内存中计算；但不执行真实 `git mv`。
-- **目标文件编译为真实字符串**：`AGENTS.md` / `CLAUDE.md` / `.instructions.md` / `.mdc` / Windsurf rule 的 frontmatter、managed block 与合并顺序在前端生成；但不写入真实 Agent 目录。
-- **生效预览为静态近似**：按目标注册表的已知规则排序与过滤，不调用各工具 CLI，也不解析其真实配置；界面必须标明近似性质。
-- **Prompt / Agent 指令凭据扫描为高置信度正则模拟**：覆盖 `sk-…`、`ghp_…`、`AKIA…`、私钥头等常见模式，不等同于完整 secret scanning；真实产品应组合熵检测、allowlist 与人工确认。
-- **Agent 写入全为模拟**：不创建 symlink、不写 `~/.claude/skills`、`~/.codex/config.toml`、`AGENTS.md` 或任何全局目录；drift 检测、项目投影、全局分发、回滚只更新原型状态。
-- **全局目录路径编辑真实持久化**：路径改动保存在 localStorage 并驱动状态与路径预览，但不校验真实文件系统、也不移动文件。
-- AI 测试为模拟流式输出，不发起真实网络请求。
-- 搜索为内存包含匹配，非 FTS5；平台发现为内置种子数据，不是真实远端搜索。
-- 凭据脱敏仅展示层行为，原型无真实加密与钥匙串；密钥转换只改状态与文案。
+- The prototype has no backend: it doesn't connect to SQLite / Electron / a real filesystem; "Install to platform" and "Apply to Agent" only change in-prototype state and give result feedback.
+- **All Git operations are simulated**: no clone / fetch / pull / commit / push, no real PRs; ahead / behind, commit hashes, and PR numbers on the repo card are demo data.
+- **Prompt and Agent Instructions sync files are genuinely serialized**: `.prompt.md` and `.contract.md` frontmatter / body, parsing, diff, and "local → repo" content are generated in frontend memory; real repo files are not read or written.
+- **Folder trees and repo paths are genuinely computed**: `folder` → repo directory mapping, reverse path → folder inference, and multi-level tree counts are all computed in memory; no real `git mv` is executed.
+- **Target files are compiled into real strings**: the frontmatter, managed blocks, and merge order of `AGENTS.md` / `CLAUDE.md` / `.instructions.md` / `.mdc` / Windsurf rules are generated in the frontend; nothing is written to real Agent directories.
+- **Resolution preview is a static approximation**: it sorts and filters by known rules in the target registry, doesn't invoke any tool CLI, and doesn't parse its real config; the UI must state the approximate nature.
+- **Prompt / Agent Instructions credential scanning is a high-confidence regex simulation**: it covers common patterns such as `sk-...`, `ghp_...`, `AKIA...`, and private key headers, but is not equivalent to full secret scanning; the real product should combine entropy detection, allowlists, and manual confirmation.
+- **All Agent writes are simulated**: no symlinks are created, nothing is written to `~/.claude/skills`, `~/.codex/config.toml`, `AGENTS.md`, or any global directory; drift detection, project projection, global dispatch, and rollback only update prototype state.
+- **Global directory path editing is genuinely persisted**: path changes are saved in localStorage and drive state and path previews, but the real filesystem is not validated and files are not moved.
+- AI testing is simulated streaming output without real network requests.
+- Search is in-memory substring matching, not FTS5; Platform Discovery uses built-in seed data, not a real remote search.
+- Credential redaction is a display-layer behavior only; the prototype has no real encryption or keychain; secret conversion only changes state and copy.
 
-### 8.3 验收清单
+### 8.3 Acceptance checklist
 
-1. Prompts / Agent 指令 / Skills / MCP 四个资产工作区均可完成「浏览 → 详情 → 编辑 → 版本」闭环；Skill / MCP 额外完成「分发」闭环，Agent 指令额外完成「生效预览 → 投影 → 漂移」闭环，Prompt 不出现 Agent 分发入口。
-2. 复制 Prompt 必弹变量表单（含变量时）。
-3. 商店安装走三步审核流。
-4. MCP 配置中凭据一律 `[REDACTED]` 展示。
-5. 所有破坏性操作有确认。
-6. 亮/暗主题即时切换。
-7. 刷新页面数据不丢（localStorage）。
-8. 同步中心可完成「概览 → 待拉取审核 → 冲突解决 → 推送 → 分发 → 历史」闭环。
-9. 含脚本 / 新增技能不能直接批量接受，必须打开审核弹窗并勾选信任。
-10. 含明文密钥的 MCP 待推送项被阻断；转换为 `${VAR}` 后可进入正常推送。
-11. 分发矩阵正确区分 synced / stale / drifted / missing / unsupported；「同步全部过时」不覆盖 drifted。
-12. 已停用的 MCP 在分发详情中禁止分发 / 重新同步。
-13. Prompt 详情可设置同步范围；仅本机 Prompt 显示「仅本机」，不产生待推送；平台发现可复制（含变量表单）与保存到本地。
-14. 断开仓库连接只移除同步关系，本地资产与分发记录仍在。
-15. 编辑同步型 Prompt 后，本地库生成新版本且同步中心出现待推送；若同时存在远端更新，状态升级为冲突而不是静默覆盖。
-16. Prompt 待拉取必须打开预览（新增全文 / 修改 diff），且不出现在批量接受中；未勾选确认时接受按钮禁用。
-17. Prompt 冲突支持采用仓库 / 保留本地 / 手动合并；手动合并结构不完整时禁止应用，应用后生成待推送。
-18. Prompt 正文含疑似凭据时被阻断；替换为 `{{api_key}}` 后可进入正常推送，正文中不再出现原值。
-19. 删除已同步 Prompt 只删除本地副本并撤回待同步项，弹窗明确提示仓库文件不受影响。
-20. 同步中心策略卡与统计正确显示 Prompt 待处理数、仅本机数；仓库向导关闭 Prompt 同步后，所有 Prompt 状态退回仅本机。
-21. 刷新页面后 Prompt / Agent 指令的同步范围、待推送 / 冲突状态与版本仍保留（localStorage v3 迁移正常）。
-22. Agent 指令工作区可新建契约、选择多个目标、保存后生成版本；编辑正文或元数据后，相关投影从 `synced` 变为 `stale`，不会自动写 Agent 目录。
-23. 生效预览选择 `cursor` 与 `src/components/PromptDetail.tsx` 时命中「仓库通用约定」「前端代码规范」；切换 `README.md` 时前端规则因路径范围 / glob 不命中而进入跳过列表；选择 `agents-md` 时前端规则因目标不支持 glob 被明确标记跳过。
-24. 生效预览的跳过列表能区分：路径范围不匹配、glob 未命中、目标不支持该激活方式、模型判断、手动引用。
-25. 单文件目标（AGENTS.md / CLAUDE.md / copilot-instructions）生成内容包含 managed block 与生成标记；per-contract 目标生成 frontmatter（`applyTo` / `globs` / `alwaysApply` / `trigger`）。
-26. 投影与漂移页正确区分 `synced` / `stale` / `drifted` / `missing`；`drifted` 不参与批量操作，必须二次确认「覆盖并投影」；激活方式不兼容的目标显示「不支持」且不能投影。
-27. 投影详情展示目标路径、写入内容、版本与时间，并支持重新投影、移除、回滚上一版本；删除本地契约后，投影记录保留为「已删除」孤儿项，目标文件不会被自动删除。
-28. Agent 指令待拉取必须打开预览（新增全文 / 修改 diff），不出现在批量接受中；未勾选确认时接受按钮禁用。
-29. Agent 指令冲突支持采用仓库 / 保留本地 / 手动合并；手动合并缺少 frontmatter 或正文时禁止应用，应用后生成待推送。
-30. Agent 指令正文含疑似凭据时推送被阻断；替换为 `{{api_key}}` 后可正常推送；同步中心策略卡与统计正确显示指令的待处理数与仅本机数。
-31. Prompt 新建 / 编辑时可输入多级文件夹；保存后文件夹树出现对应层级，卡片分组与表格文件夹列同步更新。
-32. Prompt 仓库路径随文件夹变化：`prompts/编程/代码质量/review.prompt.md` 与详情页、编辑弹窗预览一致；已有待推送项的路径同步更新。
-33. Agent 指令新建 / 编辑时文件夹写入 frontmatter 与 `instructions/<folder>/<slug>.contract.md`；从仓库拉取缺少 folder 时按路径反推。
-34. Skills 工作区显示文件夹树与分组卡片；编辑 SKILL.md 或文件夹后生成版本并出现待推送，路径变为 `skills/<folder>/<name>/SKILL.md`。
-35. MCP 工作区显示文件夹树；每个 server 的仓库路径为 `mcp/<folder>/<name>.json`；保存配置后生成待推送，仓库内容只含 `${VAR}`。
-36. Agent 指令 → 全局分发可勾选多条指令 × 多个工具；不兼容组合显示跳过，漂移项不参与批量覆盖。
-37. 全局分发页可编辑每个工具的全局目录路径；非法路径禁止提交；保存后该目标下非漂移投影变为「待更新」。
-38. 恢复默认全局路径后，路径回显默认值，相关投影仍为待更新，不自动写文件。
-39. 全局投影预览按最终文件展示：单文件目标包含该目标下已有投影与本次勾选的全部契约；per-contract 目标逐个文件展示。
-40. 全局投影记录支持重新投影、逐项覆盖漂移、移除、回滚；删除本地契约后记录保留为「已删除」，不自动删除全局文件。
-41. 同步中心展示「文件夹即仓库目录」结构示例；仓库向导展示四类资产的多级目录示例与 MCP 一 server 一文件约定。
-42. 设置页可查看全部 Agent 全局目录路径；旧版本 localStorage 升级后 folder、全局目录、待同步路径均正确迁移。
+1. All four asset workspaces — Prompts / Agent Instructions / Skills / MCP — complete the "browse → details → edit → versions" loop; Skill / MCP additionally complete the "dispatch" loop, Agent Instructions additionally complete the "resolution preview → projection → drift" loop, and Prompts have no Agent dispatch entry.
+2. Copying a Prompt always opens the variable form (when variables exist).
+3. Store installation goes through the three-step review flow.
+4. Credentials in MCP configs are always displayed as `[REDACTED]`.
+5. All destructive actions require confirmation.
+6. Light/dark theme switches instantly.
+7. Data survives page refresh (localStorage).
+8. The Sync Center completes the "Overview → incoming review → conflict resolution → push → dispatch → History" loop.
+9. New or script-containing Skills cannot be batch-accepted directly and must open the review dialog with a trust checkbox.
+10. MCP pending push items with plaintext secrets are blocked; after conversion to `${VAR}` they enter the normal push flow.
+11. The dispatch matrix correctly distinguishes synced / stale / drifted / missing / unsupported; "Sync all stale" does not overwrite drifted.
+12. Disabled MCP servers cannot be dispatched / re-synced in dispatch details.
+13. Prompt details allow setting the sync scope; local-only Prompts show "Local only" and create no pending pushes; Platform Discovery supports copy (with variable form) and save locally.
+14. Disconnecting the repo removes only the sync relationship; local assets and dispatch records remain.
+15. After editing a synced Prompt, the local library creates a new version and a pending push appears in the Sync Center; if a remote update also exists, the state escalates to a conflict instead of a silent overwrite.
+16. Incoming Prompts must open a preview (full text for new / diff for modified) and never appear in batch accept; the accept button is disabled until the confirmation checkbox is checked.
+17. Prompt conflicts support Take repo / Keep local / Manual merge; an incomplete manual merge structure blocks application, and a successful application creates a pending push.
+18. Prompt bodies with suspected credentials are blocked; after replacement with `{{api_key}}` the normal push flow is available, and the original value no longer appears in the body.
+19. Deleting a synced Prompt removes only the local copy and withdraws pending sync items; the dialog explicitly states the repo files are unaffected.
+20. Sync Center strategy cards and stats correctly show Prompt pending counts and local-only counts; after disabling Prompt sync in the repo wizard, all Prompt states fall back to local-only.
+21. After a page refresh, Prompt / Agent Instructions sync scopes, pending push / conflict states, and versions are preserved (localStorage v3 migration works).
+22. The Agent Instructions workspace can create contracts, select multiple targets, and generate a version on save; after editing the body or metadata, related projections change from `synced` to `stale` without automatically writing to Agent directories.
+23. When the resolution preview selects `cursor` and `src/components/PromptDetail.tsx`, it matches "Repository Conventions" and "Frontend Code Standards"; switching to `README.md` puts the frontend rule in the skip list because the path scope / glob doesn't match; when selecting `agents-md`, the frontend rule is explicitly marked as skipped because the target doesn't support glob.
+24. The resolution preview's skip list distinguishes: path scope mismatch, glob miss, target doesn't support the activation mode, model decision, manual reference.
+25. Single-file targets (AGENTS.md / CLAUDE.md / copilot-instructions) generate content containing managed blocks and a generation marker; per-contract targets generate frontmatter (`applyTo` / `globs` / `alwaysApply` / `trigger`).
+26. The projection and drift page correctly distinguishes `synced` / `stale` / `drifted` / `missing`; `drifted` is excluded from batch operations and requires a second confirmation to "Overwrite and project"; targets with incompatible activation modes show "Unsupported" and cannot be projected.
+27. Projection details show the target path, written content, version, and time, and support re-project, remove, and roll back previous version; after deleting a local contract, the projection record remains as a "Deleted" orphan and target files are not automatically deleted.
+28. Incoming Agent Instructions must open a preview (full text for new / diff for modified) and never appear in batch accept; the accept button is disabled until the confirmation checkbox is checked.
+29. Agent Instructions conflicts support Take repo / Keep local / Manual merge; a manual merge missing frontmatter or body blocks application, and a successful application creates a pending push.
+30. Agent Instructions bodies with suspected credentials are blocked from pushing; after replacement with `{{api_key}}` normal push works; Sync Center strategy cards and stats correctly show instruction pending counts and local-only counts.
+31. When creating / editing a Prompt, a multi-level folder can be entered; after saving, the folder tree shows the corresponding hierarchy, and card groups and the table folder column update accordingly.
+32. Prompt repo paths follow folder changes: `prompts/engineering/code-quality/review.prompt.md` matches the detail page and edit dialog preview; paths of existing pending push items update too.
+33. When creating / editing Agent Instructions, the folder is written into frontmatter and `instructions/<folder>/<slug>.contract.md`; when pulling from the repo without a folder, it is inferred from the path.
+34. The Skills workspace shows the folder tree and grouped cards; after editing SKILL.md or the folder, a version is created and a pending push appears, and the path becomes `skills/<folder>/<name>/SKILL.md`.
+35. The MCP workspace shows the folder tree; each server's repo path is `mcp/<folder>/<name>.json`; after saving the config a pending push is created, and repo content contains only `${VAR}`.
+36. Agent Instructions → Global dispatch allows selecting multiple instructions × multiple tools; incompatible combinations show as skipped, and drifted items are excluded from bulk overwrite.
+37. The Global dispatch page allows editing each tool's global directory path; invalid paths cannot be submitted; after saving, non-drifted projections under that target become "Stale".
+38. After restoring the default global path, the path shows the default value, related projections remain Stale, and no files are written automatically.
+39. Global projection previews show the final files: single-file targets include all contracts already projected to that target plus those selected this time; per-contract targets are shown file by file.
+40. Global projection records support re-project, per-item drift overwrite, remove, and roll back; after deleting a local contract the record remains as "Deleted" and global files are not automatically deleted.
+41. The Sync Center shows the "folders are repo directories" structure example; the repo wizard shows multi-level directory examples for the four asset types and the MCP one-server-one-file convention.
+42. The Settings page shows all Agent global directory paths; after upgrading older localStorage, folder, global directories, and pending-sync paths are all migrated correctly.
 
 ---
 
-## 9. 后续迭代（Backlog，按优先级）
+## 9. Backlog (by priority)
 
-1. **多仓库与订阅**：一个工作区绑定多个仓库；按资产源订阅（团队 / 个人 / 只读上游）；仓库内未归档资产的显式归档流程。
-2. **同步增强**：Git LFS、二进制文件、重命名识别、按文件 / hunk 合并；PR 评审状态回显；上游只读模式。
-3. **分发增强**：更多 Agent 适配器与项目级目录（`./.claude/skills`、`./.agents/skills`）；drift 反向导入到本地库；分发行级 diff 与批量结果明细。
-4. **Agent 指令增强**：更多目标适配器（Gemini CLI / Aider / Warp / Junie / Kiro）、工具 CLI 行为校验、项目级目录与多仓库、规则冲突检测（语义级）与合并建议。
-5. **Prompt 同步增强**：文件夹级同步策略（团队文件夹 / 个人文件夹）、删除 tombstone 推送、变量定义的结构化 diff、重命名识别与批量确认。
-6. **Prompt / 指令内容安全**：在凭据正则之外增加熵检测、示例值 allowlist、AI 指令注入提示与来源信誉。
-7. **平台 Prompt 真实化**：远端搜索、发布 / 团队空间、版本与评分；当前仅为内置种子。
-8. 批量操作全家桶：多选、批量标签、批量分发与结果明细。
-9. Prompt 关系图谱与生图 / 视频工作台。
-10. Skill 本地扫描、来源状态扩展、安全扫描报告（内容 / AI 三维评分）。
-11. MCP 拖拽 / 粘贴导入、.env 按需导入、依赖连通性探测。
-12. 私密文件夹与主密码。
-13. WebDAV / S3 快照作为 Git 之外的备份选项（只上传不覆盖）。
-14. CLI 与桌面端（Electron + SQLite + FTS5）落地。
-15. **非常驻 Agent 产物**：slash command（作为 Prompt 的投影目标）、subagent / chat mode、hooks / settings，独立建模，不与常驻指令混用。
+1. **Multiple repositories and subscriptions**: bind multiple repos to one workspace; subscribe by asset source (team / personal / read-only upstream); explicit archiving process for unfiled assets in the repo.
+2. **Sync enhancements**: Git LFS, binary files, rename detection, per-file / hunk merging; PR review status echo; upstream read-only mode.
+3. **Dispatch enhancements**: more Agent adapters and project-level directories (`./.claude/skills`, `./.agents/skills`); reverse import of drift into the local library; row-level diff and bulk result details for dispatches.
+4. **Agent Instructions enhancements**: more target adapters (Gemini CLI / Aider / Warp / Junie / Kiro), tool CLI behavior verification, project-level directories and multiple repos, rule conflict detection (semantic level) and merge suggestions.
+5. **Prompt sync enhancements**: folder-level sync policies (team folders / personal folders), tombstone deletion push, structured diff of variable definitions, rename detection and batch confirmation.
+6. **Prompt / instruction content security**: beyond credential regex, add entropy detection, example-value allowlists, AI instruction injection warnings, and source reputation.
+7. **Real Platform Prompts**: remote search, publishing / team spaces, versions and ratings; currently built-in seeds only.
+8. Full bulk-operation suite: multi-select, bulk tagging, bulk dispatch with result details.
+9. Prompt relationship graph and image / video generation workbench.
+10. Skill local scanning, source status expansion, security scan reports (content / AI three-dimension scoring).
+11. MCP drag / paste import, on-demand .env import, dependency connectivity probing.
+12. Private folders and master password.
+13. WebDAV / S3 snapshots as backup options alongside Git (upload only, never overwrite).
+14. CLI and desktop app (Electron + SQLite + FTS5) implementation.
+15. **Non-persistent Agent artifacts**: slash commands (as a Prompt projection target), subagents / chat modes, hooks / settings, modeled independently and never mixed with persistent instructions.

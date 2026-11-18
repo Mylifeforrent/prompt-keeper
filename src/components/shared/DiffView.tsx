@@ -3,7 +3,7 @@ import { diffLines } from '../../lib/diff'
 export function DiffView({ before, after }: { before: string; after: string }) {
   const lines = diffLines(before, after)
   const hasChange = lines.some((l) => l.type !== 'same')
-  if (!hasChange) return <p className="text-xs text-muted-foreground">两个版本内容完全一致。</p>
+  if (!hasChange) return <p className="text-xs text-muted-foreground">The two versions are identical.</p>
   return (
     <div className="overflow-x-auto rounded-lg border border-border font-mono text-xs leading-5">
       {lines.map((l, idx) => (

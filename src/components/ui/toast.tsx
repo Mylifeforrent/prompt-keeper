@@ -73,7 +73,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => dismiss(t.id)}
                 className="-mr-1 -mt-0.5 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="关闭通知"
+                aria-label="Dismiss notification"
               >
                 <Icon name="x" className="h-3.5 w-3.5" />
               </button>
@@ -87,7 +87,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 export function useToast() {
   const ctx = useContext(ToastCtx)
-  if (!ctx) throw new Error('useToast 必须在 ToastProvider 内使用')
+  if (!ctx) throw new Error('useToast must be used within a ToastProvider')
   return {
     success: (msg: string) => ctx.show('success', msg),
     error: (msg: string) => ctx.show('error', msg),

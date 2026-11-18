@@ -1,14 +1,14 @@
 import type { ContractTarget } from '../types'
 
 /**
- * 目标注册表：厂商差异只描述为「文件 + 格式 + 激活能力 + 合并规则」，
- * 不按厂商拆工作区。新增工具时只加一条数据，不改 UI。
+ * Target registry: vendor differences are described only as "file + format + activation capability + merge rules",
+ * and the workspace is not split per vendor. Adding a new tool means adding one data entry, not changing the UI.
  */
 export const CONTRACT_TARGETS: ContractTarget[] = [
   {
     id: 'agents-md',
     agentId: 'agents',
-    agentName: 'AGENTS.md 生态',
+    agentName: 'AGENTS.md ecosystem',
     label: 'AGENTS.md',
     format: 'agents-md',
     pathTemplate: 'AGENTS.md',
@@ -16,7 +16,7 @@ export const CONTRACT_TARGETS: ContractTarget[] = [
     precedence: 'nearest',
     supports: { globs: false, modelDecision: false, manual: false, imports: false },
     maxBytes: 32768,
-    note: 'Codex / Copilot / Cursor / Windsurf / opencode 等读取；Codex 默认合并上限 32 KiB，嵌套文件就近优先。',
+    note: 'Read by Codex / Copilot / Cursor / Windsurf / opencode and others; Codex merges up to 32 KiB by default, and nested files take precedence by proximity.',
   },
   {
     id: 'claude',
@@ -28,7 +28,7 @@ export const CONTRACT_TARGETS: ContractTarget[] = [
     merge: 'single-file',
     precedence: 'concat',
     supports: { globs: false, modelDecision: false, manual: false, imports: true },
-    note: '从仓库根到当前目录拼接；支持 @import，最多 4 跳；无 CLAUDE.md 时回退 AGENTS.md。',
+    note: 'Concatenated from the repo root down to the current directory; supports @import up to 4 hops; falls back to AGENTS.md when no CLAUDE.md exists.',
   },
   {
     id: 'copilot',
@@ -40,19 +40,19 @@ export const CONTRACT_TARGETS: ContractTarget[] = [
     merge: 'single-file',
     precedence: 'concat',
     supports: { globs: false, modelDecision: false, manual: false, imports: false },
-    note: '仓库级常驻指令；路径级规则请使用 .github/instructions/*.instructions.md。',
+    note: 'Repository-level always-on instructions; for path-level rules use .github/instructions/*.instructions.md.',
   },
   {
     id: 'copilot-path',
     agentId: 'copilot-path',
-    agentName: 'GitHub Copilot（路径级）',
+    agentName: 'GitHub Copilot (path-level)',
     label: '.instructions.md',
     format: 'copilot-path',
     pathTemplate: '.github/instructions/{slug}.instructions.md',
     merge: 'per-contract',
     precedence: 'concat',
     supports: { globs: true, modelDecision: false, manual: false, imports: false },
-    note: 'frontmatter 使用 applyTo glob；匹配路径与仓库级指令会同时提供给 Copilot。',
+    note: 'Frontmatter uses applyTo globs; matching paths and repository-level instructions are both provided to Copilot.',
   },
   {
     id: 'cursor',
@@ -64,7 +64,7 @@ export const CONTRACT_TARGETS: ContractTarget[] = [
     merge: 'per-contract',
     precedence: 'nearest',
     supports: { globs: true, modelDecision: true, manual: true, imports: false },
-    note: 'frontmatter 支持 description / globs / alwaysApply；四条激活路径（常驻 / 按文件 / 模型判断 / 手动）。',
+    note: 'Frontmatter supports description / globs / alwaysApply; four activation paths (always on / by file / model decision / manual).',
   },
   {
     id: 'windsurf',
@@ -76,7 +76,7 @@ export const CONTRACT_TARGETS: ContractTarget[] = [
     merge: 'per-contract',
     precedence: 'nearest',
     supports: { globs: true, modelDecision: true, manual: true, imports: false },
-    note: 'trigger 四态：always_on / glob / model_decision / manual；global_rules.md 另行管理。',
+    note: 'Four trigger states: always_on / glob / model_decision / manual; global_rules.md is managed separately.',
   },
 ]
 
@@ -88,7 +88,7 @@ export function contractTarget(targetId: string): ContractTarget | undefined {
   return TARGET_BY_ID[targetId]
 }
 
-/** 单文件目标按文件去重，用于解释「一条文件承载多条契约」 */
+/** Single-file targets are deduplicated per file, which explains "one file carries multiple contracts" */
 export function isSingleFileTarget(targetId: string): boolean {
   return TARGET_BY_ID[targetId]?.merge === 'single-file'
 }

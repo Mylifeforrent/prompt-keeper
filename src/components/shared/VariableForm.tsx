@@ -3,7 +3,7 @@ import type { PromptVariable } from '../../types'
 import { Button, Input, Select, Textarea } from '../ui/core'
 import { Modal } from '../ui/modal'
 
-/** 按变量定义渲染表单字段（供复制弹窗与 AI 测试抽屉复用） */
+/** Render form fields from variable definitions (shared by the copy modal and AI test drawer) */
 export function VariableFields({
   vars,
   values,
@@ -32,7 +32,7 @@ export function VariableFields({
             />
           ) : v.type === 'select' ? (
             <Select aria-label={v.label || v.name} value={values[v.name] ?? ''} onChange={(e) => onChange(v.name, e.target.value)}>
-              <option value="">请选择…</option>
+              <option value="">Select…</option>
               {(v.options ?? []).map((o) => (
                 <option key={o} value={o}>
                   {o}
@@ -57,7 +57,7 @@ export function VariableFields({
 const CACHE_PREFIX = 'pk_vars_'
 const CACHE_TTL = 30 * 24 * 3600 * 1000
 
-/** 变量值 30 天记忆（对应 PromptHub 的 localStorage 记忆策略） */
+/** Remember variable values for 30 days (mirrors PromptHub's localStorage strategy) */
 export function loadVarCache(promptId: string): Record<string, string> {
   try {
     const raw = localStorage.getItem(CACHE_PREFIX + promptId)
@@ -74,11 +74,11 @@ export function saveVarCache(promptId: string, values: Record<string, string>) {
   try {
     localStorage.setItem(CACHE_PREFIX + promptId, JSON.stringify({ at: Date.now(), values }))
   } catch {
-    /* 忽略 */
+    /* ignore */
   }
 }
 
-/** 复制/测试前的变量填充弹窗 */
+/** Variable fill-in modal shown before copying or testing */
 export function VariableFormModal({
   open,
   title,
@@ -113,12 +113,12 @@ export function VariableFormModal({
       open={open}
       onClose={onClose}
       title={title}
-      subtitle="变量值将被填入正文；填过的值会在 30 天内自动记忆"
+      subtitle="Values are filled into the body; entered values are remembered for 30 days"
       footer={
         <>
-          {missing.length > 0 && <span className="mr-auto text-xs text-danger">还有 {missing.length} 个必填变量未填写</span>}
+          {missing.length > 0 && <span className="mr-auto text-xs text-danger">{missing.length} required variable(s) missing</span>}
           <Button variant="outline" onClick={onClose}>
-            取消
+            Cancel
           </Button>
           <Button
             disabled={missing.length > 0}

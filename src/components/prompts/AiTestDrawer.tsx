@@ -19,22 +19,22 @@ interface TestRun {
 function mockResponse(prompt: Prompt, model: ModelOption, values: Record<string, string>): string {
   const varSummary =
     Object.entries(values)
-      .map(([k, v]) => `- \`${k}\`：${(v || '（空）').slice(0, 40)}`)
-      .join('\n') || '无'
-  return `（模拟响应 · ${model.name}）
+      .map(([k, v]) => `- \`${k}\`: ${(v || '(empty)').slice(0, 40)}`)
+      .join('\n') || 'None'
+  return `(Simulated response · ${model.name})
 
-已完成「${prompt.title}」的测试运行，以下是模拟输出。
+Test run for "${prompt.title}" completed. The simulated output is below.
 
-**输入概要**
+**Input Summary**
 ${varSummary}
-- System Prompt：${prompt.systemPrompt.length} 字符
+- System Prompt: ${prompt.systemPrompt.length} characters
 
-**结论**
-1. 输出结构符合预期，内容覆盖了全部输入要点。
-2. 「重点关注」类变量建议给出更具体的描述，可提升输出稳定性。
-3. 当前 System Prompt 长度适中，无需裁剪。
+**Takeaways**
+1. The output structure matches expectations and covers every input point.
+2. Variables like "focus areas" benefit from more specific descriptions, which improves output stability.
+3. The current System Prompt length is reasonable; no trimming needed.
 
-> 本响应为原型模拟流式输出；真实产品将调用设置中配置的模型端点（OpenAI / Anthropic / Gemini / 自定义 endpoint）。`
+> This response is a simulated stream from the prototype; the real product calls the model endpoint configured in Settings (OpenAI / Anthropic / Gemini / custom endpoint).`
 }
 
 export function AiTestDrawer({ prompt, onClose }: { prompt: Prompt; onClose: () => void }) {
@@ -107,22 +107,22 @@ export function AiTestDrawer({ prompt, onClose }: { prompt: Prompt; onClose: () 
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`AI 测试 — ${prompt.title}`}
+        aria-label={`AI Test — ${prompt.title}`}
         className="animate-slide-in-right absolute inset-y-0 right-0 flex w-[460px] max-w-[100vw] flex-col border-l border-border bg-card shadow-[var(--shadow-float)]"
       >
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
           <Icon name="flask" className="h-3.5 w-3.5" />
         </span>
-        <h2 className="text-sm font-semibold">AI 测试</h2>
+        <h2 className="text-sm font-semibold">AI Test</h2>
         <span className="truncate text-[11px] text-muted-foreground">· {prompt.title}</span>
         <Button
           size="icon"
           variant="ghost"
           className="ml-auto h-8 w-8"
           onClick={onClose}
-          aria-label="关闭 AI 测试"
-          title="关闭（Esc）"
+          aria-label="Close AI test"
+          title="Close (Esc)"
         >
           <Icon name="x" />
         </Button>
@@ -141,23 +141,23 @@ export function AiTestDrawer({ prompt, onClose }: { prompt: Prompt; onClose: () 
         <Button onClick={run} disabled={!running && missingRequired.length > 0} className="min-w-24">
           {running ? (
             <>
-              <Spinner /> 停止
+              <Spinner /> Stop
             </>
           ) : (
             <>
               <Icon name="play" />
-              运行
+              Run
             </>
           )}
         </Button>
       </div>
       {missingRequired.length > 0 && (
-        <p className="px-4 pt-2 text-[11px] text-danger">还有 {missingRequired.length} 个必填变量未填写</p>
+        <p className="px-4 pt-2 text-[11px] text-danger">{missingRequired.length} required variable(s) missing</p>
       )}
 
       {prompt.variables.length > 0 && (
         <div className="border-b border-border px-4 py-3">
-          <div className="mb-2 text-xs font-medium text-muted-foreground">变量取值（保留 30 天记忆）</div>
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Variable values (remembered for 30 days)</div>
           <VariableFields
             vars={prompt.variables}
             values={values}
@@ -169,8 +169,8 @@ export function AiTestDrawer({ prompt, onClose }: { prompt: Prompt; onClose: () 
       <div className="flex items-center gap-1 border-b border-border px-4 pt-2.5">
         {(
           [
-            { v: 'run', label: `响应${output ? '' : '（空）'}` },
-            { v: 'history', label: `测试历史（${history.length}）` },
+            { v: 'run', label: `Response${output ? '' : ' (empty)'}` },
+            { v: 'history', label: `Test history (${history.length})` },
           ] as const
         ).map((t) => (
           <button
@@ -193,11 +193,11 @@ export function AiTestDrawer({ prompt, onClose }: { prompt: Prompt; onClose: () 
             <Markdown text={output} />
           ) : (
             <p className="text-xs text-muted-foreground">
-              {running ? '生成中…' : '点击「运行」发起测试；正文将渲染后的最终 Prompt 发送给所选模型。'}
+              {running ? 'Generating…' : 'Click "Run" to start a test; the rendered final Prompt is sent to the selected model.'}
             </p>
           )
         ) : history.length === 0 ? (
-          <p className="text-xs text-muted-foreground">还没有测试记录。真实产品会将每次运行持久化到 SQLite（prompt_test_runs）。</p>
+          <p className="text-xs text-muted-foreground">No test runs yet. The real product persists each run to SQLite (prompt_test_runs).</p>
         ) : (
           <div className="space-y-2">
             {history.map((h) => (
@@ -218,7 +218,7 @@ export function AiTestDrawer({ prompt, onClose }: { prompt: Prompt; onClose: () 
 
       {tab === 'run' && output && (
         <div className="border-t border-border px-4 py-2.5 text-[11px] text-muted-foreground">
-          本响应由原型模拟生成；真实产品会持久化每次运行（模型 / 耗时 / 变量替换后正文）到 SQLite。
+          This response is simulated by the prototype; the real product persists each run (model / duration / rendered prompt) to SQLite.
         </div>
       )}
       </div>

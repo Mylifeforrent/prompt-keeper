@@ -7,7 +7,7 @@ import { Icon } from '../../lib/icons'
 import { cn } from '../../lib/utils'
 import { useToast } from '../ui/toast'
 
-const STEPS = ['连接仓库', '目录映射', '同步策略', '首次预检'] as const
+const STEPS = ['Connect repository', 'Directory mapping', 'Sync policy', 'Preflight'] as const
 
 export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state, connectRepo, disconnectRepo } = useStore()
@@ -56,7 +56,7 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
   const next = () => {
     if (step === 1) {
       if (!url.trim() || !branch.trim() || !localPath.trim()) {
-        setError('仓库地址、分支与本地克隆路径均必填')
+        setError('Repository URL, branch, and local clone path are all required')
         return
       }
     }
@@ -64,7 +64,7 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
       step === 2 &&
       (!skillsDir.trim() || !mcpDir.trim() || !promptsDir.trim() || !contractsDir.trim())
     ) {
-      setError('技能目录、MCP 目录、Prompt 目录与 Agent 指令目录路径必填')
+      setError('Skill, MCP, Prompt, and Agent Instructions directory paths are required')
       return
     }
     setError(null)
@@ -93,8 +93,8 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
     })
     toast.success(
       state.repo.connected
-        ? '仓库设置已保存；同步状态与历史保持不变'
-        : '仓库已连接。远端变更会先进入「变更」等待你审核，不会自动覆盖本地',
+        ? 'Repository settings saved; sync status and history are unchanged'
+        : 'Repository connected. Remote changes land in "Changes" for your review first and never overwrite local files automatically',
     )
     onClose()
   }
@@ -105,27 +105,27 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
         open={open}
         onClose={onClose}
         width="max-w-2xl"
-        title={state.repo.connected ? '仓库设置' : '连接 Git 仓库'}
-        subtitle={`第 ${step} 步 / 共 4 步 · ${STEPS[step - 1]}`}
+        title={state.repo.connected ? 'Repository settings' : 'Connect Git repository'}
+        subtitle={`Step ${step} of 4 · ${STEPS[step - 1]}`}
         footer={
           <>
             {state.repo.connected && step === 1 && (
               <Button variant="ghost" className="mr-auto text-danger" onClick={() => setConfirmDisconnect(true)}>
-                断开连接
+                Disconnect
               </Button>
             )}
             {error && <span className="mr-auto text-xs text-danger">{error}</span>}
             <Button variant="outline" onClick={step === 1 ? onClose : () => setStep((s) => Math.max(1, s - 1))}>
-              {step === 1 ? '取消' : '上一步'}
+              {step === 1 ? 'Cancel' : 'Back'}
             </Button>
             {step < 4 ? (
               <Button onClick={next}>
-                下一步
+                Next
                 <Icon name="chevronRight" />
               </Button>
             ) : (
               <Button disabled={!trusted} onClick={finish}>
-                {state.repo.connected ? '保存设置' : '完成连接'}
+                {state.repo.connected ? 'Save settings' : 'Finish connection'}
               </Button>
             )}
           </>
@@ -153,33 +153,33 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
         {step === 1 && (
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">仓库地址 *</label>
-              <Input aria-label="仓库地址" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="owner/repo 或完整 Git URL" />
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Repository URL *</label>
+              <Input aria-label="Repository URL" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="owner/repo or full Git URL" />
               <p className="mt-1 text-[11px] text-muted-foreground">
-                支持 GitHub / GitLab / 自建 Git。示例：tony/ai-assets。私有仓库使用本机已有的 Git 凭据或 SSH Key，不在应用中保存 Token。
+                Supports GitHub / GitLab / self-hosted Git. Example: tony/ai-assets. Private repos use the Git credentials or SSH key already on your machine; tokens are never stored in the app.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">分支</label>
-                <Input aria-label="分支" value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="main" />
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Branch</label>
+                <Input aria-label="Branch" value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="main" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">认证方式</label>
-                <Select aria-label="认证方式" value={auth} onChange={(e) => setAuth(e.target.value as RepoConfig['auth'])}>
-                  <option value="credential">系统 Git 凭据（推荐）</option>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Authentication</label>
+                <Select aria-label="Authentication" value={auth} onChange={(e) => setAuth(e.target.value as RepoConfig['auth'])}>
+                  <option value="credential">System Git credentials (recommended)</option>
                   <option value="ssh">SSH Key</option>
-                  <option value="token">访问令牌（仅本次会话）</option>
+                  <option value="token">Access token (this session only)</option>
                 </Select>
               </div>
             </div>
             <div>
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">本地克隆</div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Local clone</div>
               <div className="grid grid-cols-2 gap-2">
                 {(
                   [
-                    { v: 'managed', title: '由应用托管（推荐）', desc: '克隆到应用数据目录，不干扰你现有的工作仓库' },
-                    { v: 'existing', title: '绑定已有克隆', desc: '复用你已 clone 的目录；有未提交改动时会先提示' },
+                    { v: 'managed', title: 'Managed by the app (recommended)', desc: 'Clones into the app data directory without touching your existing work repos' },
+                    { v: 'existing', title: 'Use an existing clone', desc: 'Reuses a directory you already cloned; warns first if it has uncommitted changes' },
                   ] as const
                 ).map((o) => (
                   <button
@@ -198,9 +198,9 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">本地路径 *</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Local path *</label>
               <Input
-                aria-label="本地克隆路径"
+                aria-label="Local clone path"
                 value={localPath}
                 onChange={(e) => setLocalPath(e.target.value)}
                 className="font-mono text-xs"
@@ -214,26 +214,26 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
           <div className="space-y-3">
             <div className="flex items-start gap-2 rounded-lg bg-info-soft px-3 py-2 text-xs text-info">
               <Icon name="gitBranch" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              已自动识别仓库结构。若你的仓库使用别的目录，可在此改写映射；未匹配到的资产会进入「未归档」并提示你选择。
+              Repository structure detected automatically. If your repo uses different directories, edit the mapping here; unmatched assets go to "Unfiled" and prompt you to choose.
             </div>
             <pre className="overflow-x-auto rounded-lg bg-muted/60 p-3 font-mono text-[11px] leading-5">
-{`prompts/编程/代码质量/review.prompt.md
-instructions/团队/前端/frontend.contract.md
-skills/开发流程/Git/commit-helper/SKILL.md
-mcp/开发/GitHub/github.json`}
+{`prompts/engineering/code-quality/review.prompt.md
+instructions/team/frontend/frontend.contract.md
+skills/dev-workflow/git/commit-helper/SKILL.md
+mcp/development/github/github.json`}
             </pre>
             {(
               [
-                { label: '技能目录', value: skillsDir, set: setSkillsDir, hint: '按分类建文件夹；每个技能一个子目录，含 SKILL.md 与可选 scripts/' },
-                { label: 'MCP 目录', value: mcpDir, set: setMcpDir, hint: '按分类建文件夹；每个 server 一个 <name>.json，凭据必须以 ${VAR} 占位' },
-                { label: 'Prompt 目录', value: promptsDir, set: setPromptsDir, hint: '可建多级文件夹；每个 Prompt 一个 .prompt.md，frontmatter 存元数据与变量定义，正文分 System / User 两段' },
-                { label: 'Agent 指令目录', value: contractsDir, set: setContractsDir, hint: '可建多级文件夹；每个契约一个 .contract.md，frontmatter 存 folder / scope / activation / targets' },
+                { label: 'Skills directory', value: skillsDir, set: setSkillsDir, hint: 'One folder per category; one subfolder per Skill containing SKILL.md and optional scripts/' },
+                { label: 'MCP directory', value: mcpDir, set: setMcpDir, hint: 'One folder per category; one <name>.json per server; credentials must use ${VAR} placeholders' },
+                { label: 'Prompts directory', value: promptsDir, set: setPromptsDir, hint: 'Nested folders allowed; one .prompt.md per Prompt; frontmatter holds metadata and variable definitions, body splits into System / User sections' },
+                { label: 'Agent Instructions directory', value: contractsDir, set: setContractsDir, hint: 'Nested folders allowed; one .contract.md per contract; frontmatter holds folder / scope / activation / targets' },
               ] as const
             ).map((f) => (
               <div key={f.label}>
                 <div className="mb-1 flex items-center gap-2">
                   <label className="text-xs font-medium text-muted-foreground">{f.label}</label>
-                  <Badge variant="success">已识别</Badge>
+                  <Badge variant="success">Detected</Badge>
                 </div>
                 <Input aria-label={f.label} value={f.value} onChange={(e) => f.set(e.target.value)} className="font-mono text-xs" />
                 <p className="mt-1 text-[11px] text-muted-foreground">{f.hint}</p>
@@ -241,21 +241,21 @@ mcp/开发/GitHub/github.json`}
             ))}
             <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5">
               <div className="min-w-0">
-                <div className="text-sm">让 Prompt 参与仓库同步（推荐）</div>
+                <div className="text-sm">Sync Prompts with the repository (recommended)</div>
                 <p className="text-[11px] text-muted-foreground">
-                  团队 Prompt 模板随仓库共享；每条 Prompt 仍可单独设为仅本机，私密内容不会被强制推送。
+                  Team Prompt templates are shared through the repo; each Prompt can still be set to local only, so private content is never force-pushed.
                 </p>
               </div>
-              <Switch checked={syncPrompts} onChange={setSyncPrompts} label="让 Prompt 参与仓库同步" />
+              <Switch checked={syncPrompts} onChange={setSyncPrompts} label="Sync Prompts with the repository" />
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5">
               <div className="min-w-0">
-                <div className="text-sm">让 Agent 指令参与仓库同步（推荐）</div>
+                <div className="text-sm">Sync Agent Instructions with the repository (recommended)</div>
                 <p className="text-[11px] text-muted-foreground">
-                  AGENTS.md / CLAUDE.md / .cursor/rules 的规范源随仓库共享；每条契约仍可单独设为仅本机。
+                  The source of truth for AGENTS.md / CLAUDE.md / .cursor/rules is shared through the repo; each contract can still be set to local only.
                 </p>
               </div>
-              <Switch checked={syncContracts} onChange={setSyncContracts} label="让 Agent 指令参与仓库同步" />
+              <Switch checked={syncContracts} onChange={setSyncContracts} label="Sync Agent Instructions with the repository" />
             </div>
           </div>
         )}
@@ -264,27 +264,27 @@ mcp/开发/GitHub/github.json`}
           <div className="space-y-4">
             <div className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5">
               <div className="min-w-0">
-                <div className="text-sm">定时 fetch（只读）</div>
-                <p className="text-[11px] text-muted-foreground">只拉取远端元数据并提示差异，不会自动合并或改写本地资产。</p>
+                <div className="text-sm">Scheduled fetch (read-only)</div>
+                <p className="text-[11px] text-muted-foreground">Only fetches remote metadata and flags differences; never merges or rewrites local assets automatically.</p>
               </div>
               <div className="ml-auto flex items-center gap-2">
-                <Select aria-label="fetch 间隔" className="h-8 w-24 text-xs" value={interval} onChange={(e) => setInterval(e.target.value)}>
-                  <option value="5">每 5 分钟</option>
-                  <option value="15">每 15 分钟</option>
-                  <option value="30">每 30 分钟</option>
-                  <option value="60">每小时</option>
+                <Select aria-label="Fetch interval" className="h-8 w-24 text-xs" value={interval} onChange={(e) => setInterval(e.target.value)}>
+                  <option value="5">Every 5 minutes</option>
+                  <option value="15">Every 15 minutes</option>
+                  <option value="30">Every 30 minutes</option>
+                  <option value="60">Hourly</option>
                 </Select>
-                <Switch checked={autoFetch} onChange={setAutoFetch} label="定时 fetch" />
+                <Switch checked={autoFetch} onChange={setAutoFetch} label="Scheduled fetch" />
               </div>
             </div>
 
             <div>
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">推送方式</div>
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">Push method</div>
               <div className="grid grid-cols-2 gap-2">
                 {(
                   [
-                    { v: 'branch-pr', title: '推送分支 + PR（推荐）', desc: '团队仓库可评审；个人仓库也可保留最后一次确认' },
-                    { v: 'direct', title: '直接推送当前分支', desc: '适合个人仓库；会直接产生提交，失败时不改写远端' },
+                    { v: 'branch-pr', title: 'Push branch + PR (recommended)', desc: 'Reviewable in team repos; personal repos still get one last confirmation' },
+                    { v: 'direct', title: 'Push directly to current branch', desc: 'Best for personal repos; creates commits directly and never rewrites the remote on failure' },
                   ] as const
                 ).map((o) => (
                   <button
@@ -306,11 +306,11 @@ mcp/开发/GitHub/github.json`}
             <div className="rounded-lg border border-warning/30 bg-warning-soft px-3 py-2.5 text-xs text-warning">
               <div className="flex items-center gap-1.5 font-medium">
                 <Icon name="lock" className="h-3.5 w-3.5" />
-                MCP 密钥策略（必须）
+                MCP secret policy (required)
               </div>
               <p className="mt-1 leading-5">
-                仓库里只允许 ${'{'}VAR{'}'} 形式的变量占位。推送前会扫描 env / headers、Prompt 与指令正文，发现明文 Token 直接阻断；
-                真实值只存本机钥匙串或由 Prompt 变量临时填写，分发到 Agent 时再按目标工具注入。
+                Only ${'{'}VAR{'}'} placeholders are allowed in the repo. Push scans env / headers, Prompt and instruction content, and blocks any plaintext token;
+                real values live only in the local keychain or are filled in temporarily as Prompt variables, then injected per target tool at dispatch time.
               </p>
             </div>
           </div>
@@ -321,13 +321,13 @@ mcp/开发/GitHub/github.json`}
             <div className="space-y-1.5 rounded-lg border border-border">
               {(
                 [
-                  { icon: 'download' as const, label: '远端资产', value: '5 个技能 · 3 个 MCP 模板 · 4 个 Prompt 变更 · 2 个指令变更 · 2 个冲突', tone: 'text-foreground' },
-                  { icon: 'folder' as const, label: '目录结构', value: '四类资产的文件夹层级均可解析；空目录不写入，未知文件进入「未归档」', tone: 'text-success' },
-                  { icon: 'alert' as const, label: '可执行脚本', value: '1 个新技能含 scripts/collect.sh，需审核后写入', tone: 'text-warning' },
-                  { icon: 'message' as const, label: 'Prompt 格式', value: '4 个 .prompt.md 通过结构校验；拉取时必须逐条预览', tone: 'text-success' },
-                  { icon: 'file' as const, label: '指令格式', value: '2 个 .contract.md 通过结构校验；frontmatter 与正文均可解析', tone: 'text-success' },
-                  { icon: 'shield' as const, label: '凭据扫描', value: 'Prompt 正文 1 处、MCP 1 处疑似凭据将被阻断或要求转换', tone: 'text-warning' },
-                  { icon: 'folder' as const, label: '本地未提交改动', value: '无（应用托管的克隆目录）', tone: 'text-muted-foreground' },
+                  { icon: 'download' as const, label: 'Remote assets', value: '5 Skills · 3 MCP templates · 4 Prompt changes · 2 instruction changes · 2 conflicts', tone: 'text-foreground' },
+                  { icon: 'folder' as const, label: 'Directory structure', value: 'Folder hierarchies for all four asset types resolve; empty directories are not written, unknown files go to "Unfiled"', tone: 'text-success' },
+                  { icon: 'alert' as const, label: 'Executable scripts', value: '1 new Skill includes scripts/collect.sh and must be reviewed before writing', tone: 'text-warning' },
+                  { icon: 'message' as const, label: 'Prompt format', value: '4 .prompt.md files pass structure validation; each must be previewed individually before pull', tone: 'text-success' },
+                  { icon: 'file' as const, label: 'Instruction format', value: '2 .contract.md files pass structure validation; frontmatter and content parse correctly', tone: 'text-success' },
+                  { icon: 'shield' as const, label: 'Credential scan', value: '1 suspected credential in Prompt content and 1 in MCP will be blocked or require conversion', tone: 'text-warning' },
+                  { icon: 'folder' as const, label: 'Local uncommitted changes', value: 'None (app-managed clone directory)', tone: 'text-muted-foreground' },
                 ] as const
               ).map((r) => (
                 <div key={r.label} className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-xs last:border-0">
@@ -338,15 +338,15 @@ mcp/开发/GitHub/github.json`}
               ))}
             </div>
             <div className="rounded-lg bg-muted/60 px-3 py-2.5 text-[11px] leading-5 text-muted-foreground">
-              连接后不会自动写入任何 Agent 目录：先进入「变更」审核并合入本地库，再由你在「分发」里选择目标 Agent。
-              Prompt 与 Agent 指令变更必须逐条预览全文，不会进入批量接受。首次分发默认 symlink；文件系统不支持时回退 copy 并逐条提示。
+              Nothing is written to any Agent directory on connect: changes go to "Changes" for review and merge into the local library first, then you pick target Agents in "Dispatch".
+              Prompt and Agent Instructions changes require a full preview each and are never batch-accepted. First dispatch uses symlinks by default; if the filesystem does not support them, it falls back to copy with per-item prompts.
             </div>
             <Checkbox
               checked={trusted}
               onChange={setTrusted}
               label={
                 <span className="text-xs">
-                  我已确认仓库来源，并理解技能中的脚本与 MCP 命令会在本机执行
+                  I have verified the repository source and understand that scripts in Skills and MCP commands will run on my machine
                 </span>
               }
             />
@@ -359,12 +359,12 @@ mcp/开发/GitHub/github.json`}
         onClose={() => setConfirmDisconnect(false)}
         onConfirm={() => {
           disconnectRepo()
-          toast.warning('已断开仓库连接；本地资产与 Agent 分发不受影响')
+          toast.warning('Repository disconnected; local assets and Agent dispatch are unaffected')
           onClose()
         }}
-        title="断开仓库连接？"
-        confirmText="断开连接"
-        message="只移除同步关系，不删除本地资产、版本历史与已分发文件。重新连接后可继续同步。"
+        title="Disconnect repository?"
+        confirmText="Disconnect"
+        message="Only the sync relationship is removed; local assets, version history, and already dispatched files are kept. Sync resumes after reconnecting."
       />
     </>
   )

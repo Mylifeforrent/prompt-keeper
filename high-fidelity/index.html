@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="light">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <meta
       name="description"
-      content="Prompt Keeper 高保真页面原型：本地优先的 Prompt / Agent 指令 / Skill / MCP 资产工作台。"
+      content="Prompt Keeper high-fidelity page prototype: a local-first workspace for Prompt / Agent Instructions / Skill / MCP assets."
     />
-    <title>Prompt Keeper — 高保真原型</title>
+    <title>Prompt Keeper — High-Fidelity Prototype</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -224,32 +224,32 @@
       </defs>
     </svg>
 
-    <a class="skip-link" href="#workspace">跳到主内容</a>
+    <a class="skip-link" href="#workspace">Skip to main content</a>
 
     <div class="app-shell">
-      <aside class="sidebar" aria-label="主导航">
+      <aside class="sidebar" aria-label="Main navigation">
         <div class="brand">
           <span class="brand-mark">
             <svg class="icon"><use href="#i-sparkles" /></svg>
           </span>
           <span class="brand-copy">
             <strong>Prompt Keeper</strong>
-            <small>本地优先资产库</small>
+            <small>Local-first asset library</small>
           </span>
         </div>
 
-        <div class="nav-label">工作台</div>
+        <div class="nav-label">Workspace</div>
         <nav class="nav" id="nav"></nav>
 
         <div class="sidebar-foot">
           <div class="foot-card">
             <div class="foot-title">
               <svg class="icon icon-xs"><use href="#i-layers" /></svg>
-              文件夹即 Git 目录
+              Folders are Git directories
             </div>
-            <p>四类资产同构 · 审核后投影分发</p>
+            <p>Four asset types, one structure · Reviewed, then projected and dispatched</p>
             <div class="foot-meta">
-              <span>高保真原型</span>
+              <span>High-fidelity prototype</span>
               <code>v0.5.0</code>
             </div>
           </div>
@@ -260,7 +260,7 @@
         <header class="topbar">
           <div class="page-heading">
             <h1 id="page-title">Prompts</h1>
-            <p id="page-subtitle">本地资产库 · Git 可选同步</p>
+            <p id="page-subtitle">Local asset library · Optional Git sync</p>
           </div>
 
           <div class="search-box" role="search">
@@ -270,21 +270,21 @@
               type="search"
               autocomplete="off"
               spellcheck="false"
-              aria-label="全局搜索"
-              placeholder="搜索当前工作区…"
+              aria-label="Global search"
+              placeholder="Search this workspace…"
             />
             <kbd>/</kbd>
           </div>
 
-          <button class="icon-btn" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">
+          <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
             <svg class="icon"><use href="#i-sun" /></svg>
           </button>
 
-          <button class="repo-pill" id="repo-pill" type="button" title="tony/ai-assets · main · 打开同步中心">
+          <button class="repo-pill" id="repo-pill" type="button" title="tony/ai-assets · main · Open Sync Center">
             <span class="status-dot warn"></span>
             <svg class="icon icon-sm"><use href="#i-git-branch" /></svg>
             <span class="repo-name">tony/ai-assets</span>
-            <span class="badge badge-warning badge-tight">8 待处理</span>
+            <span class="badge badge-warning badge-tight">8 pending</span>
           </button>
         </header>
 

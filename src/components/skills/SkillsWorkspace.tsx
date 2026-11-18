@@ -21,10 +21,10 @@ import { FolderField, FolderTree } from '../shared/FolderTree'
 import { Input, Textarea } from '../ui/core'
 
 const SOURCE_BADGE: Record<Skill['source'], { label: string; variant: 'primary' | 'info' | 'secondary' | 'warning' }> = {
-  official: { label: '官方精选', variant: 'primary' },
-  community: { label: '社区', variant: 'info' },
-  import: { label: '导入', variant: 'secondary' },
-  scan: { label: '本地扫描', variant: 'warning' },
+  official: { label: 'Official', variant: 'primary' },
+  community: { label: 'Community', variant: 'info' },
+  import: { label: 'Imported', variant: 'secondary' },
+  scan: { label: 'Local scan', variant: 'warning' },
 }
 
 export function skillInstallStatus(skill: Skill, platformId: string): 'installed' | 'external' | 'none' {
@@ -33,7 +33,7 @@ export function skillInstallStatus(skill: Skill, platformId: string): 'installed
   return mode === 'external' ? 'external' : 'installed'
 }
 
-/* ---------------- 我的技能 ---------------- */
+/* ---------------- My Skills ---------------- */
 
 export function MySkills({ query }: { query: string }) {
   const { state, saveSkill, deleteSkill } = useStore()
@@ -54,7 +54,7 @@ export function MySkills({ query }: { query: string }) {
     return [...list].sort((a, b) => {
       const fa = a.folder ?? '\uffff'
       const fb = b.folder ?? '\uffff'
-      return fa === fb ? a.name.localeCompare(b.name) : fa.localeCompare(fb, 'zh')
+      return fa === fb ? a.name.localeCompare(b.name) : fa.localeCompare(fb, 'en')
     })
   }, [list])
 
@@ -66,21 +66,21 @@ export function MySkills({ query }: { query: string }) {
         selected={folderFilter}
         onSelect={setFolderFilter}
         className="hidden w-[180px] shrink-0 border-r border-border bg-card/40 xl:flex"
-        title="技能文件夹"
+        title="Skill folders"
       />
       <div className="min-h-0 flex-1 overflow-y-auto">
         {list.length === 0 ? (
           <EmptyState
             icon="grid"
-            title={q || folderFilter ? '未找到匹配技能' : '还没有技能'}
-            description={q || folderFilter ? '换个关键词或文件夹试试' : '去技能商店安装，或从本地扫描导入'}
+            title={q || folderFilter ? 'No matching skills' : 'No skills yet'}
+            description={q || folderFilter ? 'Try another keyword or folder' : 'Install from the Skill Store, or import from a local scan'}
           />
         ) : (
           <div className="p-4">
             <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
               <Icon name="grid" className="h-3.5 w-3.5" />
               <span>
-                共 <span className="tabular font-medium text-foreground">{list.length}</span> 个技能
+                <span className="tabular font-medium text-foreground">{list.length}</span> skills
               </span>
               {folderFilter && (
                 <>
@@ -94,13 +94,13 @@ export function MySkills({ query }: { query: string }) {
                     onClick={() => setFolderFilter('')}
                     className="cursor-pointer rounded px-1.5 py-0.5 text-primary transition-colors hover:bg-primary-soft"
                   >
-                    返回全部
+                    Show all
                   </button>
                 </>
               )}
               <span className="ml-auto hidden items-center gap-1.5 sm:flex">
                 <Icon name="layers" className="h-3 w-3" />
-                一个技能一个目录 · skills/&lt;folder&gt;/&lt;name&gt;/
+                One skill per directory · skills/&lt;folder&gt;/&lt;name&gt;/
               </span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -151,18 +151,18 @@ export function MySkills({ query }: { query: string }) {
                         {installed > 0 ? (
                           <Badge variant="success" className="gap-1 font-normal">
                             <Icon name="check" className="h-3 w-3" />
-                            {installed} 平台
+                            {installed} platforms
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="font-normal">未分发</Badge>
+                          <Badge variant="outline" className="font-normal">Not dispatched</Badge>
                         )}
-                        {external > 0 && <Badge variant="warning" className="font-normal">外部 {external}</Badge>}
-                        {pending && <Badge variant="warning" className="font-normal">待推送</Badge>}
+                        {external > 0 && <Badge variant="warning" className="font-normal">External {external}</Badge>}
+                        {pending && <Badge variant="warning" className="font-normal">Pending push</Badge>}
                         <button
                           type="button"
                           onClick={() => setEditing(s)}
-                          aria-label={`编辑 ${s.name}`}
-                          title="编辑"
+                          aria-label={`Edit ${s.name}`}
+                          title="Edit"
                           className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
                         >
                           <Icon name="pencil" className="h-3 w-3" />
@@ -199,14 +199,14 @@ export function MySkills({ query }: { query: string }) {
         onConfirm={() => {
           if (deleteOf) {
             deleteSkill(deleteOf.id)
-            toast.success(`已删除「${deleteOf.name}」`)
+            toast.success(`Deleted "${deleteOf.name}"`)
           }
         }}
-        title="删除技能？"
+        title="Delete skill?"
         message={
           <>
-            将删除本地技能「<b className="text-foreground">{deleteOf?.name}</b>」及其全部历史版本。
-            已安装到 Agent 目录的文件不会被自动移除；仓库文件也不会被删除。
+            This removes the local skill "<b className="text-foreground">{deleteOf?.name}</b>" and all of its version history.
+            Files already installed in Agent directories are not removed automatically, and repo files are not deleted.
           </>
         }
       />
@@ -214,7 +214,7 @@ export function MySkills({ query }: { query: string }) {
   )
 }
 
-/* ---------------- 技能详情 ---------------- */
+/* ---------------- Skill details ---------------- */
 
 function SkillDetailModal({
   skill,
@@ -253,22 +253,22 @@ function SkillDetailModal({
         footer={
           <>
             <span className="mr-auto text-[11px] text-muted-foreground">
-              安装于 {skill.installedAt ? formatDate(skill.installedAt, false) : '—'}
+              Installed {skill.installedAt ? formatDate(skill.installedAt, false) : '—'}
             </span>
             <Button variant="outline" size="sm" onClick={onEdit}>
               <Icon name="pencil" className="h-3.5 w-3.5" />
-              编辑
+              Edit
             </Button>
             <Button variant="ghost" size="sm" className="text-danger" onClick={onDelete}>
               <Icon name="trash" className="h-3.5 w-3.5" />
-              删除
+              Delete
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowVersions(true)}>
               <Icon name="history" className="h-3.5 w-3.5" />
-              版本历史（{skill.versions.length}）
+              Version history ({skill.versions.length})
             </Button>
             <Button size="sm" onClick={onClose}>
-              完成
+              Done
             </Button>
           </>
         }
@@ -280,7 +280,7 @@ function SkillDetailModal({
           </Badge>
           <span className="flex items-center gap-1">
             <Icon name="gitBranch" className="h-3 w-3" />
-            仓库文件
+            Repo file
           </span>
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
             {skillFilePath(skill, state.repo.layout.skills)}
@@ -289,8 +289,8 @@ function SkillDetailModal({
         <div className="mb-3 flex items-center gap-1">
           {(
             [
-              { v: 'content', label: '指令内容（SKILL.md）' },
-              { v: 'platforms', label: `分发平台（${Object.values(skill.installs).filter((m) => m !== 'external').length}/${SKILL_PLATFORMS.length}）` },
+              { v: 'content', label: 'Instructions (SKILL.md)' },
+              { v: 'platforms', label: `Platforms (${Object.values(skill.installs).filter((m) => m !== 'external').length}/${SKILL_PLATFORMS.length})` },
             ] as const
           ).map((t) => (
             <button
@@ -311,7 +311,7 @@ function SkillDetailModal({
         ) : (
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">
-              symlink 模式多工具共享同一份文件、改动即时同步；copy 模式各平台保留独立副本。真实产品按平台规范写入对应目录。
+              In symlink mode, multiple tools share one file and edits sync instantly; in copy mode, each platform keeps its own copy. The real product writes to each platform's directory following its conventions.
             </p>
             {SKILL_PLATFORMS.map((p) => {
               const status = skillInstallStatus(skill, p.id)
@@ -324,16 +324,16 @@ function SkillDetailModal({
                     <div className="truncate text-[11px] text-muted-foreground">{p.dir}/{skill.name}/</div>
                   </div>
                   <div className="ml-auto flex items-center gap-2">
-                    {status === 'installed' && <Badge variant="success">已安装 · {mode === 'symlink' ? 'symlink' : 'copy'}</Badge>}
-                    {status === 'external' && <Badge variant="warning">外部安装</Badge>}
-                    {status === 'none' && <Badge variant="outline">未安装</Badge>}
+                    {status === 'installed' && <Badge variant="success">Installed · {mode === 'symlink' ? 'symlink' : 'copy'}</Badge>}
+                    {status === 'external' && <Badge variant="warning">External install</Badge>}
+                    {status === 'none' && <Badge variant="outline">Not installed</Badge>}
                     {status === 'none' ? (
                       <Button size="sm" variant="outline" onClick={() => setInstallTarget(p.id)}>
-                        安装
+                        Install
                       </Button>
                     ) : status === 'installed' ? (
                       <Button size="sm" variant="ghost" className="text-danger" onClick={() => setRemoveTarget(p.id)}>
-                        移除
+                        Remove
                       </Button>
                     ) : null}
                   </div>
@@ -344,27 +344,27 @@ function SkillDetailModal({
         )}
       </Modal>
 
-      {/* 安装模式选择 */}
+      {/* Install mode selection */}
       <Modal
         open={!!installTarget}
         onClose={() => setInstallTarget(null)}
-        title={`安装到 ${SKILL_PLATFORMS.find((p) => p.id === installTarget)?.name ?? ''}`}
+        title={`Install to ${SKILL_PLATFORMS.find((p) => p.id === installTarget)?.name ?? ''}`}
         width="max-w-md"
         footer={
           <>
             <Button variant="outline" onClick={() => setInstallTarget(null)}>
-              取消
+              Cancel
             </Button>
             <Button
               onClick={() => {
                 if (installTarget) {
                   setSkillInstall(skill.id, installTarget, 'symlink')
-                  toast.success(`已通过 symlink 安装到 ${SKILL_PLATFORMS.find((p) => p.id === installTarget)?.name}`)
+                  toast.success(`Installed to ${SKILL_PLATFORMS.find((p) => p.id === installTarget)?.name} via symlink`)
                 }
                 setInstallTarget(null)
               }}
             >
-              确认安装
+              Confirm install
             </Button>
           </>
         }
@@ -373,7 +373,7 @@ function SkillDetailModal({
           onConfirm={(mode) => {
             if (installTarget) {
               setSkillInstall(skill.id, installTarget, mode)
-              toast.success(`已通过 ${mode} 安装到 ${SKILL_PLATFORMS.find((p) => p.id === installTarget)?.name}`)
+              toast.success(`Installed to ${SKILL_PLATFORMS.find((p) => p.id === installTarget)?.name} via ${mode}`)
             }
             setInstallTarget(null)
           }}
@@ -386,28 +386,28 @@ function SkillDetailModal({
         onConfirm={() => {
           if (removeTarget) {
             setSkillInstall(skill.id, removeTarget, null)
-            toast.success(`已从 ${SKILL_PLATFORMS.find((p) => p.id === removeTarget)?.name} 移除`)
+            toast.success(`Removed from ${SKILL_PLATFORMS.find((p) => p.id === removeTarget)?.name}`)
           }
         }}
-        title="从平台移除？"
-        confirmText="移除"
-        message={`将从 ${SKILL_PLATFORMS.find((p) => p.id === removeTarget)?.name ?? ''} 的技能目录删除 ${skill.name}/（copy 模式删除独立副本，不影响本库）。`}
+        title="Remove from platform?"
+        confirmText="Remove"
+        message={`This deletes ${skill.name}/ from the skill directory for ${SKILL_PLATFORMS.find((p) => p.id === removeTarget)?.name ?? ''} (in copy mode it removes the separate copy and leaves this library untouched).`}
       />
 
       {showVersions && (
         <VersionHistoryModal
           open
           onClose={() => setShowVersions(false)}
-          title={`版本历史 — ${skill.name}`}
+          title={`Version history — ${skill.name}`}
           versions={skill.versions}
           fields={[{ key: 'instructions', label: 'SKILL.md' }]}
           onRestore={(v) => {
             restoreSkillVersion(skill.id, v.id)
-            toast.success(`已恢复 v${v.version}`)
+            toast.success(`Restored v${v.version}`)
           }}
           onDeleteVersion={(vid) => {
             deleteSkillVersion(skill.id, vid)
-            toast.success('已删除该历史版本')
+            toast.success('Version deleted')
           }}
         />
       )}
@@ -421,8 +421,8 @@ function ModeChooser({ onConfirm }: { onConfirm: (mode: 'symlink' | 'copy') => v
     <div className="space-y-3">
       {(
         [
-          { v: 'symlink', title: 'symlink（推荐）', desc: '在平台目录创建符号链接，多工具共享同一份内容，本库内编辑即时生效' },
-          { v: 'copy', title: 'copy', desc: '复制完整目录到平台目录，各平台独立副本；本库更新后需重新分发' },
+          { v: 'symlink', title: 'symlink (recommended)', desc: 'Creates a symlink in the platform directory so multiple tools share one copy; edits in this library take effect immediately' },
+          { v: 'copy', title: 'copy', desc: 'Copies the whole directory to the platform directory; each platform gets its own copy and must be re-dispatched after library updates' },
         ] as const
       ).map((o) => (
         <button
@@ -441,13 +441,13 @@ function ModeChooser({ onConfirm }: { onConfirm: (mode: 'symlink' | 'copy') => v
         </button>
       ))}
       <Button className="w-full" onClick={() => onConfirm(mode)}>
-        确认以 {mode} 模式安装
+        Install in {mode} mode
       </Button>
     </div>
   )
 }
 
-/* ---------------- 技能编辑 ---------------- */
+/* ---------------- Skill editing ---------------- */
 
 function SkillEditModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
   const { state, saveSkill } = useStore()
@@ -459,18 +459,18 @@ function SkillEditModal({ skill, onClose }: { skill: Skill; onClose: () => void 
 
   const submit = () => {
     if (!draft.name.trim()) {
-      setError('技能名称必填')
+      setError('Skill name is required')
       return
     }
     const dup = state.skills.find(
       (s) => s.name === draft.name.trim() && s.id !== draft.id,
     )
     if (dup) {
-      setError(`名称与现有技能「${dup.name}」重复；仓库目录会冲突`)
+      setError(`Name already used by existing skill "${dup.name}"; repo directories would conflict`)
       return
     }
     if (!draft.instructions.trim()) {
-      setError('SKILL.md 内容必填')
+      setError('SKILL.md content is required')
       return
     }
     saveSkill({
@@ -480,7 +480,7 @@ function SkillEditModal({ skill, onClose }: { skill: Skill; onClose: () => void 
       folder: normalizeFolder(draft.folder),
       instructions: draft.instructions.trim(),
     })
-    toast.success(`已保存「${draft.name}」，本地改动已进入待推送`)
+    toast.success(`Saved "${draft.name}"; local changes are pending push`)
     onClose()
   }
 
@@ -489,42 +489,42 @@ function SkillEditModal({ skill, onClose }: { skill: Skill; onClose: () => void 
       open
       onClose={onClose}
       width="max-w-2xl"
-      title={`编辑技能 — ${skill.name}`}
-      subtitle="技能目录会按文件夹映射到仓库；保存后生成版本并进入待推送"
+      title={`Edit skill — ${skill.name}`}
+      subtitle="The skill directory maps to the repo by folder; saving creates a version and marks it pending push"
       footer={
         <>
           {error && <span className="mr-auto text-xs text-danger">{error}</span>}
           <Button variant="outline" onClick={onClose}>
-            取消
+            Cancel
           </Button>
-          <Button onClick={submit}>保存</Button>
+          <Button onClick={submit}>Save</Button>
         </>
       }
     >
       <div className="space-y-4">
         <div className="flex gap-3">
           <div className="w-16">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">图标</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Icon</label>
             <Input
-              aria-label="图标"
+              aria-label="Icon"
               value={draft.emoji}
               onChange={(e) => setDraft((d) => ({ ...d, emoji: e.target.value }))}
               className="text-center text-lg"
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">名称 *</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Name *</label>
             <Input
-              aria-label="名称"
+              aria-label="Name"
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
               className="font-mono text-xs"
             />
           </div>
           <div className="w-28">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">版本</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Version</label>
             <Input
-              aria-label="版本"
+              aria-label="Version"
               value={draft.version}
               onChange={(e) => setDraft((d) => ({ ...d, version: e.target.value }))}
             />
@@ -539,27 +539,27 @@ function SkillEditModal({ skill, onClose }: { skill: Skill; onClose: () => void 
             { ...draft, name: draft.name || 'untitled', folder: draft.folder },
             state.repo.layout.skills,
           )}
-          hint="一个技能一个目录，目录内放 SKILL.md 与 scripts/；文件夹会原样成为仓库目录。"
+          hint="One skill per directory, containing SKILL.md and scripts/; the folder becomes the repo directory as-is."
         />
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">描述</label>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Description</label>
           <Input
-            aria-label="描述"
+            aria-label="Description"
             value={draft.description}
             onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
           />
         </div>
 
         <div>
-          <label className="mb-1.5 text-xs font-medium text-muted-foreground">标签</label>
+          <label className="mb-1.5 text-xs font-medium text-muted-foreground">Tags</label>
           <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-input bg-card px-2.5 py-2">
             {draft.tags.map((tag) => (
               <Badge key={tag} variant="primary" className="gap-1 py-1">
                 {tag}
                 <button
                   type="button"
-                  aria-label={`移除标签 ${tag}`}
+                  aria-label={`Remove tag ${tag}`}
                   className="cursor-pointer"
                   onClick={() => setDraft((d) => ({ ...d, tags: d.tags.filter((x) => x !== tag) }))}
                 >
@@ -568,10 +568,10 @@ function SkillEditModal({ skill, onClose }: { skill: Skill; onClose: () => void 
               </Badge>
             ))}
             <input
-              aria-label="添加标签"
+              aria-label="Add tag"
               className="min-w-24 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/80"
               value={tagInput}
-              placeholder={draft.tags.length ? '' : 'git、测试、文档…'}
+              placeholder={draft.tags.length ? '' : 'git, testing, docs…'}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && tagInput.trim()) {
@@ -589,14 +589,14 @@ function SkillEditModal({ skill, onClose }: { skill: Skill; onClose: () => void 
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">SKILL.md *</label>
           <Textarea
-            aria-label="SKILL.md 内容"
+            aria-label="SKILL.md content"
             rows={14}
             value={draft.instructions}
             onChange={(e) => setDraft((d) => ({ ...d, instructions: e.target.value }))}
             className="font-mono text-xs leading-5"
           />
           <p className="mt-1 text-[11px] text-muted-foreground">
-            内容会作为 SKILL.md 同步；含脚本时拉取审核会标记为「含可执行脚本」。
+            The content syncs as SKILL.md; when scripts are included, pull review flags it as "Contains executable scripts".
           </p>
         </div>
       </div>
@@ -604,7 +604,7 @@ function SkillEditModal({ skill, onClose }: { skill: Skill; onClose: () => void 
   )
 }
 
-/* ---------------- 技能商店 ---------------- */
+/* ---------------- Skill Store ---------------- */
 
 export function StoreTab({ query }: { query: string }) {
   const { state, addSkillFromStore } = useStore()
@@ -631,9 +631,9 @@ export function StoreTab({ query }: { query: string }) {
         <div className="inline-flex items-center gap-1 rounded-lg bg-muted p-1">
           {(
             [
-              { v: 'all', label: '全部' },
-              { v: 'official', label: '官方精选' },
-              { v: 'community', label: '社区' },
+              { v: 'all', label: 'All' },
+              { v: 'official', label: 'Official' },
+              { v: 'community', label: 'Community' },
             ] as const
           ).map((t) => (
             <button
@@ -654,7 +654,7 @@ export function StoreTab({ query }: { query: string }) {
             onClick={() => setCategory('')}
             className={`cursor-pointer rounded-md border px-2.5 py-[3px] text-[11px] transition-colors ${!category ? 'border-primary/40 bg-primary-soft font-medium text-primary' : 'border-border text-muted-foreground hover:border-border-strong hover:bg-muted'}`}
           >
-            全部分类
+            All categories
           </button>
           {categories.map((c) => (
             <button
@@ -670,7 +670,7 @@ export function StoreTab({ query }: { query: string }) {
       </div>
 
       {list.length === 0 ? (
-        <EmptyState icon="search" title="未找到匹配技能" description="换个关键词或来源筛选" />
+        <EmptyState icon="search" title="No matching skills" description="Try another keyword or source filter" />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((s) => {
@@ -685,11 +685,11 @@ export function StoreTab({ query }: { query: string }) {
                       <span className="truncate">{s.author}</span>
                       <span>·</span>
                       <Icon name="download" className="h-3 w-3" />
-                      {s.downloads.toLocaleString()}
+                      {s.downloads.toLocaleString('en-US')}
                     </div>
                   </div>
                   <Badge variant={s.source === 'official' ? 'primary' : 'info'} className="ml-auto shrink-0 font-normal">
-                    {s.source === 'official' ? '官方' : '社区'}
+                    {s.source === 'official' ? 'Official' : 'Community'}
                   </Badge>
                 </div>
                 <p className="mt-2 line-clamp-2 min-h-8 flex-1 text-[11.5px] leading-4 text-muted-foreground">{s.description}</p>
@@ -697,7 +697,7 @@ export function StoreTab({ query }: { query: string }) {
                   {installed ? (
                     <Badge variant="success">
                       <Icon name="check" className="h-3 w-3" />
-                      已在我的技能
+                      In My Skills
                     </Badge>
                   ) : (
                     <Button
@@ -705,10 +705,10 @@ export function StoreTab({ query }: { query: string }) {
                       variant="outline"
                       className="border-primary/25 text-primary hover:border-primary/40 hover:bg-primary-soft"
                       onClick={() => setReviewOf(s)}
-                      aria-label={`安装 ${s.name}`}
+                      aria-label={`Install ${s.name}`}
                     >
                       <Icon name="download" className="h-3.5 w-3.5" />
-                      安装
+                      Install
                     </Button>
                   )}
                   <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{s.category}</span>
@@ -741,14 +741,14 @@ export function StoreTab({ query }: { query: string }) {
                 {
                   id: uid(),
                   version: 1,
-                  note: `来自商店 v${reviewOf.version}`,
+                  note: `From the store v${reviewOf.version}`,
                   createdAt: nowIso(),
                   data: { instructions: reviewOf.instructions },
                 },
               ],
               installedAt: nowIso(),
             })
-            toast.success(`「${reviewOf.name}」已安装并分发到 ${platforms.length} 个平台`)
+            toast.success(`Installed "${reviewOf.name}" and dispatched to ${platforms.length} platforms`)
             setReviewOf(null)
           }}
         />
@@ -757,7 +757,7 @@ export function StoreTab({ query }: { query: string }) {
   )
 }
 
-/* ---------------- 三步安装审核流 ---------------- */
+/* ---------------- Three-step install review ---------------- */
 
 function InstallReviewModal({
   item,
@@ -780,25 +780,25 @@ function InstallReviewModal({
       open
       onClose={onClose}
       width="max-w-2xl"
-      title={`安装审核 — ${item.name}`}
+      title={`Install review — ${item.name}`}
       subtitle={
-        ['第 1 步 · 审核技能内容', '第 2 步 · 选择目标平台', '第 3 步 · 安装结果'][step - 1]
+        ['Step 1 · Review skill content', 'Step 2 · Choose target platforms', 'Step 3 · Install results'][step - 1]
       }
       footer={
         step === 1 ? (
           <>
             <Button variant="outline" onClick={onClose}>
-              取消
+              Cancel
             </Button>
             <Button onClick={() => setStep(2)}>
-              内容无问题，继续
+              Content looks good, continue
               <Icon name="chevronRight" />
             </Button>
           </>
         ) : step === 2 ? (
           <>
             <Button variant="outline" onClick={() => setStep(1)}>
-              返回审核
+              Back to review
             </Button>
             <Button disabled={platforms.length === 0 || installing} onClick={() => {
               setInstalling(true)
@@ -808,11 +808,11 @@ function InstallReviewModal({
                 setStep(3)
               }, 700)
             }}>
-              {installing ? '安装中…' : `确认安装（${platforms.length} 个平台）`}
+              {installing ? 'Installing…' : `Confirm install (${platforms.length} platforms)`}
             </Button>
           </>
         ) : (
-          <Button onClick={() => onInstalled(platforms, mode)}>完成</Button>
+          <Button onClick={() => onInstalled(platforms, mode)}>Done</Button>
         )
       }
     >
@@ -820,12 +820,12 @@ function InstallReviewModal({
         <div className="space-y-3">
           <div className="flex items-center gap-2 rounded-lg bg-info-soft px-3 py-2 text-xs text-info">
             <Icon name="shield" />
-            安装前必须审核：以下内容将原样写入目标平台目录。
+            Review is required before installing: the following content is written verbatim to the target platform directory.
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="secondary">v{item.version}</Badge>
-            <Badge variant="outline">{item.files.length} 个文件</Badge>
-            <Badge variant="outline">共 {totalSize} KB</Badge>
+            <Badge variant="outline">{item.files.length} files</Badge>
+            <Badge variant="outline">{totalSize} KB total</Badge>
           </div>
           <div className="rounded-lg border border-border">
             {item.files.map((f) => (
@@ -843,7 +843,7 @@ function InstallReviewModal({
       {step === 2 && (
         <div className="space-y-4">
           <div>
-            <div className="mb-2 text-xs font-medium text-muted-foreground">目标平台（多选）</div>
+            <div className="mb-2 text-xs font-medium text-muted-foreground">Target platforms (multi-select)</div>
             <div className="flex flex-wrap gap-1.5">
               {SKILL_PLATFORMS.map((p) => {
                 const active = platforms.includes(p.id)
@@ -864,9 +864,9 @@ function InstallReviewModal({
             </div>
           </div>
           <div>
-            <div className="mb-2 text-xs font-medium text-muted-foreground">安装模式</div>
+            <div className="mb-2 text-xs font-medium text-muted-foreground">Install mode</div>
             <ModeChooser onConfirm={(m) => setMode(m)} />
-            <p className="mt-1 text-[11px] text-muted-foreground">这里的选择会在第 3 步生效；当前选中：{mode}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">This choice applies in step 3; currently selected: {mode}</p>
           </div>
         </div>
       )}
@@ -879,11 +879,11 @@ function InstallReviewModal({
               <div key={r.id} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
                 {r.ok ? <Icon name="check" className="text-success" /> : <Icon name="x" className="text-danger" />}
                 {p?.name}
-                <span className="ml-auto text-xs text-muted-foreground">{r.ok ? `已以 ${mode} 模式写入 ${p?.dir}/${item.name}/` : '失败'}</span>
+                <span className="ml-auto text-xs text-muted-foreground">{r.ok ? `Written in ${mode} mode to ${p?.dir}/${item.name}/` : 'Failed'}</span>
               </div>
             )
           })}
-          <p className="pt-1 text-xs text-muted-foreground">真实产品在 symlink 因文件系统不支持而回退 copy 时，会给出逐条回退警告。</p>
+          <p className="pt-1 text-xs text-muted-foreground">In the real product, when symlink falls back to copy because the filesystem does not support it, each fallback is reported individually.</p>
         </div>
       )}
     </Modal>

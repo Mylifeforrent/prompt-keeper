@@ -11,8 +11,8 @@ import {
 import { Input } from '../ui/core'
 
 /**
- * 多级文件夹树。
- * 选中父目录时会包含其全部子目录，仓库路径也按同样的层级组织。
+ * Nested folder tree.
+ * Selecting a parent folder includes all its subfolders; repo paths follow the same hierarchy.
  */
 export function FolderTree<T>({
   items,
@@ -20,7 +20,7 @@ export function FolderTree<T>({
   selected,
   onSelect,
   className,
-  title = '文件夹',
+  title = 'Folders',
 }: {
   items: T[]
   getFolder: (item: T) => string | null | undefined
@@ -77,8 +77,8 @@ export function FolderTree<T>({
               !hasChildren && 'invisible',
             )}
             onClick={() => toggle(node.path)}
-            aria-label={open ? '收起' : '展开'}
-            title={open ? '收起' : '展开'}
+            aria-label={open ? 'Collapse' : 'Expand'}
+            title={open ? 'Collapse' : 'Expand'}
           >
             <Icon name={open ? 'chevronDown' : 'chevronRight'} className="h-3 w-3" />
           </button>
@@ -126,7 +126,7 @@ export function FolderTree<T>({
           )}
         >
           <Icon name="grid" className="h-3.5 w-3.5" />
-          全部
+          All
           <span
             className={cn(
               'tabular ml-auto rounded px-1 text-[9.5px] leading-4',
@@ -149,7 +149,7 @@ export function FolderTree<T>({
             )}
           >
             <Icon name="file" className="h-3.5 w-3.5" />
-            未分类
+            Uncategorized
             <span
               className={cn(
                 'tabular ml-auto rounded px-1 text-[9.5px] leading-4',
@@ -165,19 +165,19 @@ export function FolderTree<T>({
       </div>
       <div className="flex shrink-0 items-start gap-1.5 border-t border-border px-3.5 py-2 text-[9.5px] leading-4 text-muted-foreground/85">
         <Icon name="gitBranch" className="mt-px h-3 w-3 shrink-0" />
-        文件夹会原样映射为仓库目录
+        Folders map directly to repo directories
       </div>
     </div>
   )
 }
 
-/** 编辑弹窗中的文件夹输入：支持多级、已有目录补全、实时预览仓库路径 */
+/** Folder input in edit dialogs: nested paths, autocomplete from existing folders, live repo path preview */
 export function FolderField({
   value,
   onChange,
   options,
   pathPreview,
-  label = '文件夹',
+  label = 'Folder',
   hint,
 }: {
   value: string | null
@@ -196,7 +196,7 @@ export function FolderField({
         list={listId}
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value.trim() ? e.target.value : null)}
-        placeholder="例如：编程/前端"
+        placeholder="e.g. engineering/frontend"
         className="font-mono text-xs"
       />
       <datalist id={listId}>
@@ -205,7 +205,7 @@ export function FolderField({
         ))}
       </datalist>
       <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-        用 <code className="rounded bg-muted px-1">/</code> 表示多级目录；留空为未分类。
+        Use <code className="rounded bg-muted px-1">/</code> for nested directories; leave empty for Uncategorized.
         {hint ? ` ${hint}` : ''}
       </p>
       {pathPreview && (

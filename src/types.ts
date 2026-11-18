@@ -2,7 +2,7 @@ export type ThemeMode = 'light' | 'dark' | 'system'
 export type InstallMode = 'symlink' | 'copy'
 export type PromptVariableType = 'text' | 'textarea' | 'number' | 'select'
 
-/** 版本快照：data 为该版本的字段内容（按资产类型不同而不同） */
+/** Version snapshot: data holds the field content for this version (it differs by asset type) */
 export interface VersionSnapshot {
   id: string
   version: number
@@ -20,7 +20,7 @@ export interface PromptVariable {
   required?: boolean
 }
 
-/** inherit=跟随仓库策略；sync=显式参与；local=仅本机 */
+/** inherit=follow repository policy; sync=explicitly synced; local=local machine only */
 export type PromptSyncPolicy = 'inherit' | 'sync' | 'local'
 
 export interface Prompt {
@@ -36,7 +36,7 @@ export interface Prompt {
   usageCount: number
   variables: PromptVariable[]
   syncPolicy: PromptSyncPolicy
-  /** 最近一次同步时仓库中是否已有该 Prompt；用于区分待推送新增 / 修改 */
+  /** Whether this Prompt already existed in the repository at the last sync; distinguishes outgoing additions from modifications */
   inRepo?: boolean
   versions: VersionSnapshot[]
   createdAt: string
@@ -54,11 +54,11 @@ export interface Skill {
   version: string
   source: SkillSource
   category: string
-  /** 库内文件夹路径（可多级，例如 开发流程/Git）；同时映射为仓库目录 */
+  /** Folder path inside the library (may be nested, e.g. dev-workflow/git); also maps to a repository directory */
   folder: string | null
   tags: string[]
   instructions: string
-  /** platformId -> 安装方式；'external' 表示外部安装（非本应用写入） */
+  /** platformId -> install mode; 'external' means installed externally (not written by this app) */
   installs: Record<string, InstallMode | 'external'>
   versions: VersionSnapshot[]
   installedAt?: string
@@ -95,11 +95,11 @@ export interface McpServer {
   headers?: Record<string, string>
   enabled: boolean
   isFavorite: boolean
-  /** 库内文件夹路径；每个 server 一个 JSON 文件写入仓库 */
+  /** Folder path inside the library; one JSON file per server is written to the repository */
   folder: string | null
   tags: string[]
   source: McpSourceKind
-  /** platformId -> 已由本应用写入 */
+  /** platformId -> already written by this app */
   installs: Record<string, boolean>
   notes: string
   versions: VersionSnapshot[]
@@ -145,16 +145,16 @@ export interface McpTarget {
   format: 'json' | 'toml'
 }
 
-/* ---------------- Agent 指令 / 契约 ---------------- */
+/* ---------------- Agent Instructions / Contracts ---------------- */
 
 export type ContractScope = 'user' | 'project' | 'path'
 export type ContractActivationMode = 'always' | 'glob' | 'model' | 'manual'
 
 export interface ContractActivation {
   mode: ContractActivationMode
-  /** mode=glob 时生效的路径模式；支持 ** / * / ? / {a,b} */
+  /** Path patterns applied when mode=glob; supports ** / * / ? / {a,b} */
   globs: string[]
-  /** mode=model 时给模型判断相关性的描述 */
+  /** Description given to the model for relevance decisions when mode=model */
   description?: string
 }
 
@@ -163,17 +163,17 @@ export interface AgentContract {
   title: string
   description: string
   body: string
-  /** 库内文件夹路径；同时映射为仓库目录 */
+  /** Folder path inside the library; also maps to a repository directory */
   folder: string | null
   scope: ContractScope
-  /** scope=path 时的目录前缀，例如 src */
+  /** Directory prefix when scope=path, e.g. src */
   path?: string
   activation: ContractActivation
-  /** 数值越大越优先；仅用于解释合并顺序，不做静默覆盖 */
+  /** Higher values take precedence; only explains merge order, never silently overwrites */
   priority: number
-  /** Claude Code 的 @import 路径 */
+  /** @import paths for Claude Code */
   imports: string[]
-  /** 目标注册表 id，例如 agents-md / claude / cursor */
+  /** Target registry id, e.g. agents-md / claude / cursor */
   targets: string[]
   tags: string[]
   syncPolicy: PromptSyncPolicy
@@ -197,11 +197,11 @@ export interface ContractTarget {
   agentName: string
   label: string
   format: ContractFormat
-  /** 目标文件路径模板；{slug} 会被契约 slug 替换 */
+  /** Target file path template; {slug} is replaced by the contract slug */
   pathTemplate: string
-  /** single-file：多条契约合并进一个文件；per-contract：一条契约一个文件 */
+  /** single-file: multiple contracts merge into one file; per-contract: one file per contract */
   merge: 'single-file' | 'per-contract'
-  /** nearest：更具体路径优先；concat：从根到具体拼接；override：就近覆盖 */
+  /** nearest: more specific paths win; concat: concatenate from root to specific; override: nearest wins and overrides */
   precedence: 'nearest' | 'concat' | 'override'
   supports: { globs: boolean; modelDecision: boolean; manual: boolean; imports: boolean }
   maxBytes?: number
@@ -219,19 +219,19 @@ export interface ContractProjection {
   previousVersion?: string
   deployedAt?: string
   note?: string
-  /** 删除本地契约后保留的展示信息，便于清理孤儿投影 */
+  /** Display info kept after the local contract is deleted, to help clean up orphan projections */
   contractTitle?: string
   contractSlug?: string
 }
 
-/** 本地 Agent 的全局指令目标；路径允许用户改写，写回仅到本机目录 */
+/** Global instruction targets for local agents; users may edit paths, and writes go only to local machine directories */
 export interface AgentGlobalTarget {
   id: string
   agentId: string
   agentName: string
   label: string
   description: string
-  /** file = path 指向一个文件；dir = path 指向目录，按契约生成独立文件 */
+  /** file = path points to a file; dir = path points to a directory, one separate file per contract */
   pathMode: 'file' | 'dir'
   defaultPath: string
   path: string
@@ -252,7 +252,7 @@ export interface GlobalProjection {
   previousVersion?: string
   deployedAt?: string
   note?: string
-  /** 删除本地契约后保留的展示信息 */
+  /** Display info kept after the local contract is deleted */
   contractTitle?: string
   contractSlug?: string
 }
@@ -261,7 +261,7 @@ export interface ResolvedContractEntry {
   contractId: string
   title: string
   sourcePath: string
-  /** 为什么进入当前上下文，例如「项目级 · 始终生效」 */
+  /** Why it enters the current context, e.g. "Project · Always on" */
   reason: string
   bytes: number
 }
@@ -282,12 +282,12 @@ export interface ResolvedPreview {
   warnings: string[]
 }
 
-/* ---------------- Git 仓库同步 ---------------- */
+/* ---------------- Git repository sync ---------------- */
 
 export type AssetKind = 'skill' | 'mcp' | 'prompt' | 'contract'
 export type SyncDirection = 'incoming' | 'outgoing' | 'conflict'
 export type SyncChangeKind = 'added' | 'modified' | 'deleted' | 'renamed'
-/** none=低风险；scripts=含可执行脚本；secrets=含明文密钥；network=会访问网络 */
+/** none=low risk; scripts=contains executable scripts; secrets=contains plaintext secret; network=network access */
 export type SyncRisk = 'none' | 'scripts' | 'secrets' | 'network'
 
 export interface RepoConfig {
@@ -305,14 +305,14 @@ export interface RepoConfig {
   ahead: number
   behind: number
   layout: { skills: string; mcp: string; prompts: string; contracts: string }
-  /** 资产是否参与仓库同步；Prompt 默认关闭 */
+  /** Whether assets participate in repository sync; off by default for Prompts */
   policies: { skills: boolean; mcp: boolean; prompts: boolean; contracts: boolean }
 }
 
 export interface SyncChange {
   id: string
   kind: AssetKind
-  /** 资产稳定标识；重命名时仍能匹配同一资产（Prompt 必填） */
+  /** Stable asset identifier; still matches the same asset after a rename (required for Prompts) */
   assetId?: string
   assetName: string
   path: string
@@ -379,7 +379,7 @@ export interface SyncEvent {
   result: 'success' | 'warning' | 'error'
 }
 
-/* ---------------- 平台 Prompt 发现 ---------------- */
+/* ---------------- Platform Prompt discovery ---------------- */
 
 export interface PromptPlatformItem {
   id: string
@@ -396,7 +396,7 @@ export interface PromptPlatformItem {
 }
 
 export interface AppState {
-  /** localStorage 结构版本；用于旧数据迁移 */
+  /** localStorage schema version; used for legacy data migration */
   schemaVersion: number
   prompts: Prompt[]
   contracts: AgentContract[]
@@ -407,10 +407,10 @@ export interface AppState {
   syncChanges: SyncChange[]
   deployments: Deployment[]
   contractProjections: ContractProjection[]
-  /** 本机 Agent 全局目录配置；path 可由用户二次修改 */
+  /** Global directory config for local agents; path can be edited by the user */
   globalTargets: AgentGlobalTarget[]
   globalProjections: GlobalProjection[]
   syncEvents: SyncEvent[]
-  /** 本机检测到的 Agent id；用于分发矩阵默认视图 */
+  /** Agent ids detected on this machine; used for the default dispatch matrix view */
   detectedAgents: string[]
 }

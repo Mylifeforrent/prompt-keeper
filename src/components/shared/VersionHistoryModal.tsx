@@ -12,8 +12,8 @@ export interface VersionField {
 }
 
 /**
- * 通用版本历史弹窗（Prompt / Skill / MCP 共用）。
- * versions 按「最新在前」传入；versions[0] 视为当前版本，禁删。
+ * Shared version history modal (used by Prompt / Skill / MCP).
+ * Versions are passed newest-first; versions[0] is treated as the current version and cannot be deleted.
  */
 export function VersionHistoryModal({
   open,
@@ -43,9 +43,9 @@ export function VersionHistoryModal({
 
   return (
     <>
-      <Modal open={open} onClose={onClose} title={title} subtitle="每次保存自动生成版本；恢复会生成新版本，不影响标签与备注" width="max-w-3xl">
+      <Modal open={open} onClose={onClose} title={title} subtitle="Every save creates a version; restoring creates a new version and leaves tags and notes untouched" width="max-w-3xl">
         <div className="flex h-[460px] gap-4">
-          {/* 时间线 */}
+          {/* Timeline */}
           <div className="w-52 shrink-0 space-y-1 overflow-y-auto pr-1">
             {versions.map((v, idx) => (
               <button
@@ -64,7 +64,7 @@ export function VersionHistoryModal({
                   {idx === 0 && (
                     <Badge variant="primary">
                       <Icon name="check" className="h-3 w-3" />
-                      当前
+                      Current
                     </Badge>
                   )}
                 </div>
@@ -74,7 +74,7 @@ export function VersionHistoryModal({
             ))}
           </div>
 
-          {/* 右侧预览 / 对比 */}
+          {/* Right side: preview / diff */}
           <div className="flex min-w-0 flex-1 flex-col gap-3">
             {selected && (
               <>
@@ -82,8 +82,8 @@ export function VersionHistoryModal({
                   <div className="inline-flex rounded-lg bg-muted p-0.5">
                     {(
                       [
-                        { v: 'preview', label: '版本预览' },
-                        { v: 'diff', label: '与当前对比' },
+                        { v: 'preview', label: 'Version preview' },
+                        { v: 'diff', label: 'Compare with current' },
                       ] as const
                     ).map((t) => (
                       <button
@@ -99,7 +99,7 @@ export function VersionHistoryModal({
                     ))}
                   </div>
                   <span className="ml-auto text-[11px] text-muted-foreground">
-                    {selected.note ? `备注：${selected.note}` : null}
+                    {selected.note ? `Note: ${selected.note}` : null}
                   </span>
                 </div>
 
@@ -109,12 +109,12 @@ export function VersionHistoryModal({
                       <div key={f.key}>
                         <div className="mb-1 text-xs font-medium text-muted-foreground">{f.label}</div>
                         <pre className="whitespace-pre-wrap rounded-md bg-muted/60 p-2.5 font-mono text-xs leading-5">
-                          {selected.data[f.key] || '（空）'}
+                          {selected.data[f.key] || '(empty)'}
                         </pre>
                       </div>
                     ) : (
                       <div key={f.key}>
-                        <div className="mb-1 text-xs font-medium text-muted-foreground">{f.label} 变更</div>
+                        <div className="mb-1 text-xs font-medium text-muted-foreground">{f.label} changes</div>
                         <DiffView before={selected.data[f.key] ?? ''} after={versions[0]?.data[f.key] ?? ''} />
                       </div>
                     ),
@@ -130,17 +130,17 @@ export function VersionHistoryModal({
                       onClick={() => setConfirmDelete(selected)}
                     >
                       <Icon name="trash" className="h-3.5 w-3.5" />
-                      删除此版本
+                      Delete this version
                     </Button>
                   )}
                   {selected.id !== versions[0]?.id && (
                     <Button size="sm" onClick={() => setConfirmRestore(selected)}>
                       <Icon name="history" className="h-3.5 w-3.5" />
-                      恢复此版本
+                      Restore this version
                     </Button>
                   )}
                   {selected.id === versions[0]?.id && (
-                    <span className="text-[11px] text-muted-foreground">当前版本不可删除；恢复其他版本会生成新版本号</span>
+                    <span className="text-[11px] text-muted-foreground">The current version cannot be deleted; restoring another version creates a new version</span>
                   )}
                 </div>
               </>
@@ -155,12 +155,12 @@ export function VersionHistoryModal({
         onConfirm={() => {
           if (confirmRestore) onRestore(confirmRestore)
         }}
-        title="恢复此版本？"
-        confirmText="恢复"
+        title="Restore this version?"
+        confirmText="Restore"
         danger={false}
         message={
           <>
-            将用 <b className="text-foreground">v{confirmRestore?.version}</b> 的内容覆盖当前内容；当前内容会先自动保存为一个新版本，不会丢失。
+            This replaces the current content with <b className="text-foreground">v{confirmRestore?.version}</b>; the current content is first saved as a new version, so nothing is lost.
             {restoreHint && <div className="mt-2">{restoreHint}</div>}
           </>
         }
@@ -171,8 +171,8 @@ export function VersionHistoryModal({
         onConfirm={() => {
           if (confirmDelete) onDeleteVersion(confirmDelete.id)
         }}
-        title="删除此历史版本？"
-        message={`将永久删除 v${confirmDelete?.version} 的快照，删除后版本号不复用。`}
+        title="Delete this version?"
+        message={`Permanently deletes the v${confirmDelete?.version} snapshot; version numbers are never reused.`}
       />
     </>
   )

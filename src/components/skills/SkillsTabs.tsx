@@ -11,16 +11,16 @@ export function SkillsTabs({ query }: { query: string }) {
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5">
         <Tabs
           tabs={[
-            { value: 'mine', label: '我的技能' },
-            { value: 'store', label: '技能商店' },
-            { value: 'projects', label: '项目工作区' },
+            { value: 'mine', label: 'My Skills' },
+            { value: 'store', label: 'Skill Store' },
+            { value: 'projects', label: 'Project Workspace' },
           ]}
           value={tab}
           onChange={setTab}
         />
         <span className="ml-auto hidden items-center gap-1.5 text-[11px] text-muted-foreground lg:flex">
           <Icon name="layers" className="h-3.5 w-3.5" />
-          <span className="whitespace-nowrap">SKILL.md + scripts · 支持 symlink / copy 分发</span>
+          <span className="whitespace-nowrap">SKILL.md + scripts · symlink / copy dispatch supported</span>
         </span>
       </div>
       <div className={tab === 'mine' ? 'min-h-0 flex-1 overflow-hidden' : 'min-h-0 flex-1 overflow-y-auto'}>
@@ -29,12 +29,12 @@ export function SkillsTabs({ query }: { query: string }) {
         {tab === 'projects' && (
           <EmptyState
             icon="folder"
-            title="项目级 Skill 工作区（后续迭代）"
-            description="注册项目根目录与扫描路径后，可为单个项目建立独立技能空间：扫描 .claude/skills、.agents/skills 等目录，双向导入、独立分发，不污染全局库。"
+            title="Project-level Skill workspace (future iteration)"
+            description="Register a project root and scan paths to give each project its own Skill space: scan directories such as .claude/skills and .agents/skills, import both ways, and dispatch independently without polluting the global library."
             action={
               <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-xs text-muted-foreground">
                 <Icon name="sparkles" className="h-3.5 w-3.5" />
-                原型暂未实现，见交互设计文档 §3.2
+                Not implemented in the prototype yet; see interaction design doc §3.2
               </span>
             }
           />

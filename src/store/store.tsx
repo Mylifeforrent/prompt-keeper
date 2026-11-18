@@ -74,7 +74,7 @@ function initialState(): AppState {
   }
 }
 
-/** 保留用户改过的全局路径，同时补上新增的目标定义 */
+/** Keep user-modified global paths while backfilling newly added target definitions */
 function mergeGlobalTargets(saved: AgentGlobalTarget[] | undefined): AgentGlobalTarget[] {
   return DEFAULT_GLOBAL_TARGETS.map((def) => {
     const hit = saved?.find((target) => target.id === def.id)
@@ -124,7 +124,7 @@ function load(): AppState {
       let syncChanges = parsed.syncChanges ?? base.syncChanges
 
       if (legacy) {
-        // 旧版本升级：补齐 Prompt / 指令 / 全局目录演示数据，并默认开启 Prompt 与指令同步
+        // Upgrading from an older version: backfill Prompt / instruction / global directory demo data and enable Prompt and instruction sync by default
         const ids = new Set(prompts.map((p) => p.id))
         prompts = [...prompts, ...base.prompts.filter((p) => !ids.has(p.id))]
         const promptSeeds = base.syncChanges.filter((c) => c.kind === 'prompt')
@@ -145,10 +145,10 @@ function load(): AppState {
         ...base.repo.layout,
         ...(repo?.layout ?? {}),
       }
-      // v0.4 以前 MCP 是单文件 servers.json；v0.5 改为按文件夹一 server 一文件
+      // Before v0.4, MCP was a single servers.json file; v0.5 switched to one file per server per folder
       if (layout.mcp === 'mcp/servers.json') layout.mcp = 'mcp'
 
-      // 资产移动文件夹后，待同步项的仓库路径也必须跟着移动
+      // After an asset moves to another folder, the repo path of pending sync items must move with it
       syncChanges = syncChanges.map((change) => {
         if (change.kind === 'prompt') {
           const prompt =
@@ -202,7 +202,7 @@ function load(): AppState {
       }
     }
   } catch {
-    /* 损坏或旧版本数据结构则回退种子，避免原型白屏 */
+    /* Fall back to seed data when the stored structure is corrupt or from an older version, to avoid a blank prototype screen */
   }
   return base
 }
@@ -301,9 +301,9 @@ function matchesPromptChange(change: SyncChange, prompt: Prompt): boolean {
 }
 
 /**
- * Prompt 同步范围变化：
- * - 进入同步 → 生成待推送（若尚无未处理变更）
- * - 退出同步 → 撤回未处理变更，但不动仓库文件
+ * Prompt sync scope change:
+ * - Entering sync → create a pending push (if there is no unresolved change)
+ * - Leaving sync → withdraw unresolved changes, but leave repo files untouched
  */
 function transitionPromptSyncPolicy(state: AppState, before: Prompt, after: Prompt): AppState {
   if (before.syncPolicy === after.syncPolicy) return state
@@ -321,11 +321,11 @@ function transitionPromptSyncPolicy(state: AppState, before: Prompt, after: Prom
         nextState,
         after,
         after.inRepo ? 'modified' : 'added',
-        after.inRepo ? '重新加入仓库同步，等待推送' : '已加入仓库同步，等待推送',
+        after.inRepo ? 'Rejoined repository sync, pending push' : 'Added to repository sync, pending push',
       )
     }
-    title = `已加入仓库同步：prompt:${after.title}`
-    detail = existing ? '已有待处理变更；推送仍需在同步中心确认' : '已生成待推送变更；不会自动提交'
+    title = `Added to repository sync: prompt:${after.title}`
+    detail = existing ? 'A pending change already exists; pushing still needs confirmation in Sync Center' : 'Created a pending push change; nothing is committed automatically'
   } else if (!willEffective && wasEffective) {
     let withdrawn = 0
     nextState = {
@@ -338,18 +338,18 @@ function transitionPromptSyncPolicy(state: AppState, before: Prompt, after: Prom
         return c
       }),
     }
-    title = `已设为仅本机：prompt:${after.title}`
+    title = `Set to local only: prompt:${after.title}`
     detail = withdrawn
-      ? `已撤回 ${withdrawn} 条待同步变更；仓库中已有文件不会被删除`
-      : '仓库中已有文件不会被删除'
+      ? `Withdrew ${withdrawn} pending sync changes; existing repository files will not be deleted`
+      : 'Existing repository files will not be deleted'
     result = 'warning'
   } else if (after.syncPolicy === 'sync' && !state.repo.policies.prompts) {
-    title = `Prompt 同步未开启：${after.title}`
-    detail = '需要先在同步中心开启 Prompt 同步；当前仅保存偏好，不会产生待推送'
+    title = `Prompt sync is off: ${after.title}`
+    detail = 'Enable Prompt sync in Sync Center first; for now only the preference is saved and no pending push is created'
     result = 'warning'
   } else {
-    title = `Prompt 同步范围已更新：${after.title}`
-    detail = '当前仍在本地库；仓库连接后按策略生效'
+    title = `Prompt sync scope updated: ${after.title}`
+    detail = 'Still in the local library; the policy takes effect once a repository is connected'
   }
 
   return {
@@ -360,10 +360,10 @@ function transitionPromptSyncPolicy(state: AppState, before: Prompt, after: Prom
 
 
 /**
- * 本地编辑同步型 Prompt 时更新待推送/冲突状态：
- * - 已有远端变更 → 升级为冲突（保留远端内容供三方对比）
- * - 已有待推送 → 更新内容与版本
- * - 否则新建待推送
+ * Update pending-push / conflict state when a sync-enabled Prompt is edited locally:
+ * - A remote change already exists → upgrade to a conflict (keep the remote content for three-way comparison)
+ * - A pending push already exists → update content and version
+ * - Otherwise create a new pending push
  */
 function withPromptLocalChange(
   state: AppState,
@@ -383,7 +383,7 @@ function withPromptLocalChange(
       const conflict: SyncChange = {
         ...existing,
         direction: 'conflict',
-        summary: summary ?? '本地修改与仓库更新冲突：双方都改动了同一个 Prompt',
+        summary: summary ?? 'Local edits conflict with repository updates: both sides changed the same Prompt',
         localContent: file,
         baseContent: existing.baseContent ?? existing.remoteContent ?? '',
         localVersion: version,
@@ -420,7 +420,7 @@ function withPromptLocalChange(
     path: nextPath,
     change: changeKind,
     direction: 'outgoing',
-    summary: summary ?? (changeKind === 'added' ? '新增 Prompt，等待推送' : '本地修改了 Prompt，等待推送'),
+    summary: summary ?? (changeKind === 'added' ? 'New Prompt, pending push' : 'Prompt edited locally, pending push'),
     additions: file.split('\n').length,
     deletions: 0,
     risk,
@@ -431,7 +431,7 @@ function withPromptLocalChange(
   return { ...state, syncChanges: [change, ...state.syncChanges] }
 }
 
-/* ---------------- Agent 指令 / 契约同步 ---------------- */
+/* ---------------- Agent Instructions / contract sync ---------------- */
 
 const contractContent = (c: AgentContract) =>
   JSON.stringify({
@@ -460,7 +460,7 @@ function matchesContractChange(change: SyncChange, contract: AgentContract): boo
 function markContractProjectionsStale(
   state: AppState,
   contractId: string,
-  note = '契约内容已更新，等待重新投影',
+  note = 'Contract content updated, pending re-projection',
 ): AppState {
   return {
     ...state,
@@ -475,17 +475,17 @@ function markContractProjectionsStale(
       p.contractId === contractId
         ? p.status === 'drifted'
           ? p
-          : { ...p, status: 'stale', note: `${note}（全局目录）` }
+          : { ...p, status: 'stale', note: `${note} (global directory)` }
         : p,
     ),
   }
 }
 
 /**
- * 本地编辑同步型契约时更新待推送/冲突状态：
- * - 已有远端变更 → 升级为冲突（保留远端内容供三方对比）
- * - 已有待推送 → 更新内容与版本
- * - 否则新建待推送
+ * Update pending-push / conflict state when a sync-enabled contract is edited locally:
+ * - A remote change already exists → upgrade to a conflict (keep the remote content for three-way comparison)
+ * - A pending push already exists → update content and version
+ * - Otherwise create a new pending push
  */
 function withContractLocalChange(
   state: AppState,
@@ -505,7 +505,7 @@ function withContractLocalChange(
       const conflict: SyncChange = {
         ...existing,
         direction: 'conflict',
-        summary: summary ?? '本地修改与仓库更新冲突：双方都改动了同一个指令契约',
+        summary: summary ?? 'Local edits conflict with repository updates: both sides changed the same instruction contract',
         localContent: file,
         baseContent: existing.baseContent ?? existing.remoteContent ?? '',
         localVersion: version,
@@ -542,7 +542,7 @@ function withContractLocalChange(
     path: nextPath,
     change: changeKind,
     direction: 'outgoing',
-    summary: summary ?? (changeKind === 'added' ? '新增指令契约，等待推送' : '本地修改了指令契约，等待推送'),
+    summary: summary ?? (changeKind === 'added' ? 'New instruction contract, pending push' : 'Instruction contract edited locally, pending push'),
     additions: file.split('\n').length,
     deletions: 0,
     risk,
@@ -569,11 +569,11 @@ function transitionContractSyncPolicy(state: AppState, before: AgentContract, af
         nextState,
         after,
         after.inRepo ? 'modified' : 'added',
-        after.inRepo ? '重新加入仓库同步，等待推送' : '已加入仓库同步，等待推送',
+        after.inRepo ? 'Rejoined repository sync, pending push' : 'Added to repository sync, pending push',
       )
     }
-    title = `已加入仓库同步：instruction:${after.title}`
-    detail = existing ? '已有待处理变更；推送仍需在同步中心确认' : '已生成待推送变更；不会自动提交'
+    title = `Added to repository sync: instruction:${after.title}`
+    detail = existing ? 'A pending change already exists; pushing still needs confirmation in Sync Center' : 'Created a pending push change; nothing is committed automatically'
   } else if (!willEffective && wasEffective) {
     let withdrawn = 0
     nextState = {
@@ -586,18 +586,18 @@ function transitionContractSyncPolicy(state: AppState, before: AgentContract, af
         return c
       }),
     }
-    title = `已设为仅本机：instruction:${after.title}`
+    title = `Set to local only: instruction:${after.title}`
     detail = withdrawn
-      ? `已撤回 ${withdrawn} 条待同步变更；仓库中已有文件不会被删除`
-      : '仓库中已有文件不会被删除'
+      ? `Withdrew ${withdrawn} pending sync changes; existing repository files will not be deleted`
+      : 'Existing repository files will not be deleted'
     result = 'warning'
   } else if (after.syncPolicy === 'sync' && !state.repo.policies.contracts) {
-    title = `指令同步未开启：${after.title}`
-    detail = '需要先在同步中心开启 Agent 指令同步；当前仅保存偏好，不会产生待推送'
+    title = `Instruction sync is off: ${after.title}`
+    detail = 'Enable Agent Instructions sync in Sync Center first; for now only the preference is saved and no pending push is created'
     result = 'warning'
   } else {
-    title = `指令同步范围已更新：${after.title}`
-    detail = '当前仍在本地库；仓库连接后按策略生效'
+    title = `Instruction sync scope updated: ${after.title}`
+    detail = 'Still in the local library; the policy takes effect once a repository is connected'
   }
 
   return {
@@ -606,7 +606,7 @@ function transitionContractSyncPolicy(state: AppState, before: AgentContract, af
   }
 }
 
-/* ---------------- Skill / MCP 双向同步 ---------------- */
+/* ---------------- Skill / MCP two-way sync ---------------- */
 
 function matchesSkillChange(change: SyncChange, skill: Skill): boolean {
   if (change.kind !== 'skill') return false
@@ -635,7 +635,7 @@ function withSkillLocalChange(
             ? {
                 ...existing,
                 direction: 'conflict',
-                summary: summary ?? '本地修改与仓库更新冲突：双方都改动了同一个技能',
+                summary: summary ?? 'Local edits conflict with repository updates: both sides changed the same Skill',
                 localContent: content,
                 baseContent: existing.baseContent ?? existing.remoteContent ?? '',
                 localVersion: version,
@@ -677,7 +677,7 @@ function withSkillLocalChange(
         path,
         change: changeKind,
         direction: 'outgoing',
-        summary: summary ?? (changeKind === 'added' ? '新增本地技能，等待推送' : '本地修改了技能，等待推送'),
+        summary: summary ?? (changeKind === 'added' ? 'New local Skill, pending push' : 'Skill edited locally, pending push'),
         additions: content.split('\n').length,
         deletions: 0,
         risk,
@@ -717,7 +717,7 @@ function withMcpLocalChange(
             ? {
                 ...existing,
                 direction: 'conflict',
-                summary: summary ?? '本地修改与仓库更新冲突：双方都改动了同一个 MCP 模板',
+                summary: summary ?? 'Local edits conflict with repository updates: both sides changed the same MCP template',
                 localContent: content,
                 baseContent: existing.baseContent ?? existing.remoteContent ?? '',
                 localVersion: version,
@@ -759,7 +759,7 @@ function withMcpLocalChange(
         path,
         change: changeKind,
         direction: 'outgoing',
-        summary: summary ?? (changeKind === 'added' ? '新增本地 MCP 模板，等待推送' : '本地修改了 MCP 模板，等待推送'),
+        summary: summary ?? (changeKind === 'added' ? 'New local MCP template, pending push' : 'MCP template edited locally, pending push'),
         additions: content.split('\n').length,
         deletions: 0,
         risk,
@@ -779,7 +779,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     } catch {
-      /* 原型忽略配额错误 */
+      /* Prototype ignores quota errors */
     }
   }, [state])
 
@@ -814,7 +814,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             versions: next.versions.length ? next.versions : pushVersion([], promptContentOf(next)),
           }
           const state: AppState = { ...s, prompts: [created, ...s.prompts] }
-          return withPromptLocalChange(state, created, 'added', '新增本地 Prompt，等待推送')
+          return withPromptLocalChange(state, created, 'added', 'New local Prompt, pending push')
         }
         const contentChanged = promptContent(prev) !== promptContent(next)
         const metaChanged = serializePromptFile(prev) !== serializePromptFile(next)
@@ -825,7 +825,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             prompts: s.prompts.map((p) => (p.id === next.id ? next : p)),
           }
           if (metaChanged && !policyChanged) {
-            state = withPromptLocalChange(state, next, 'modified', '本地更新了 Prompt 元数据，等待推送')
+            state = withPromptLocalChange(state, next, 'modified', 'Prompt metadata updated locally, pending push')
           }
           return policyChanged ? transitionPromptSyncPolicy(state, prev, next) : state
         }
@@ -843,11 +843,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             state,
             saved,
             saved.inRepo ? 'modified' : 'added',
-            saved.inRepo ? '已重新加入仓库同步，等待推送' : '已加入仓库同步，等待推送',
+            saved.inRepo ? 'Rejoined repository sync, pending push' : 'Added to repository sync, pending push',
           )
           return state
         }
-        state = withPromptLocalChange(state, saved, 'modified', '本地修改了 Prompt，等待推送')
+        state = withPromptLocalChange(state, saved, 'modified', 'Prompt edited locally, pending push')
         return policyChanged ? transitionPromptSyncPolicy(state, prev, saved) : state
       }),
     deletePrompt: (id) =>
@@ -865,8 +865,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ? [
                 syncEvent(
                   'review',
-                  `已删除本地 Prompt：${prompt.title}`,
-                  '仓库文件未改动；若远端仍有该文件，下次 fetch 后会重新出现在待拉取中',
+                  `Deleted local Prompt: ${prompt.title}`,
+                  'Repository files were not changed; if the remote still has this file, it will reappear as incoming after the next fetch',
                   'warning',
                 ),
                 ...s.syncEvents,
@@ -904,13 +904,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           systemPrompt: target.data.systemPrompt ?? prompt.systemPrompt,
           userPrompt: target.data.userPrompt ?? prompt.userPrompt,
           updatedAt: nowIso(),
-          versions: pushVersion(prompt.versions, target.data, `恢复自 v${target.version}`),
+          versions: pushVersion(prompt.versions, target.data, `Restored from v${target.version}`),
         }
         const state: AppState = {
           ...s,
           prompts: s.prompts.map((p) => (p.id === promptId ? restored : p)),
         }
-        return withPromptLocalChange(state, restored, 'modified', `从 v${target.version} 恢复，等待推送`)
+        return withPromptLocalChange(state, restored, 'modified', `Restored from v${target.version}, pending push`)
       }),
     deletePromptVersion: (promptId, versionId) =>
       setState((s) => ({
@@ -926,10 +926,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (!prev) {
           const created: AgentContract = {
             ...next,
-            versions: next.versions.length ? next.versions : pushVersion([], contractVersionData(next), '初始版本'),
+            versions: next.versions.length ? next.versions : pushVersion([], contractVersionData(next), 'Initial version'),
           }
           const state: AppState = { ...s, contracts: [created, ...s.contracts] }
-          return withContractLocalChange(state, created, 'added', '新增本地指令契约，等待推送')
+          return withContractLocalChange(state, created, 'added', 'New local instruction contract, pending push')
         }
         const contentChanged = contractContent(prev) !== contractContent(next)
         const fileChanged = serializeContractFile(prev) !== serializeContractFile(next)
@@ -941,7 +941,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
           if (fileChanged && !policyChanged) {
             state = markContractProjectionsStale(state, next.id)
-            state = withContractLocalChange(state, next, 'modified', '本地更新了指令元数据，等待推送')
+            state = withContractLocalChange(state, next, 'modified', 'Instruction metadata updated locally, pending push')
           }
           return policyChanged ? transitionContractSyncPolicy(state, prev, next) : state
         }
@@ -960,11 +960,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             state,
             saved,
             saved.inRepo ? 'modified' : 'added',
-            saved.inRepo ? '已重新加入仓库同步，等待推送' : '已加入仓库同步，等待推送',
+            saved.inRepo ? 'Rejoined repository sync, pending push' : 'Added to repository sync, pending push',
           )
           return state
         }
-        state = withContractLocalChange(state, saved, 'modified', '本地修改了指令契约，等待推送')
+        state = withContractLocalChange(state, saved, 'modified', 'Instruction contract edited locally, pending push')
         return policyChanged ? transitionContractSyncPolicy(state, prev, saved) : state
       }),
     deleteContract: (id) =>
@@ -992,8 +992,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ? [
                 syncEvent(
                   'review',
-                  `已删除本地指令契约：${contract.title}`,
-                  '仓库文件未改动；若远端仍有该文件，下次 fetch 后会重新出现在待拉取中；已投影的目标文件不会自动删除',
+                  `Deleted local instruction contract: ${contract.title}`,
+                  'Repository files were not changed; if the remote still has this file, it will reappear as incoming after the next fetch; already projected target files are not deleted automatically',
                   'warning',
                 ),
                 ...s.syncEvents,
@@ -1041,15 +1041,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           versions: pushVersion(
             contract.versions,
             contractVersionData({ ...contract, ...data }),
-            `恢复自 v${target.version}`,
+            `Restored from v${target.version}`,
           ),
         }
         let state: AppState = {
           ...s,
           contracts: s.contracts.map((c) => (c.id === contractId ? restored : c)),
         }
-        state = markContractProjectionsStale(state, contractId, `已恢复到 v${target.version}，等待重新投影`)
-        return withContractLocalChange(state, restored, 'modified', `从 v${target.version} 恢复，等待推送`)
+        state = markContractProjectionsStale(state, contractId, `Restored to v${target.version}, pending re-projection`)
+        return withContractLocalChange(state, restored, 'modified', `Restored from v${target.version}, pending push`)
       }),
     deleteContractVersion: (contractId, versionId) =>
       setState((s) => ({
@@ -1107,8 +1107,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncEvents: [
             syncEvent(
               'deploy',
-              `投影指令 ${contract.title} → ${target.label}`,
-              `${target.pathTemplate} · ${contractVersionLabel(contract)}${target.merge === 'single-file' ? ' · 已重写合并文件' : ''}`,
+              `Projected instruction ${contract.title} → ${target.label}`,
+              `${target.pathTemplate} · ${contractVersionLabel(contract)}${target.merge === 'single-file' ? ' · merged file rewritten' : ''}`,
             ),
             ...s.syncEvents,
           ],
@@ -1154,8 +1154,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncEvents: [
             syncEvent(
               'deploy',
-              `重新投影指令 ${contract.title} → ${target.label}`,
-              wasDrifted ? '已显式覆盖 Agent 侧手工修改；该操作可回滚' : `${target.pathTemplate} 已更新`,
+              `Re-projected instruction ${contract.title} → ${target.label}`,
+              wasDrifted ? 'Explicitly overwrote manual edits on the Agent side; this operation can be rolled back' : `${target.pathTemplate} updated`,
               wasDrifted ? 'warning' : 'success',
             ),
             ...s.syncEvents,
@@ -1175,10 +1175,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncEvents: [
             syncEvent(
               'deploy',
-              `已移除指令投影 ${contract?.title ?? projection.contractTitle ?? projection.contractId}`,
+              `Removed instruction projection ${contract?.title ?? projection.contractTitle ?? projection.contractId}`,
               target?.merge === 'single-file'
-                ? `仅从 ${target.pathTemplate} 的 managed block 中移除；本地库与仓库不受影响`
-                : `目标 ${target?.pathTemplate ?? projection.targetId}；本地库与仓库不受影响`,
+                ? `Removed only from the managed block in ${target.pathTemplate}; the local library and repository are unaffected`
+                : `Target ${target?.pathTemplate ?? projection.targetId}; the local library and repository are unaffected`,
               'warning',
             ),
             ...s.syncEvents,
@@ -1202,15 +1202,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   deployedVersion: p.previousVersion!,
                   previousVersion: p.deployedVersion,
                   deployedAt: nowIso(),
-                  note: '已回滚到上一版本',
+                  note: 'Rolled back to the previous version',
                 }
               : p,
           ),
           syncEvents: [
             syncEvent(
               'rollback',
-              `回滚指令投影 ${contract?.title ?? projection.contractTitle ?? projection.contractId} → ${target?.label ?? projection.targetId}`,
-              `恢复 ${projection.previousVersion}；本地库与仓库未变`,
+              `Rolled back instruction projection ${contract?.title ?? projection.contractTitle ?? projection.contractId} → ${target?.label ?? projection.targetId}`,
+              `Restored ${projection.previousVersion}; the local library and repository are unchanged`,
               'warning',
             ),
             ...s.syncEvents,
@@ -1229,14 +1229,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ),
           globalProjections: s.globalProjections.map((p) =>
             p.targetId === targetId && p.status !== 'drifted'
-              ? { ...p, status: 'stale', note: '全局目录路径已修改，等待重新投影' }
+              ? { ...p, status: 'stale', note: 'Global directory path changed, pending re-projection' }
               : p,
           ),
           syncEvents: [
             syncEvent(
               'deploy',
-              `更新全局目录：${target.label}`,
-              `${target.path} → ${path.trim()} · 已投影文件标记为待更新`,
+              `Updated global directory: ${target.label}`,
+              `${target.path} → ${path.trim()} · projected files marked as stale`,
               'warning',
             ),
             ...s.syncEvents,
@@ -1255,13 +1255,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ),
           globalProjections: s.globalProjections.map((p) =>
             p.targetId === targetId && p.status !== 'drifted'
-              ? { ...p, status: 'stale', note: '全局目录已恢复默认路径，等待重新投影' }
+              ? { ...p, status: 'stale', note: 'Global directory restored to the default path, pending re-projection' }
               : p,
           ),
           syncEvents: [
             syncEvent(
               'deploy',
-              `恢复默认全局目录：${target.label}`,
+              `Restored default global directory: ${target.label}`,
               target.defaultPath,
               'warning',
             ),
@@ -1281,7 +1281,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         let unsupported = 0
 
         for (const target of targets) {
-          // 单文件目标会重写整个文件，因此除了本次勾选的契约，也要覆盖该目标下已有的投影
+          // Single-file targets rewrite the whole file, so besides the contracts selected now, existing projections under that target must be included as well
           const targetContracts =
             target.merge === 'single-file'
               ? s.contracts.filter(
@@ -1342,11 +1342,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncEvents: [
             syncEvent(
               'deploy',
-              `全局投影 ${deployed} 个组合`,
+              `Globally projected ${deployed} combinations`,
               [
-                `${contracts.length} 条指令 × ${targets.length} 个全局目录`,
-                drifted ? `${drifted} 个漂移项未覆盖` : '',
-                unsupported ? `${unsupported} 个组合因激活方式不兼容跳过` : '',
+                `${contracts.length} instructions × ${targets.length} global directories`,
+                drifted ? `${drifted} drifted items not overwritten` : '',
+                unsupported ? `${unsupported} combinations skipped due to incompatible activation mode` : '',
               ]
                 .filter(Boolean)
                 .join(' · '),
@@ -1382,10 +1382,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncEvents: [
             syncEvent(
               'deploy',
-              `重新投影全局指令 ${contract.title} → ${target?.label ?? projection.targetId}`,
+              `Re-projected global instruction ${contract.title} → ${target?.label ?? projection.targetId}`,
               wasDrifted
-                ? '已显式覆盖 Agent 全局目录中的手工修改；该操作可回滚'
-                : '全局目录文件已更新',
+                ? 'Explicitly overwrote manual edits in the Agent global directory; this operation can be rolled back'
+                : 'Global directory file updated',
               wasDrifted ? 'warning' : 'success',
             ),
             ...s.syncEvents,
@@ -1405,8 +1405,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncEvents: [
             syncEvent(
               'deploy',
-              `已移除全局投影 ${contract?.title ?? projection.contractTitle ?? projection.contractId}`,
-              `${target?.label ?? projection.targetId} · 本地库与仓库不受影响`,
+              `Removed global projection ${contract?.title ?? projection.contractTitle ?? projection.contractId}`,
+              `${target?.label ?? projection.targetId} · the local library and repository are unaffected`,
               'warning',
             ),
             ...s.syncEvents,
@@ -1430,15 +1430,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   deployedVersion: p.previousVersion!,
                   previousVersion: p.deployedVersion,
                   deployedAt: nowIso(),
-                  note: '已回滚到上一版本',
+                  note: 'Rolled back to the previous version',
                 }
               : p,
           ),
           syncEvents: [
             syncEvent(
               'rollback',
-              `回滚全局投影 ${contract?.title ?? projection.contractTitle ?? projection.contractId} → ${target?.label ?? projection.targetId}`,
-              `恢复 ${projection.previousVersion}；本地库与仓库未变`,
+              `Rolled back global projection ${contract?.title ?? projection.contractTitle ?? projection.contractId} → ${target?.label ?? projection.targetId}`,
+              `Restored ${projection.previousVersion}; the local library and repository are unchanged`,
               'warning',
             ),
             ...s.syncEvents,
@@ -1452,7 +1452,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           { ...s, skills: [skill, ...s.skills] },
           skill,
           'added',
-          '从技能商店安装，已加入本地库，等待推送',
+          'Installed from Skill Store, added to the local library, pending push',
         ),
       ),
     saveSkill: (next) =>
@@ -1463,13 +1463,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ...next,
             versions: next.versions.length
               ? next.versions
-              : pushVersion([], { instructions: next.instructions }, '初始版本'),
+              : pushVersion([], { instructions: next.instructions }, 'Initial version'),
           }
           return withSkillLocalChange(
             { ...s, skills: [created, ...s.skills] },
             created,
             'added',
-            '新增本地技能，等待推送',
+            'New local Skill, pending push',
           )
         }
         const contentChanged = prev.instructions !== next.instructions
@@ -1494,8 +1494,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             saved,
             'modified',
             moved
-              ? `已移动到「${next.folder || '未分类'}」，仓库路径随之更新，等待推送`
-              : '本地修改了技能，等待推送',
+              ? `Moved to "${next.folder || 'Uncategorized'}"; repository path updated, pending push`
+              : 'Skill edited locally, pending push',
           )
         }
         return state
@@ -1517,8 +1517,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ? [
                 syncEvent(
                   'review',
-                  `已删除本地技能：${skill.name}`,
-                  '仓库文件未改动；若远端仍有该技能，下次 fetch 后会重新出现在待拉取中',
+                  `Deleted local Skill: ${skill.name}`,
+                  'Repository files were not changed; if the remote still has this Skill, it will reappear as incoming after the next fetch',
                   'warning',
                 ),
                 ...s.syncEvents,
@@ -1547,7 +1547,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return {
             ...sk,
             instructions: target.data.instructions ?? sk.instructions,
-            versions: pushVersion(sk.versions, target.data, `恢复自 v${target.version}`),
+            versions: pushVersion(sk.versions, target.data, `Restored from v${target.version}`),
           }
         }),
       })),
@@ -1571,7 +1571,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             { ...s, mcps: [created, ...s.mcps] },
             created,
             'added',
-            '新增本地 MCP 模板，等待推送',
+            'New local MCP template, pending push',
           )
         }
         const changed = mcpConfig(prev) !== mcpConfig(next)
@@ -1594,8 +1594,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           saved,
           'modified',
           prev.folder !== next.folder || prev.name !== next.name
-            ? `已移动到「${next.folder || '未分类'}」，仓库路径随之更新，等待推送`
-            : '本地修改了 MCP 模板，等待推送',
+            ? `Moved to "${next.folder || 'Uncategorized'}"; repository path updated, pending push`
+            : 'MCP template edited locally, pending push',
         )
         return state
       }),
@@ -1614,8 +1614,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ? [
                 syncEvent(
                   'review',
-                  `已删除本地 MCP：${mcp.name}`,
-                  '仓库文件未改动；若远端仍有该模板，下次 fetch 后会重新出现在待拉取中',
+                  `Deleted local MCP: ${mcp.name}`,
+                  'Repository files were not changed; if the remote still has this template, it will reappear as incoming after the next fetch',
                   'warning',
                 ),
                 ...s.syncEvents,
@@ -1659,7 +1659,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ...m,
             ...(parsed as Partial<McpServer>),
             updatedAt: nowIso(),
-            versions: pushVersion(m.versions, target.data, `恢复自 v${target.version}`),
+            versions: pushVersion(m.versions, target.data, `Restored from v${target.version}`),
           }
         }),
       })),
@@ -1676,7 +1676,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           { ...s, mcps: [server, ...s.mcps] },
           server,
           'added',
-          '从 Agent 配置反向导入，已加入本地库，等待推送',
+          'Imported from the Agent configuration, added to the local library, pending push',
         ),
       ),
 
@@ -1697,8 +1697,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncEvents: [
             syncEvent(
               'connect',
-              same ? `仓库设置已更新 ${config.url}` : `连接仓库 ${config.url}`,
-              `${config.branch} · ${config.auth === 'credential' ? '系统 Git 凭据' : config.auth === 'ssh' ? 'SSH Key' : '访问令牌'} · 目录映射已确认`,
+              same ? `Repository settings updated ${config.url}` : `Connected repository ${config.url}`,
+              `${config.branch} · ${config.auth === 'credential' ? 'system Git credentials' : config.auth === 'ssh' ? 'SSH Key' : 'access token'} · directory mapping confirmed`,
             ),
             ...s.syncEvents,
           ],
@@ -1709,7 +1709,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...s,
         repo: { ...s.repo, connected: false, ahead: 0, behind: 0 },
         syncChanges: [],
-        syncEvents: [syncEvent('connect', '已断开仓库连接', '本地资产库与分发状态保持不变', 'warning'), ...s.syncEvents],
+        syncEvents: [syncEvent('connect', 'Disconnected repository', 'The local asset library and dispatch state are unchanged', 'warning'), ...s.syncEvents],
       })),
     fetchRepo: () =>
       setState((s) => ({
@@ -1718,8 +1718,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         syncEvents: [
           syncEvent(
             'fetch',
-            'fetch 完成 · 未自动合并',
-            s.repo.behind > 0 ? `${s.repo.url} · 领先 ${s.repo.ahead} / 落后 ${s.repo.behind}，等待确认` : `${s.repo.url} · 已是最新`,
+            'Fetch complete · not merged automatically',
+            s.repo.behind > 0 ? `${s.repo.url} · ${s.repo.ahead} ahead / ${s.repo.behind} behind, awaiting confirmation` : `${s.repo.url} · already up to date`,
           ),
           ...s.syncEvents,
         ],
@@ -1750,13 +1750,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                       instructions: nextContent,
                       folder,
                       updatedAt: nowIso(),
-                      versions: pushVersion(sk.versions, { instructions: nextContent }, `仓库更新 ${ch.remoteVersion ?? ''}`.trim()),
+                      versions: pushVersion(sk.versions, { instructions: nextContent }, `Repository update ${ch.remoteVersion ?? ''}`.trim()),
                     }
                   : sk,
               )
             } else {
               const nextContent =
-                content ?? `# ${ch.assetName}\n\n${ch.summary}\n\n> 来自仓库 ${ch.path}\n`
+                content ?? `# ${ch.assetName}\n\n${ch.summary}\n\n> From repository ${ch.path}\n`
               const version = (ch.remoteVersion ?? ch.versionLabel ?? 'v1.0.0').replace(/^v/, '')
               skills = [
                 {
@@ -1767,16 +1767,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   author: 'repo',
                   version,
                   source: 'import',
-                  category: folder ?? '仓库同步',
+                  category: folder ?? 'Repository Sync',
                   folder,
-                  tags: ['仓库'],
+                  tags: ['Repository'],
                   instructions: nextContent,
                   installs: {},
                   versions: [
                     {
                       id: uid(),
                       version: 1,
-                      note: `来自仓库 ${ch.versionLabel ?? ''}`.trim(),
+                      note: `From repository ${ch.versionLabel ?? ''}`.trim(),
                       createdAt: nowIso(),
                       data: { instructions: nextContent },
                     },
@@ -1811,7 +1811,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   versions: pushVersion(
                     existing.versions,
                     data,
-                    `仓库更新 ${ch.remoteVersion ?? ''}`.trim(),
+                    `Repository update ${ch.remoteVersion ?? ''}`.trim(),
                   ),
                 }
                 prompts = prompts.map((p) => (p.id === existing.id ? updated : p))
@@ -1827,7 +1827,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   isFavorite: false,
                   isPinned: false,
                   usageCount: 0,
-                  versions: pushVersion([], data, `来自仓库 ${ch.versionLabel ?? ''}`.trim()),
+                  versions: pushVersion([], data, `From repository ${ch.versionLabel ?? ''}`.trim()),
                   createdAt: nowIso(),
                   updatedAt: nowIso(),
                 }
@@ -1863,7 +1863,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   versions: pushVersion(
                     existing.versions,
                     contractVersionData({ ...existing, ...data } as AgentContract),
-                    `仓库更新 ${ch.remoteVersion ?? ''}`.trim(),
+                    `Repository update ${ch.remoteVersion ?? ''}`.trim(),
                   ),
                 }
                 contracts = contracts.map((c) => (c.id === existing.id ? updated : c))
@@ -1877,7 +1877,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   versions: pushVersion(
                     [],
                     contractVersionData({ id: '', ...data } as AgentContract),
-                    `来自仓库 ${ch.versionLabel ?? ''}`.trim(),
+                    `From repository ${ch.versionLabel ?? ''}`.trim(),
                   ),
                   createdAt: nowIso(),
                   updatedAt: nowIso(),
@@ -1892,7 +1892,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             const folder = folderFromRepoPath(ch.path, s.repo.layout.mcp, 1)
             const existing = mcps.find((m) => m.name === ch.assetName)
             if (existing) {
-              // 远程模板只带 ${VAR} 占位；本机已有真实凭据继续沿用，非密钥字段采用远程新值
+              // Remote templates carry only ${VAR} placeholders; real local credentials are kept, and non-secret fields take the new remote values
               const mergedEnv: Record<string, string> = { ...(parsed?.env ?? {}) }
               for (const [key, value] of Object.entries(existing.env ?? {})) {
                 if ((isSecretKey(key) && value.trim()) || mergedEnv[key] === undefined) {
@@ -1916,7 +1916,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               }
               mcps = mcps.map((m) =>
                 m.id === existing.id
-                  ? { ...next, versions: pushVersion(m.versions, mcpConfigOf(next), '仓库模板更新') }
+                  ? { ...next, versions: pushVersion(m.versions, mcpConfigOf(next), 'Repository template update') }
                   : m,
               )
             } else if (parsed) {
@@ -1934,7 +1934,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 enabled: true,
                 isFavorite: false,
                 folder,
-                tags: ['仓库'],
+                tags: ['Repository'],
                 source: 'import',
                 installs: {},
                 notes: '',
@@ -1945,7 +1945,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   versions: [],
                   createdAt: nowIso(),
                   updatedAt: nowIso(),
-                } as McpServer), `来自仓库 ${ch.versionLabel ?? ''}`.trim()),
+                } as McpServer), `From repository ${ch.versionLabel ?? ''}`.trim()),
                 createdAt: nowIso(),
                 updatedAt: nowIso(),
               }
@@ -1963,7 +1963,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             pulledContractIds.includes(p.contractId)
               ? p.status === 'drifted'
                 ? p
-                : { ...p, status: 'stale', note: '仓库更新已合入，等待重新投影' }
+                : { ...p, status: 'stale', note: 'Repository update merged in, pending re-projection' }
               : p,
           ),
           repo: {
@@ -1975,7 +1975,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncEvents: [
             syncEvent(
               'pull',
-              `拉取 ${targets.length} 项变更到本地库`,
+              `Pulled ${targets.length} changes into the local library`,
               targets.map((t) => `${t.kind}:${t.assetName}`).join(' · '),
             ),
             ...s.syncEvents,
@@ -1991,8 +1991,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (targets.length === 0) return s
         const hash = shortHash()
         const detail = createPr
-          ? `分支 prompt-keeper/sync-${hash.slice(0, 4)} · 已创建 PR（${message}）`
-          : `直接推送到 ${s.repo.branch} · commit ${hash}（${message}）`
+          ? `Branch prompt-keeper/sync-${hash.slice(0, 4)} · PR created (${message})`
+          : `Pushed directly to ${s.repo.branch} · commit ${hash} (${message})`
         let prompts = s.prompts
         let contracts = s.contracts
         for (const target of targets.filter((t) => t.kind === 'prompt')) {
@@ -2008,7 +2008,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           repo: { ...s.repo, ahead: Math.max(0, s.repo.ahead - targets.length), lastSyncedAt: nowIso() },
           syncChanges: s.syncChanges.map((c) => (targets.some((t) => t.id === c.id) ? { ...c, resolved: true } : c)),
           syncEvents: [
-            syncEvent('push', `推送 ${targets.length} 个变更 · commit ${hash}`, detail),
+            syncEvent('push', `Pushed ${targets.length} changes · commit ${hash}`, detail),
             ...s.syncEvents,
           ],
         }
@@ -2034,7 +2034,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 instructions: content,
                 folder: folderFromRepoPath(ch.path, s.repo.layout.skills, 2),
                 updatedAt: nowIso(),
-                versions: pushVersion(sk.versions, { instructions: content }, `解决同步冲突（${strategy === 'remote' ? '采用仓库' : '手动合并'}）`),
+                versions: pushVersion(sk.versions, { instructions: content }, `Resolved sync conflict (${strategy === 'remote' ? 'took repository version' : 'manual merge'})`),
               }
             })
           }
@@ -2064,7 +2064,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 versions: pushVersion(
                   existing.versions,
                   data,
-                  `解决同步冲突（${strategy === 'remote' ? '采用仓库' : '手动合并'}）`,
+                  `Resolved sync conflict (${strategy === 'remote' ? 'took repository version' : 'manual merge'})`,
                 ),
               }
               prompts = prompts.map((p) => (p.id === existing.id ? updated : p))
@@ -2080,7 +2080,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 isFavorite: false,
                 isPinned: false,
                 usageCount: 0,
-                versions: pushVersion([], data, `解决同步冲突（${strategy === 'remote' ? '采用仓库' : '手动合并'}）`),
+                versions: pushVersion([], data, `Resolved sync conflict (${strategy === 'remote' ? 'took repository version' : 'manual merge'})`),
                 createdAt: nowIso(),
                 updatedAt: nowIso(),
               }
@@ -2121,7 +2121,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 versions: pushVersion(
                   existing.versions,
                   contractVersionData({ ...existing, ...data } as AgentContract),
-                  `解决同步冲突（${strategy === 'remote' ? '采用仓库' : '手动合并'}）`,
+                  `Resolved sync conflict (${strategy === 'remote' ? 'took repository version' : 'manual merge'})`,
                 ),
               }
               contracts = contracts.map((c) => (c.id === existing.id ? updated : c))
@@ -2134,7 +2134,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 versions: pushVersion(
                   [],
                   contractVersionData({ id: '', ...data } as AgentContract),
-                  `解决同步冲突（${strategy === 'remote' ? '采用仓库' : '手动合并'}）`,
+                  `Resolved sync conflict (${strategy === 'remote' ? 'took repository version' : 'manual merge'})`,
                 ),
                 createdAt: nowIso(),
                 updatedAt: nowIso(),
@@ -2184,8 +2184,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 direction: 'outgoing',
                 summary:
                   strategy === 'manual'
-                    ? '冲突手动合并结果待推送'
-                    : '冲突已按本地版本解决，合并结果待推送',
+                    ? 'Manual conflict merge result pending push'
+                    : 'Conflict resolved with the local version; merge result pending push',
                 additions: 0,
                 deletions: 0,
                 risk: followUpRisk,
@@ -2206,7 +2206,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   p.contractId === targetContract.id
                     ? p.status === 'drifted'
                       ? p
-                      : { ...p, status: 'stale', note: '冲突处理结果已写入本地库，等待重新投影' }
+                      : { ...p, status: 'stale', note: 'Conflict resolution written to the local library, pending re-projection' }
                     : p,
                 )
               : s.contractProjections,
@@ -2223,8 +2223,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncEvents: [
             syncEvent(
               'conflict',
-              `已解决冲突：${ch.kind}:${ch.assetName}`,
-              strategy === 'remote' ? '采用仓库版本' : strategy === 'local' ? '保留本地版本' : '手动合并后写入本地库',
+              `Resolved conflict: ${ch.kind}:${ch.assetName}`,
+              strategy === 'remote' ? 'Took the repository version' : strategy === 'local' ? 'Kept the local version' : 'Manually merged and written to the local library',
               'warning',
             ),
             ...s.syncEvents,
@@ -2242,9 +2242,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         let maskedPrompt: Prompt | null = null
         let maskedContract: AgentContract | null = null
         let maskedMcp: McpServer | null = null
-        let summary = '已把明文密钥替换为 ${AMAP_API_KEY} 占位，真实值仅存于本机钥匙串'
+        let summary = 'Replaced the plaintext secret with the ${AMAP_API_KEY} placeholder; the real value lives only in the local keychain'
         if (ch.kind === 'prompt') {
-          summary = '已把 Prompt 正文中的疑似凭据替换为 {{api_key}} 模板变量，真实值未落盘'
+          summary = 'Replaced suspected credentials in the Prompt content with the {{api_key}} template variable; the real value was never written to disk'
           const target = s.prompts.find(
             (p) => (ch.assetId ? p.id === ch.assetId : false) || p.title === ch.assetName,
           )
@@ -2264,13 +2264,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               userPrompt,
               variables,
               updatedAt: nowIso(),
-              versions: pushVersion(target.versions, data, '移除疑似明文凭据'),
+              versions: pushVersion(target.versions, data, 'Removed suspected plaintext credentials'),
             }
             prompts = s.prompts.map((p) => (p.id === target.id ? maskedPrompt! : p))
           }
         }
         if (ch.kind === 'mcp') {
-          summary = '仓库模板中的凭据已改为 ${VAR} 占位；真实值仍只在本机钥匙串'
+          summary = 'Credentials in the repository template were changed to ${VAR} placeholders; real values remain only in the local keychain'
           const target = s.mcps.find(
             (m) => (ch.assetId ? m.id === ch.assetId : false) || m.name === ch.assetName,
           )
@@ -2280,7 +2280,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
         }
         if (ch.kind === 'contract') {
-          summary = '已把指令正文中的疑似凭据替换为 {{api_key}} 模板变量，真实值未落盘'
+          summary = 'Replaced suspected credentials in the instruction content with the {{api_key}} template variable; the real value was never written to disk'
           const target = s.contracts.find(
             (c) => (ch.assetId ? c.id === ch.assetId : false) || c.title === ch.assetName,
           )
@@ -2293,7 +2293,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               versions: pushVersion(
                 target.versions,
                 contractVersionData({ ...target, body }),
-                '移除疑似明文凭据',
+                'Removed suspected plaintext credentials',
               ),
             }
             contracts = s.contracts.map((c) => (c.id === target.id ? maskedContract! : c))
@@ -2324,10 +2324,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           syncEvents: [
             syncEvent(
               'blocked',
-              `已解除推送阻断：${ch.kind}:${ch.assetName}`,
+              `Push block cleared: ${ch.kind}:${ch.assetName}`,
               ch.kind === 'prompt' || ch.kind === 'contract'
-                ? '正文中的凭据已替换为 {{api_key}} 变量；复制或分发时再填值'
-                : '明文密钥已转为 ${VAR} 占位；本机值不会进入仓库',
+                ? 'Credentials in the content were replaced with the {{api_key}} variable; fill in values when copying or dispatching'
+                : 'Plaintext secrets were converted to ${VAR} placeholders; local values never enter the repository',
               'success',
             ),
             ...s.syncEvents,
@@ -2386,7 +2386,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           skills,
           mcps,
           syncEvents: [
-            syncEvent('deploy', `分发 ${kind}:${asset.name} → ${agentId}`, `${mode} · ${version}`),
+            syncEvent('deploy', `Dispatched ${kind}:${asset.name} → ${agentId}`, `${mode} · ${version}`),
             ...s.syncEvents,
           ],
         }
@@ -2417,7 +2417,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               : d,
           ),
           syncEvents: [
-            syncEvent('deploy', `分发 ${target.kind}:${target.assetName} → ${target.agentId}`, `${target.mode} · ${version}`),
+            syncEvent('deploy', `Dispatched ${target.kind}:${target.assetName} → ${target.agentId}`, `${target.mode} · ${version}`),
             ...s.syncEvents,
           ],
         }
@@ -2441,7 +2441,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...s,
           deployments,
           syncEvents: [
-            syncEvent('deploy', `批量分发 ${targets.length} 项过时资产`, '仅同步 stale；drifted（Agent 内被改过）不自动覆盖'),
+            syncEvent('deploy', `Bulk dispatched ${targets.length} stale assets`, 'Only stale items are synced; drifted items (edited inside the Agent) are not overwritten automatically'),
             ...s.syncEvents,
           ],
         }
@@ -2460,7 +2460,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...s,
           deployments: s.deployments.filter((d) => d.id !== id),
           syncEvents: target
-            ? [syncEvent('deploy', `已移除分发 ${target.kind}:${target.assetName}`, `目标 ${target.agentId}，不影响本地库与仓库`, 'warning'), ...s.syncEvents]
+            ? [syncEvent('deploy', `Removed dispatch ${target.kind}:${target.assetName}`, `Target ${target.agentId}; the local library and repository are unaffected`, 'warning'), ...s.syncEvents]
             : s.syncEvents,
         }
       }),
@@ -2473,14 +2473,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...s,
           deployments: s.deployments.map((d) =>
             d.id === id
-              ? { ...d, status: 'stale', deployedVersion: d.previousVersion!, previousVersion: d.deployedVersion, deployedAt: nowIso(), note: '已回滚到上一版本' }
+              ? { ...d, status: 'stale', deployedVersion: d.previousVersion!, previousVersion: d.deployedVersion, deployedAt: nowIso(), note: 'Rolled back to the previous version' }
               : d,
           ),
           syncEvents: [
             syncEvent(
               'rollback',
-              `回滚分发 ${target.kind}:${target.assetName} → ${target.agentId}`,
-              `恢复 ${target.previousVersion}，本地库与仓库未变`,
+              `Rolled back dispatch ${target.kind}:${target.assetName} → ${target.agentId}`,
+              `Restored ${target.previousVersion}; the local library and repository are unchanged`,
               'warning',
             ),
             ...s.syncEvents,
@@ -2494,7 +2494,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...s,
         detectedAgents: next,
         syncEvents: [
-          syncEvent('deploy', `重新检测本机 Agent · 发现 ${next.length} 个`, '扫描各工具默认目录与配置文件，未安装的工具不写入'),
+          syncEvent('deploy', `Re-detected local Agents · found ${next.length}`, 'Scanned each tool\'s default directories and configuration files; tools that are not installed are not written'),
           ...s.syncEvents,
         ],
       }))
@@ -2505,7 +2505,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   return <StoreCtx.Provider value={api}>{children}</StoreCtx.Provider>
 }
 
-// 内容快照辅助（避免把版本数组写进 data）
+// Content snapshot helpers (avoid writing version arrays into data)
 function promptContentOf(p: Prompt): Record<string, string> {
   return { title: p.title, description: p.description, systemPrompt: p.systemPrompt, userPrompt: p.userPrompt }
 }
@@ -2521,6 +2521,6 @@ function mcpConfigOf(m: McpServer): Record<string, string> {
 
 export function useStore(): StoreApi {
   const ctx = useContext(StoreCtx)
-  if (!ctx) throw new Error('useStore 必须在 StoreProvider 内使用')
+  if (!ctx) throw new Error('useStore must be used within a StoreProvider')
   return ctx
 }

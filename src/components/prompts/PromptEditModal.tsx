@@ -35,7 +35,7 @@ export function PromptEditModal({
   onClose,
 }: {
   open: boolean
-  prompt: Prompt | null // null = 新建
+  prompt: Prompt | null // null = create new
   onClose: () => void
 }) {
   const { state, savePrompt } = useStore()
@@ -57,11 +57,11 @@ export function PromptEditModal({
 
   const submit = () => {
     if (!draft.title.trim()) {
-      setError('标题必填')
+      setError('Title is required')
       return
     }
     if (!draft.systemPrompt.trim() && !draft.userPrompt.trim()) {
-      setError('System Prompt 与 User Prompt 至少填写一个')
+      setError('Fill in at least one of System Prompt or User Prompt')
       return
     }
     const next: Prompt = {
@@ -80,22 +80,22 @@ export function PromptEditModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={prompt ? '编辑 Prompt' : '新建 Prompt'}
+      title={prompt ? 'Edit Prompt' : 'New Prompt'}
       width="max-w-2xl"
       footer={
         <>
           {error && <span className="mr-auto text-xs text-danger">{error}</span>}
           <Button variant="outline" onClick={onClose}>
-            取消
+            Cancel
           </Button>
-          <Button onClick={submit}>保存（自动生成版本）</Button>
+          <Button onClick={submit}>Save (auto-creates version)</Button>
         </>
       }
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">标题 *</label>
-          <Input aria-label="标题" value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="例如：代码审查助手" />
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Title *</label>
+          <Input aria-label="Title" value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. Code Review Assistant" />
         </div>
 
         <FolderField
@@ -106,28 +106,28 @@ export function PromptEditModal({
             { ...draft, title: draft.title || 'untitled', folder: draft.folder },
             state.repo.layout.prompts,
           )}
-          hint="保存后文件夹会成为仓库目录；移动文件夹会同步移动文件路径。"
+          hint="After saving, the folder becomes a repo directory; moving folders moves the file paths too."
         />
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">描述</label>
-          <Input aria-label="描述" value={draft.description} onChange={(e) => set({ description: e.target.value })} placeholder="一句话说明用途" />
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Description</label>
+          <Input aria-label="Description" value={draft.description} onChange={(e) => set({ description: e.target.value })} placeholder="One line on what this is for" />
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">System Prompt</label>
-          <Textarea aria-label="System Prompt" rows={4} value={draft.systemPrompt} onChange={(e) => set({ systemPrompt: e.target.value })} placeholder="设定角色与输出要求…" />
+          <Textarea aria-label="System Prompt" rows={4} value={draft.systemPrompt} onChange={(e) => set({ systemPrompt: e.target.value })} placeholder="Set the role and output requirements…" />
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">User Prompt</label>
-          <Textarea aria-label="User Prompt" rows={5} value={draft.userPrompt} onChange={(e) => set({ userPrompt: e.target.value })} placeholder="正文模板，可用 {{变量名}} 或 {{变量名:示例值}}…" />
+          <Textarea aria-label="User Prompt" rows={5} value={draft.userPrompt} onChange={(e) => set({ userPrompt: e.target.value })} placeholder="Body template; use {{variable}} or {{variable:example}}…" />
         </div>
 
         <div>
           <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            标签
-            <span className="font-normal">回车添加，点击 × 移除</span>
+            Tags
+            <span className="font-normal">Press Enter to add, click × to remove</span>
           </label>
           <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-input bg-card px-2.5 py-2">
             {draft.tags.map((t) => (
@@ -135,7 +135,7 @@ export function PromptEditModal({
                 {t}
                 <button
                   type="button"
-                  aria-label={`移除标签 ${t}`}
+                  aria-label={`Remove tag ${t}`}
                   className="cursor-pointer"
                   onClick={() => set({ tags: draft.tags.filter((x) => x !== t) })}
                 >
@@ -144,10 +144,10 @@ export function PromptEditModal({
               </Badge>
             ))}
             <input
-              aria-label="添加标签"
+              aria-label="Add tag"
               className="min-w-24 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/80"
               value={tagInput}
-              placeholder={draft.tags.length ? '' : '编程、写作…'}
+              placeholder={draft.tags.length ? '' : 'Engineering, Writing…'}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && tagInput.trim()) {
@@ -162,15 +162,15 @@ export function PromptEditModal({
 
         <div>
           <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            同步范围
-            <span className="font-normal">Git 仓库是可选的；私密 Prompt 建议仅本机</span>
+            Sync scope
+            <span className="font-normal">Git sync is optional; keep private prompts local only</span>
           </label>
           <div className="grid grid-cols-3 gap-2">
             {(
               [
-                { v: 'inherit', title: '跟随仓库策略', desc: '仓库开启 Prompt 同步时参与' },
-                { v: 'sync', title: '参与同步', desc: '显式推送到 Git 仓库' },
-                { v: 'local', title: '仅本机', desc: '不进入 Git，也不生成待推送' },
+                { v: 'inherit', title: 'Follow repository policy', desc: 'Included when the repo enables Prompt sync' },
+                { v: 'sync', title: 'Participate in sync', desc: 'Explicitly push to the Git repo' },
+                { v: 'local', title: 'Local only', desc: 'Never enters Git or pending pushes' },
               ] as const
             ).map((o) => {
               const disabled = o.v === 'sync' && !state.repo.policies.prompts
@@ -195,15 +195,15 @@ export function PromptEditModal({
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
             {state.repo.connected
-              ? '保存后在详情页仍可调整；参与同步的改动会进入「待推送」，不会自动提交。'
-              : '当前未连接仓库；同步范围只作为偏好保存。'}
+              ? 'You can still adjust this on the detail page; changes in sync scope become pending pushes and are never committed automatically.'
+              : 'No repo connected; the sync scope is saved as a preference only.'}
           </p>
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">识别到的模板变量</label>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Detected template variables</label>
           {variableDefs.length === 0 ? (
-            <p className="text-xs text-muted-foreground">未检测到变量；在正文中写 {`{{变量名}}`} 即可，复制/测试时会弹表单填值。</p>
+            <p className="text-xs text-muted-foreground">No variables detected. Write {`{{variable}}`} in the body; a form appears when copying or testing.</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {variableDefs.map((v) => (

@@ -14,14 +14,14 @@ import { AssetSyncBadge } from '../sync/AssetSyncBadge'
 import { folderLabel, folderMatches } from '../../lib/folders'
 import { FolderTree } from '../shared/FolderTree'
 
-/** 目标平台当前对某 server 的状态 */
+/** Current status of a server on a target platform */
 export type TargetStatus = 'managed' | 'missing' | 'external'
 export function targetStatus(server: McpServer, platformId: string): TargetStatus {
   if (server.installs[platformId]) return 'managed'
   return 'missing'
 }
 
-/* ---------------- 分发弹窗 ---------------- */
+/* ---------------- Dispatch modal ---------------- */
 
 export function McpDeployModal({
   server,
@@ -37,10 +37,10 @@ export function McpDeployModal({
 
   if (!server.enabled) {
     return (
-      <Modal open onClose={onClose} title="无法分发" width="max-w-md">
+      <Modal open onClose={onClose} title="Cannot dispatch" width="max-w-md">
         <div className="flex items-start gap-2 rounded-lg bg-warning-soft px-3 py-2.5 text-sm text-warning">
           <Icon name="alert" className="mt-0.5" />
-          服务「{server.name}」已停用，停用的服务禁止分发到任何平台。请先在列表中启用。
+          Server "{server.name}" is disabled. Disabled servers cannot be dispatched to any platform. Enable it in the list first.
         </div>
       </Modal>
     )
@@ -53,22 +53,22 @@ export function McpDeployModal({
       open
       onClose={onClose}
       width="max-w-2xl"
-      title={`分发到 Agent 平台 — ${server.name}`}
-      subtitle="应用会按平台规范改写其 MCP 配置文件；写入为原型模拟，不触碰真实文件"
+      title={`Dispatch to Agent platforms — ${server.name}`}
+      subtitle="The app rewrites the MCP config file following each platform's conventions; writes are simulated in this prototype and never touch real files"
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
-            取消
+            Cancel
           </Button>
           <Button
             disabled={selected.length === 0}
             onClick={() => {
               for (const p of selected) applyMcp(server.id, p)
-              toast.success(`已把 ${server.name} 应用到 ${selected.length} 个平台（模拟写入）`)
+              toast.success(`Applied ${server.name} to ${selected.length} platforms (simulated write)`)
               onClose()
             }}
           >
-            应用到所选（{selected.length}）
+            Apply to selected ({selected.length})
           </Button>
         </>
       }
@@ -97,25 +97,25 @@ export function McpDeployModal({
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <button type="button" onClick={() => setPreviewFor(t.id)} className="cursor-pointer rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted">
-                  预览写入内容
+                  Preview write
                 </button>
                 {st === 'managed' ? (
                   <>
-                    <Badge variant="success">已由本应用管理</Badge>
+                    <Badge variant="success">Managed by this app</Badge>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="text-danger"
                       onClick={() => {
                         removeMcpFromPlatform(server.id, t.id)
-                        toast.success(`已从 ${t.name} 的配置移除（模拟）`)
+                        toast.success(`Removed from ${t.name} config (simulated)`)
                       }}
                     >
-                      移除
+                      Remove
                     </Button>
                   </>
                 ) : (
-                  <Badge variant="outline">{st === 'external' ? '外部配置' : '未创建'}</Badge>
+                  <Badge variant="outline">{st === 'external' ? 'External config' : 'Not created'}</Badge>
                 )}
               </div>
             </div>
@@ -125,14 +125,14 @@ export function McpDeployModal({
         {previewFor && (
           <div>
             <div className="mb-1 mt-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              写入预览 · {MCP_TARGETS.find((t) => t.id === previewFor)?.file}
+              Write preview · {MCP_TARGETS.find((t) => t.id === previewFor)?.file}
               <Badge variant="outline">{MCP_TARGETS.find((t) => t.id === previewFor)?.format}</Badge>
             </div>
             <pre className="max-h-48 overflow-auto rounded-lg border border-border bg-muted/60 p-3 font-mono text-xs leading-5">
               {projectForTarget(selectedServers, MCP_TARGETS.find((t) => t.id === previewFor)!)}
             </pre>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              凭据在写入时会从加密存储解密注入；此处原型以 *** 代替。真实产品为原子写入 + 失败回滚，并保留原文件权限。
+              Credentials are decrypted from encrypted storage and injected at write time; this prototype shows *** instead. The real product performs atomic writes with rollback on failure and preserves file permissions.
             </p>
           </div>
         )}
@@ -141,7 +141,7 @@ export function McpDeployModal({
   )
 }
 
-/* ---------------- 我的 MCP：主从布局 ---------------- */
+/* ---------------- My MCP: master-detail layout ---------------- */
 
 export function McpLibrary({ query, createSignal }: { query: string; createSignal: { n: number; page: string } }) {
   const { state, saveMcp, deleteMcp, toggleMcpEnabled, toggleMcpFavorite, restoreMcpVersion, deleteMcpVersion } = useStore()
@@ -187,9 +187,9 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
         selected={folderFilter}
         onSelect={setFolderFilter}
         className="hidden w-[176px] shrink-0 border-r border-border bg-card/40 xl:flex"
-        title="MCP 文件夹"
+        title="MCP folders"
       />
-      {/* 列表 */}
+      {/* List */}
       <div className="flex w-[360px] shrink-0 flex-col border-r border-border bg-background/40 xl:w-[380px]">
         {folderFilter && (
           <div className="flex items-center gap-1.5 border-b border-border bg-muted/25 px-4 py-1.5 text-[11px] text-muted-foreground">
@@ -200,7 +200,7 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
               onClick={() => setFolderFilter('')}
               className="ml-auto shrink-0 cursor-pointer rounded px-1.5 py-0.5 transition-colors hover:bg-muted hover:text-foreground"
             >
-              返回全部
+              Show all
             </button>
           </div>
         )}
@@ -209,30 +209,30 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
             type="button"
             onClick={() => setFavOnly((f) => !f)}
             aria-pressed={favOnly}
-            aria-label="只看收藏"
+            aria-label="Favorites only"
             className={cn(
               'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors',
               favOnly
                 ? 'border-warning/50 bg-warning-soft text-warning'
                 : 'border-input text-muted-foreground hover:border-border-strong hover:bg-muted hover:text-foreground',
             )}
-            title="只看收藏"
+            title="Favorites only"
           >
             <Icon name="star" className="h-3.5 w-3.5" />
           </button>
           <span className="tabular text-[11px] text-muted-foreground">
-            {list.length} / {state.mcps.length} 个服务
+            {list.length} / {state.mcps.length} servers
           </span>
           <Button size="sm" variant="outline" className="ml-auto h-7" onClick={() => setCreating(true)}
-            title="新建 MCP（快捷键 N）"
+            title="New MCP (shortcut N)"
           >
             <Icon name="plus" className="h-3.5 w-3.5" />
-            新建
+            New
           </Button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
           {list.length === 0 ? (
-            <p className="px-4 py-10 text-center text-xs text-muted-foreground">没有匹配的服务</p>
+            <p className="px-4 py-10 text-center text-xs text-muted-foreground">No matching servers</p>
           ) : (
             list.map((m) => {
               const hb = healthOf(m)
@@ -275,7 +275,7 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
                       <Switch
                         checked={m.enabled}
                         onChange={() => toggleMcpEnabled(m.id)}
-                        label={`${m.enabled ? '停用' : '启用'} ${m.name}`}
+                        label={`${m.enabled ? 'Disable' : 'Enable'} ${m.name}`}
                       />
                     </span>
                   </div>
@@ -287,12 +287,12 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
                     </span>
                     {Object.keys(m.installs).length > 0 && (
                       <Badge variant="success" className="shrink-0 font-normal">
-                        已分发 {Object.keys(m.installs).length}
+                        Dispatched {Object.keys(m.installs).length}
                       </Badge>
                     )}
                     {!m.enabled && (
                       <Badge variant="warning" className="shrink-0 font-normal">
-                        已停用
+                        Disabled
                       </Badge>
                     )}
                     <span className="tabular ml-auto shrink-0 text-[10px] text-muted-foreground">
@@ -306,7 +306,7 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
         </div>
       </div>
 
-      {/* 详情 */}
+      {/* Details */}
       <div className="min-w-0 flex-1 overflow-y-auto bg-background/30">
         {selected ? (
           <McpDetail
@@ -319,7 +319,7 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
             onNotes={(notes) => saveMcp({ ...selected, notes })}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">左侧选择一个 MCP 服务</div>
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Select an MCP server on the left</div>
         )}
       </div>
 
@@ -333,11 +333,11 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
           onClose={() => setVersionOf(null)}
           onRestore={(v) => {
             restoreMcpVersion(versionOf.id, v.id)
-            toast.success(`已恢复 v${v.version}。注意：恢复不会自动写回 Agent 配置，需重新「应用到平台」`)
+            toast.success(`Restored v${v.version}. Note: restoring does not write back to Agent configs; use "Apply to platforms" again`)
           }}
           onDeleteVersion={(vid) => {
             deleteMcpVersion(versionOf.id, vid)
-            toast.success('已删除该历史版本')
+            toast.success('Version deleted')
           }}
         />
       )}
@@ -349,7 +349,7 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
           if (deleteOf) {
             deleteMcp(deleteOf.id)
             setSelectedId(null)
-            toast.success(`已删除 ${deleteOf.name}（绑定关系与脱敏指纹一并清理）`)
+            toast.success(`Deleted ${deleteOf.name} (dispatch bindings and redacted fingerprints removed)`)
           }
         }}
       />
@@ -357,7 +357,7 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
   )
 }
 
-/* ---------------- 详情区 ---------------- */
+/* ---------------- Detail pane ---------------- */
 
 function McpDetail({
   server,
@@ -398,13 +398,13 @@ function McpDetail({
               {folderLabel(server.folder)}
             </Badge>
             <Badge variant={server.source === 'manual' ? 'outline' : server.source === 'market' ? 'primary' : 'warning'} className="font-normal">
-              {server.source === 'manual' ? '手动创建' : server.source === 'market' ? '来自商店' : '导入'}
+              {server.source === 'manual' ? 'Manual' : server.source === 'market' ? 'From store' : 'Imported'}
             </Badge>
             <AssetSyncBadge kind="mcp" name={server.name} />
             {hb !== 'ok' && (
               <Badge variant={hb === 'error' ? 'danger' : 'warning'} className="gap-1 font-normal">
                 <Icon name="alert" className="h-3 w-3" />
-                健康检查 {hb === 'error' ? 'error' : 'warning'}
+                Health check {hb === 'error' ? 'error' : 'warning'}
               </Badge>
             )}
           </div>
@@ -413,9 +413,9 @@ function McpDetail({
               size="icon"
               variant="ghost"
               className="h-8 w-8"
-              aria-label={server.isFavorite ? '取消收藏' : '收藏'}
+              aria-label={server.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               aria-pressed={server.isFavorite}
-              title={server.isFavorite ? '取消收藏' : '收藏'}
+              title={server.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               onClick={onToggleFavorite}
             >
               <Icon name="star" className={server.isFavorite ? 'fill-warning/20 text-warning' : ''} />
@@ -425,8 +425,8 @@ function McpDetail({
               size="icon"
               variant="ghost"
               className="h-8 w-8 text-muted-foreground hover:bg-danger-soft hover:text-danger"
-              aria-label="删除 MCP 服务"
-              title="删除"
+              aria-label="Delete MCP server"
+              title="Delete"
               onClick={onDelete}
             >
               <Icon name="trash" className="h-4 w-4" />
@@ -436,7 +436,7 @@ function McpDetail({
         <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{server.description}</p>
         <div className="mt-2 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
           <Icon name="gitBranch" className="h-3 w-3 shrink-0" />
-          <span className="shrink-0">仓库文件</span>
+          <span className="shrink-0">Repo file</span>
           <code className="truncate rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 font-mono text-[10px]">
             {mcpFilePath(server, state.repo.layout.mcp)}
           </code>
@@ -448,21 +448,21 @@ function McpDetail({
             </Badge>
           ))}
           <span className="tabular ml-auto whitespace-nowrap text-[10.5px] text-muted-foreground">
-            更新于 {formatDate(server.updatedAt)}
+            Updated {formatDate(server.updatedAt)}
           </span>
         </div>
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
-          <Button onClick={onDeploy} disabled={!server.enabled} className="shadow-sm" title={server.enabled ? '' : '已停用的服务禁止分发'}>
+          <Button onClick={onDeploy} disabled={!server.enabled} className="shadow-sm" title={server.enabled ? '' : 'Disabled servers cannot be dispatched'}>
             <Icon name="send" />
-            应用到平台
+            Apply to platforms
           </Button>
           <Button variant="outline" onClick={onEdit}>
             <Icon name="pencil" />
-            编辑
+            Edit
           </Button>
           <Button variant="outline" onClick={onVersions}>
             <Icon name="history" />
-            版本（{server.versions.length}）
+            Versions ({server.versions.length})
           </Button>
         </div>
       </div>
@@ -470,9 +470,9 @@ function McpDetail({
       <div className="flex shrink-0 items-center gap-5 border-b border-border px-5 pt-2.5">
         {(
           [
-            { v: 'config', label: '配置（脱敏）' },
-            { v: 'health', label: `健康检查（${issues.length}）` },
-            { v: 'deploy', label: `分发状态（${Object.keys(server.installs).length}/${MCP_TARGETS.length}）` },
+            { v: 'config', label: 'Config (redacted)' },
+            { v: 'health', label: `Health check (${issues.length})` },
+            { v: 'deploy', label: `Dispatch status (${Object.keys(server.installs).length}/${MCP_TARGETS.length})` },
           ] as const
         ).map((t) => (
           <button
@@ -500,15 +500,15 @@ function McpDetail({
                 variant="outline"
                 onClick={async () => {
                   await navigator.clipboard.writeText(serverConfigJson(server)).catch(() => {})
-                  toast.success('已复制脱敏后的配置 JSON')
+                  toast.success('Copied redacted config JSON')
                 }}
               >
                 <Icon name="copy" className="h-3.5 w-3.5" />
-                复制配置
+                Copy config
               </Button>
               <Button size="sm" variant="outline" onClick={onEdit}>
                 <Icon name="pencil" className="h-3.5 w-3.5" />
-                JSON / 表单编辑
+                JSON / form editing
               </Button>
             </div>
             <pre className="overflow-x-auto rounded-lg border border-border bg-muted/60 p-3 font-mono text-xs leading-5">
@@ -516,13 +516,13 @@ function McpDetail({
             </pre>
             <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
               <Icon name="shield" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              凭据字段（KEY / TOKEN / SECRET / PASSWORD / Authorization）以 AES-256-GCM 加密存于 SQLite，主密钥在系统钥匙串；界面回显一律 [REDACTED]，编辑时未改动的脱敏值沿用原值。
+              Credential fields (KEY / TOKEN / SECRET / PASSWORD / Authorization) are encrypted with AES-256-GCM in SQLite, with the master key in the system keychain; the UI always shows [REDACTED], and unchanged redacted values keep their original values when editing.
             </p>
             {server.notes !== undefined && (
               <div>
-                <div className="mb-1 text-xs font-medium text-muted-foreground">个人备注（不产生版本）</div>
+                <div className="mb-1 text-xs font-medium text-muted-foreground">Personal notes (not versioned)</div>
                 <Textarea
-                  aria-label="个人备注"
+                  aria-label="Personal notes"
                   rows={2}
                   value={notesDraft}
                   onChange={(e) => setNotesDraft(e.target.value)}
@@ -539,16 +539,16 @@ function McpDetail({
               {hb === 'ok' ? (
                 <Badge variant="success">
                   <Icon name="check" className="h-3 w-3" />
-                  全部通过
+                  All checks passed
                 </Badge>
               ) : (
                 <Badge variant={hb === 'error' ? 'danger' : 'warning'}>
                   <Icon name="alert" className="h-3 w-3" />
-                  {issues.filter((i) => i.level === 'error').length} 个错误 ·{' '}
-                  {issues.filter((i) => i.level === 'warning').length} 个警告
+                  {issues.filter((i) => i.level === 'error').length} errors ·{' '}
+                  {issues.filter((i) => i.level === 'warning').length} warnings
                 </Badge>
               )}
-              <span className="text-[11px] text-muted-foreground">检查项：命令存在性 / URL 合法性 / 必填 env / 凭据格式（内置常见服务商规则）</span>
+              <span className="text-[11px] text-muted-foreground">Checks: command existence / URL validity / required env / credential format (built-in rules for common providers)</span>
             </div>
             {issues.map((i, idx) => (
               <div
@@ -565,13 +565,13 @@ function McpDetail({
                 </div>
               </div>
             ))}
-            {issues.length === 0 && <p className="text-xs text-muted-foreground">未发现静态问题。真实产品还会在 PATH 中探测命令、对远端 URL 做连通性探测。</p>}
+            {issues.length === 0 && <p className="text-xs text-muted-foreground">No static issues found. The real product also probes commands on PATH and checks remote URL connectivity.</p>}
           </div>
         )}
 
         {tab === 'deploy' && (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">各平台配置文件中该服务的当前状态。真实产品基于 SHA-256 entry digest 识别「外部修改 / 双向冲突」。</p>
+            <p className="text-xs text-muted-foreground">Current state of this server in each platform config file. The real product uses a SHA-256 entry digest to detect "external modification / two-way conflict".</p>
             {MCP_TARGETS.map((t) => {
               const st = targetStatus(server, t.id)
               return (
@@ -582,8 +582,8 @@ function McpDetail({
                     <div className="truncate text-[11px] text-muted-foreground">{t.file}</div>
                   </div>
                   <div className="ml-auto">
-                    {st === 'managed' && <Badge variant="success">已写入 · 本应用管理</Badge>}
-                    {st === 'missing' && <Badge variant="outline">未创建</Badge>}
+                    {st === 'managed' && <Badge variant="success">Written · managed by this app</Badge>}
+                    {st === 'missing' && <Badge variant="outline">Not created</Badge>}
                   </div>
                 </div>
               )
@@ -595,7 +595,7 @@ function McpDetail({
   )
 }
 
-/* ---------------- 版本 / 删除 ---------------- */
+/* ---------------- Versions / Delete ---------------- */
 
 function VersionHistoryModalMcp({
   server,
@@ -616,12 +616,12 @@ function VersionHistoryModalMcp({
     <VersionHistoryModal
       open
       onClose={onClose}
-      title={`版本历史 — ${server.name}`}
+      title={`Version history — ${server.name}`}
       versions={versions}
-      fields={[{ key: 'config', label: '服务配置（脱敏）' }]}
+      fields={[{ key: 'config', label: 'Server config (redacted)' }]}
       onRestore={onRestore}
       onDeleteVersion={onDeleteVersion}
-      restoreHint="恢复仅写入「我的 MCP」库，不会自动改写各 Agent 的配置文件。"
+      restoreHint='Restore only updates the "My MCP" library; it does not rewrite any Agent config files.'
     />
   )
 }
@@ -636,19 +636,19 @@ function DeleteMcpConfirm({
   onConfirm: () => void
 }) {
   return (
-    <Modal open={!!server} onClose={onClose} title="删除 MCP 服务？" width="max-w-md"
+    <Modal open={!!server} onClose={onClose} title="Delete MCP server?" width="max-w-md"
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>取消</Button>
-          <Button variant="danger" onClick={() => { onConfirm(); onClose() }}>确认删除</Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="danger" onClick={() => { onConfirm(); onClose() }}>Delete</Button>
         </>
       }
     >
       <div className="text-sm text-muted-foreground">
         <p>
-          将删除「<b className="text-foreground">{server?.name}</b>」：配置、{server?.versions.length ?? 0} 个历史版本与凭据加密记录，并清理其分发绑定。
+          This deletes "<b className="text-foreground">{server?.name}</b>": its config, {server?.versions.length ?? 0} historical versions, encrypted credential records, and its dispatch bindings.
         </p>
-        <p className="mt-2">已写入各平台配置文件中的条目不会被自动移除，可稍后在「Agent MCP」里卸载。</p>
+        <p className="mt-2">Entries already written to platform config files are not removed automatically; you can uninstall them later under "Agent MCP".</p>
       </div>
     </Modal>
   )

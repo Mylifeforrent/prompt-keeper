@@ -45,7 +45,7 @@ function InlineEditable({
           }}
         />
         <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span>⌘Enter 保存 · Esc 取消</span>
+          <span>⌘Enter to save · Esc to cancel</span>
           <Button
             size="sm"
             className="ml-auto h-7"
@@ -54,7 +54,7 @@ function InlineEditable({
               setEditing(false)
             }}
           >
-            保存
+            Save
           </Button>
         </div>
       </div>
@@ -72,7 +72,7 @@ function InlineEditable({
         setDraft(prompt[field])
         setEditing(true)
       }}
-      title="双击进入 inline 编辑"
+      title="Double-click to edit inline"
     >
       {children}
       <button
@@ -81,11 +81,11 @@ function InlineEditable({
           setDraft(prompt[field])
           setEditing(true)
         }}
-        aria-label={`编辑 ${label}`}
+        aria-label={`Edit ${label}`}
         className="absolute right-2 top-2 hidden h-6 cursor-pointer items-center gap-1 rounded-md border border-border bg-card px-1.5 text-[10px] text-muted-foreground shadow-sm transition-colors hover:text-foreground group-focus-within:flex group-hover:flex"
       >
         <Icon name="pencil" className="h-3 w-3" />
-        编辑
+        Edit
       </button>
     </div>
   )
@@ -119,7 +119,7 @@ export function PromptDetail({
               {prompt.isPinned && <Icon name="pin" className="h-3.5 w-3.5 shrink-0 text-primary" />}
             </div>
             <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
-              {prompt.description || '（无描述）'}
+              {prompt.description || '(No description)'}
             </p>
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
@@ -127,9 +127,9 @@ export function PromptDetail({
               size="icon"
               variant="ghost"
               className="h-8 w-8"
-              aria-label={prompt.isFavorite ? '取消收藏' : '收藏'}
+              aria-label={prompt.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               aria-pressed={prompt.isFavorite}
-              title={prompt.isFavorite ? '取消收藏' : '收藏'}
+              title={prompt.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               onClick={() => togglePromptFavorite(prompt.id)}
             >
               <Icon
@@ -141,9 +141,9 @@ export function PromptDetail({
               size="icon"
               variant="ghost"
               className="h-8 w-8"
-              aria-label={prompt.isPinned ? '取消置顶' : '置顶'}
+              aria-label={prompt.isPinned ? 'Unpin' : 'Pin'}
               aria-pressed={prompt.isPinned}
-              title={prompt.isPinned ? '取消置顶' : '置顶'}
+              title={prompt.isPinned ? 'Unpin' : 'Pin'}
               onClick={() => togglePromptPin(prompt.id)}
             >
               <Icon name="pin" className={cn('h-4 w-4', prompt.isPinned ? 'text-primary' : '')} />
@@ -153,8 +153,8 @@ export function PromptDetail({
               size="icon"
               variant="ghost"
               className="h-8 w-8 text-muted-foreground hover:bg-danger-soft hover:text-danger"
-              aria-label="删除 Prompt"
-              title="删除"
+              aria-label="Delete Prompt"
+              title="Delete"
               onClick={onDelete}
             >
               <Icon name="trash" className="h-4 w-4" />
@@ -178,7 +178,7 @@ export function PromptDetail({
             v{prompt.versions[0]?.version ?? 1}
           </Badge>
           <Badge variant="outline" className="tabular">
-            用 {prompt.usageCount} 次
+            {prompt.usageCount} uses
           </Badge>
           <AssetSyncBadge
             kind="prompt"
@@ -187,13 +187,13 @@ export function PromptDetail({
             policy={prompt.syncPolicy}
           />
           <span className="tabular ml-auto whitespace-nowrap text-[10.5px] text-muted-foreground">
-            更新于 {formatDate(prompt.updatedAt)}
+            Updated {formatDate(prompt.updatedAt)}
           </span>
         </div>
 
         <div className="mt-2 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
           <Icon name="gitBranch" className="h-3 w-3 shrink-0" />
-          <span className="shrink-0">仓库文件</span>
+          <span className="shrink-0">Repo file</span>
           <code className="truncate rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 font-mono text-[10px]">
             {promptFilePath(prompt, state.repo.layout.prompts)}
           </code>
@@ -202,23 +202,23 @@ export function PromptDetail({
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
           <Button onClick={onCopy} className="shadow-sm">
             <Icon name="copy" />
-            复制 Prompt
+            Copy Prompt
           </Button>
           <Button variant="outline" onClick={onTest}>
             <Icon name="flask" />
-            AI 测试
+            AI Test
           </Button>
           <Button variant="outline" onClick={onEdit}>
             <Icon name="pencil" />
-            编辑
+            Edit
           </Button>
           <Button variant="outline" onClick={onSync}>
             <Icon name="gitBranch" />
-            同步
+            Sync
           </Button>
           <Button variant="outline" onClick={onShowVersions}>
             <Icon name="history" />
-            版本
+            Versions
           </Button>
         </div>
       </div>
@@ -253,7 +253,7 @@ export function PromptDetail({
         {prompt.variables.length > 0 && (
           <section>
             <h3 className="mb-2 flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              模板变量（{prompt.variables.length}）
+              Template variables ({prompt.variables.length})
               <span className="h-px flex-1 bg-border/70" />
             </h3>
             <div className="flex flex-wrap gap-1.5">
@@ -267,7 +267,7 @@ export function PromptDetail({
               ))}
             </div>
             <p className="mt-2 text-[10.5px] text-muted-foreground">
-              复制或测试时会弹表单填值，值保留 30 天自动记忆。
+              Copying or testing opens a form to fill values; values are remembered for 30 days.
             </p>
           </section>
         )}

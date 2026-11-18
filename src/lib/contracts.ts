@@ -16,26 +16,26 @@ import { normalizeFolder, repoFilePath } from './folders'
 type BadgeVariant = 'default' | 'secondary' | 'success' | 'warning' | 'danger' | 'info' | 'primary' | 'outline'
 
 export const CONTRACT_SCOPE_META: Record<ContractScope, { label: string; short: string; desc: string }> = {
-  user: { label: '用户级', short: '用户', desc: '对本机所有项目生效，只写入用户目录。' },
-  project: { label: '项目级', short: '项目', desc: '写入当前仓库根目录，跟随仓库共享。' },
-  path: { label: '路径级', short: '路径', desc: '只在指定目录及其子目录内生效，适合模块级规范。' },
+  user: { label: 'User', short: 'User', desc: 'Applies to every project on this machine and is written only to the user directory.' },
+  project: { label: 'Project', short: 'Project', desc: 'Written to the current repository root and shared along with the repository.' },
+  path: { label: 'Path', short: 'Path', desc: 'Applies only within the specified directory and its subdirectories; good for module-level standards.' },
 }
 
 export const ACTIVATION_META: Record<
   ContractActivation['mode'],
   { label: string; short: string; desc: string }
 > = {
-  always: { label: '始终生效', short: '常驻', desc: '每次会话都进入上下文，适合构建、测试、安全等硬约束。' },
-  glob: { label: '按路径生效', short: 'glob', desc: '当处理匹配 glob 的文件时激活；不支持 glob 的目标会跳过。' },
-  model: { label: '模型判断', short: '模型判断', desc: '提供描述，由 Agent 判断相关性后决定是否引用。' },
-  manual: { label: '手动引用', short: '手动', desc: '不自动进入上下文，只在用户显式 @ 引用时生效。' },
+  always: { label: 'Always on', short: 'Always', desc: 'Enters the context in every session; good for hard constraints like builds, testing, and security.' },
+  glob: { label: 'By path (glob)', short: 'glob', desc: 'Activates when working on files that match the glob; targets that do not support globs are skipped.' },
+  model: { label: 'Model decision', short: 'Model', desc: 'Provide a description and let the Agent judge relevance before referencing it.' },
+  manual: { label: 'Manual', short: 'Manual', desc: 'Never enters the context automatically; only applies when the user explicitly references it with @.' },
 }
 
 export const PROJECTION_META: Record<ProjectionStatus, { label: string; variant: BadgeVariant; icon: IconName }> = {
-  synced: { label: '已投影', variant: 'success', icon: 'check' },
-  stale: { label: '待更新', variant: 'warning', icon: 'refresh' },
-  drifted: { label: '漂移', variant: 'danger', icon: 'alert' },
-  missing: { label: '未投影', variant: 'outline', icon: 'plus' },
+  synced: { label: 'Projected', variant: 'success', icon: 'check' },
+  stale: { label: 'Stale', variant: 'warning', icon: 'refresh' },
+  drifted: { label: 'Drifted', variant: 'danger', icon: 'alert' },
+  missing: { label: 'Not projected', variant: 'outline', icon: 'plus' },
 }
 
 export const CONTRACT_SYNC_POLICY_META: Record<
@@ -43,19 +43,19 @@ export const CONTRACT_SYNC_POLICY_META: Record<
   { label: string; short: string; desc: string }
 > = {
   inherit: {
-    label: '跟随仓库策略',
-    short: '跟随策略',
-    desc: '仓库启用 Agent 指令同步时参与；关闭时自动退回仅本机。',
+    label: 'Follow repository policy',
+    short: 'Follow policy',
+    desc: 'Participates when the repository has Agent Instructions sync enabled; falls back to local only when it is off.',
   },
   sync: {
-    label: '参与同步',
-    short: '参与同步',
-    desc: '把契约写入仓库并允许其他机器拉取；需要全局指令同步已开启。',
+    label: 'Participate in sync',
+    short: 'Sync',
+    desc: 'Writes the contract to the repository so other machines can pull it; global instruction sync must be enabled.',
   },
   local: {
-    label: '仅本机',
-    short: '仅本机',
-    desc: '不进入 Git，也不产生待推送；适合个人上下文或未定稿规则。',
+    label: 'Local only',
+    short: 'Local',
+    desc: 'Never enters Git and produces no pending pushes; good for personal context or rules that are not final yet.',
   },
 }
 
@@ -68,7 +68,7 @@ export function contractSlug(contract: Pick<AgentContract, 'id' | 'title'>): str
   return slug || contract.id
 }
 
-/** 目录直接复用库内文件夹：instructions/<folder>/<slug>.contract.md */
+/** The directory reuses the library folder directly: instructions/<folder>/<slug>.contract.md */
 export function contractFilePath(
   contract: Pick<AgentContract, 'id' | 'title'> & { folder?: string | null },
   contractsDir = 'instructions',
@@ -96,22 +96,22 @@ export function contractSyncEnabled(
 export function activationSummary(activation: ContractActivation): string {
   switch (activation.mode) {
     case 'glob':
-      return activation.globs.length ? `按路径：${activation.globs.join('，')}` : '按路径（未配置 glob）'
+      return activation.globs.length ? `By path: ${activation.globs.join(', ')}` : 'By path (no glob configured)'
     case 'model':
-      return '由模型判断相关性'
+      return 'Model decides relevance'
     case 'manual':
-      return '手动 @ 引用'
+      return 'Manual @ reference'
     default:
-      return '始终生效'
+      return 'Always on'
   }
 }
 
 export function scopeSummary(contract: Pick<AgentContract, 'scope' | 'path'>): string {
-  if (contract.scope === 'path') return `路径级：${contract.path || '未指定目录'}`
+  if (contract.scope === 'path') return `Path: ${contract.path || 'no directory specified'}`
   return CONTRACT_SCOPE_META[contract.scope].label
 }
 
-/* ---------------- 文件序列化 ---------------- */
+/* ---------------- File serialization ---------------- */
 
 type ContractFileInput = Pick<
   AgentContract,
@@ -165,9 +165,9 @@ export interface ParsedContractFile {
   tags: string[]
 }
 
-/** 把版本快照里的 JSON 还原为可读文本，供通用版本弹窗展示 */
+/** Turn the JSON in a version snapshot back into readable text for the generic version dialog */
 export function formatContractSnapshot(raw?: string): string {
-  if (!raw) return '（空）'
+  if (!raw) return '(empty)'
   try {
     const parsed = JSON.parse(raw) as Partial<AgentContract>
     const meta = [
@@ -175,7 +175,7 @@ export function formatContractSnapshot(raw?: string): string {
       `scope: ${parsed.scope ?? 'project'}`,
       parsed.path ? `path: ${parsed.path}` : '',
       `priority: ${parsed.priority ?? 50}`,
-      `activation: ${parsed.activation ? activationSummary(parsed.activation) : '始终生效'}`,
+      `activation: ${parsed.activation ? activationSummary(parsed.activation) : 'Always on'}`,
       `targets: ${(parsed.targets ?? []).join(', ') || '—'}`,
       parsed.imports?.length ? `imports: ${parsed.imports.join(', ')}` : '',
     ].filter(Boolean)
@@ -212,7 +212,7 @@ function readArray(fields: Map<string, string>, key: string): string[] {
   return []
 }
 
-/** 解析 .contract.md；结构不完整时返回 null，用于手动合并校验 */
+/** Parse .contract.md; returns null when the structure is incomplete, used to validate manual merges */
 export function parseContractFile(text: string): ParsedContractFile | null {
   const normalized = text.replace(/\r\n/g, '\n')
   const frontmatter = normalized.match(/^---\n([\s\S]*?)\n---\n?/)
@@ -267,7 +267,7 @@ export function parseContractFile(text: string): ParsedContractFile | null {
   }
 }
 
-/* ---------------- glob 匹配 ---------------- */
+/* ---------------- glob matching ---------------- */
 
 function normalizePath(input: string): string {
   return input.replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, '')
@@ -307,7 +307,7 @@ function globToRegExpSource(glob: string): string {
   return source
 }
 
-/** 简化 glob：支持 ** / * / ? / {a,b}；不模拟各工具的全部边界行为 */
+/** Simplified glob: supports ** / * / ? / {a,b}; does not emulate every edge case of each tool */
 export function pathMatchesGlob(filePath: string, glob: string): boolean {
   const path = normalizePath(filePath)
   return expandBraces(glob).some((pattern) => {
@@ -328,7 +328,7 @@ export function contractPathApplies(
   if (!prefix) return { ok: true, reason: '' }
   const path = normalizePath(filePath)
   if (path === prefix || path.startsWith(`${prefix}/`)) return { ok: true, reason: '' }
-  return { ok: false, reason: `仅对 ${prefix}/ 生效，当前路径不匹配` }
+  return { ok: false, reason: `Only applies to ${prefix}/; the current path does not match` }
 }
 
 function activationSupport(
@@ -337,13 +337,13 @@ function activationSupport(
 ): { ok: boolean; reason: string } {
   if (mode === 'always') return { ok: true, reason: '' }
   if (mode === 'glob' && !target.supports.globs) {
-    return { ok: false, reason: `${target.label} 不支持按路径激活（glob）` }
+    return { ok: false, reason: `${target.label} does not support path-based activation (glob)` }
   }
   if (mode === 'model' && !target.supports.modelDecision) {
-    return { ok: false, reason: `${target.label} 不支持模型判断激活` }
+    return { ok: false, reason: `${target.label} does not support model-decision activation` }
   }
   if (mode === 'manual' && !target.supports.manual) {
-    return { ok: false, reason: `${target.label} 不支持手动引用激活` }
+    return { ok: false, reason: `${target.label} does not support manual activation` }
   }
   return { ok: true, reason: '' }
 }
@@ -361,7 +361,7 @@ function specificity(contract: Pick<AgentContract, 'scope' | 'path'>): number {
   return 2 + normalizePath(contract.path ?? '').split('/').filter(Boolean).length
 }
 
-/* ---------------- 生效预览 ---------------- */
+/* ---------------- Resolution preview ---------------- */
 
 export function resolveContracts(
   contracts: AgentContract[],
@@ -371,7 +371,7 @@ export function resolveContracts(
   const target = TARGET_BY_ID[targetId]
   const skipped: SkippedContractEntry[] = []
   if (!target) {
-    return { targetId, filePath, included: [], skipped, totalBytes: 0, warnings: ['未知目标'] }
+    return { targetId, filePath, included: [], skipped, totalBytes: 0, warnings: ['Unknown target'] }
   }
 
   const targeting = contracts.filter((c) => c.targets.includes(targetId))
@@ -392,7 +392,7 @@ export function resolveContracts(
     const scopeLabel = CONTRACT_SCOPE_META[contract.scope].label
     if (contract.activation.mode === 'glob') {
       if (contract.activation.globs.length === 0) {
-        skipped.push({ contractId: contract.id, title: contract.title, reason: '未配置 glob，无法判断生效路径' })
+        skipped.push({ contractId: contract.id, title: contract.title, reason: 'No glob configured; cannot determine the applicable path' })
         continue
       }
       const matched = contract.activation.globs.find((g) => pathMatchesGlob(filePath, g))
@@ -400,18 +400,19 @@ export function resolveContracts(
         skipped.push({
           contractId: contract.id,
           title: contract.title,
-          reason: `未命中 glob：${contract.activation.globs.join('，')}`,
+          reason: `No glob match: ${contract.activation.globs.join(', ')}`,
         })
         continue
       }
-      candidates.push({ contract, reason: `${scopeLabel} · 命中 ${matched}` })
+      candidates.push({ contract, reason: `${scopeLabel} · matched ${matched}` })
       continue
     }
     if (contract.activation.mode === 'model') {
       skipped.push({
         contractId: contract.id,
         title: contract.title,
-        reason: '条件激活：由模型判断相关性，不进入常驻上下文（仍会部署为独立文件）',
+        reason:
+          'Conditional activation: the model decides relevance, so it does not enter the always-on context (it is still deployed as a standalone file)',
       })
       continue
     }
@@ -419,11 +420,12 @@ export function resolveContracts(
       skipped.push({
         contractId: contract.id,
         title: contract.title,
-        reason: '条件激活：需手动 @ 引用，不进入常驻上下文（仍会部署为独立文件）',
+        reason:
+          'Conditional activation: requires a manual @ reference, so it does not enter the always-on context (it is still deployed as a standalone file)',
       })
       continue
     }
-    candidates.push({ contract, reason: `${scopeLabel} · 始终生效` })
+    candidates.push({ contract, reason: `${scopeLabel} · Always on` })
   }
 
   candidates.sort((a, b) => {
@@ -435,7 +437,7 @@ export function resolveContracts(
       return sb - sa
     }
     if (a.contract.priority !== b.contract.priority) return b.contract.priority - a.contract.priority
-    return a.contract.title.localeCompare(b.contract.title, 'zh')
+    return a.contract.title.localeCompare(b.contract.title, 'en')
   })
 
   const included = candidates.map(({ contract, reason }) => ({
@@ -451,16 +453,18 @@ export function resolveContracts(
 
   if (target.maxBytes && totalBytes > target.maxBytes) {
     warnings.push(
-      `正文合计 ${totalBytes} 字节，超过 ${target.maxBytes} 字节建议上限；超限内容可能被工具截断。`,
+      `Total content is ${totalBytes} bytes, exceeding the recommended limit of ${target.maxBytes} bytes; content over the limit may be truncated by the tool.`,
     )
   }
   if (included.length > 5) {
-    warnings.push(`当前有 ${included.length} 条常驻契约，建议合并重复内容；常驻指令会占用每次会话的上下文预算。`)
+    warnings.push(
+      `${included.length} always-on contracts are active; consider merging duplicate content. Always-on instructions consume context budget in every session.`,
+    )
   }
 
   const duplicateLines = countDuplicateLines(candidates.map((c) => c.contract.body))
   if (duplicateLines > 0) {
-    warnings.push(`检测到 ${duplicateLines} 行重复内容，可能来自复制粘贴；合并时不会自动去重。`)
+    warnings.push(`Detected ${duplicateLines} lines of duplicated content, possibly from copy-paste; merging does not deduplicate automatically.`)
   }
 
   const unsupportedImports = candidates.filter(
@@ -468,7 +472,7 @@ export function resolveContracts(
   )
   if (unsupportedImports.length > 0) {
     warnings.push(
-      `${unsupportedImports.map((c) => c.contract.title).join('、')} 配置了 @import，但 ${target.label} 不支持 import；导入行会被忽略。`,
+      `${unsupportedImports.map((c) => c.contract.title).join(', ')} configure @import, but ${target.label} does not support imports; the import lines will be ignored.`,
     )
   }
 
@@ -493,7 +497,7 @@ function byteLength(text: string): number {
   return new TextEncoder().encode(text).length
 }
 
-/* ---------------- 目标文件编译（模拟各工具方言） ---------------- */
+/* ---------------- Target file compilation (emulates each tool's dialect) ---------------- */
 
 const GENERATED_HEADER =
   '<!-- Generated by Prompt Keeper. Source of truth: instructions/**/*.contract.md. Manual edits will be reported as drift. -->'
@@ -548,7 +552,7 @@ export function compileContractFile(target: ContractTarget, contract: AgentContr
   return body
 }
 
-/** 单文件目标：把当前路径命中的契约合并为一个文件；per-contract 目标返回逐文件预览 */
+/** Single-file targets: merge contracts matching the current path into one file; per-contract targets return a per-file preview */
 export function compileTargetFile(
   contracts: AgentContract[],
   targetId: string,
@@ -582,13 +586,13 @@ export function compileTargetFile(
     ].join('\n')
   })
 
-  const header = `${GENERATED_HEADER}\n\n<!-- 当前路径：${filePath} -->\n\n`
+  const header = `${GENERATED_HEADER}\n\n<!-- Current path: ${filePath} -->\n\n`
   return [
     {
       path: target.pathTemplate,
       content: blocks.length
         ? `${header}${blocks.join('\n\n')}\n`
-        : `${header}<!-- 当前路径没有命中的契约。 -->\n`,
+        : `${header}<!-- No contracts match the current path. -->\n`,
     },
   ]
 }
@@ -596,10 +600,10 @@ export function compileTargetFile(
 export function targetSummary(targetId: string): string {
   const target = TARGET_BY_ID[targetId]
   if (!target) return targetId
-  const parts = [target.agentName, target.merge === 'single-file' ? '单文件合并' : '一契约一文件']
-  if (target.precedence === 'concat') parts.push('顺序拼接')
-  if (target.precedence === 'nearest') parts.push('就近优先')
-  if (target.precedence === 'override') parts.push('就近覆盖')
+  const parts = [target.agentName, target.merge === 'single-file' ? 'single-file merge' : 'one file per contract']
+  if (target.precedence === 'concat') parts.push('concatenated in order')
+  if (target.precedence === 'nearest') parts.push('nearest first')
+  if (target.precedence === 'override') parts.push('nearest overrides')
   return parts.join(' · ')
 }
 

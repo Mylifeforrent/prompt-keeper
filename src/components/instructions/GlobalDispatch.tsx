@@ -17,8 +17,8 @@ import { ACTIVATION_META, PROJECTION_META, contractVersionLabel } from '../../li
 import { folderMatches, folderLabel, folderOptions } from '../../lib/folders'
 
 /**
- * Agent 指令 → 本机 Agent 全局目录。
- * 与项目级投影分开：这里写入的是用户级目录，路径可由用户逐项改写。
+ * Agent instructions → local Agent global directories.
+ * Separate from project projections: these writes target user-level directories whose paths can be edited per item.
  */
 export function GlobalDispatch({ query }: { query: string }) {
   const { state, deployGlobal, syncGlobalProjection, removeGlobalProjection, rollbackGlobalProjection } = useStore()
@@ -94,8 +94,8 @@ export function GlobalDispatch({ query }: { query: string }) {
     deployGlobal(selectedContracts, selectedTargets)
     toast.success(
       driftedCombos.length
-        ? `已投影 ${supportedCombos.length - driftedCombos.length} 个组合；${driftedCombos.length} 个漂移项未覆盖，请在下方逐项确认`
-        : `已投影 ${supportedCombos.length} 个组合到本机 Agent 全局目录（模拟写入）`,
+        ? `Projected ${supportedCombos.length - driftedCombos.length} combinations; ${driftedCombos.length} drifted items were not overwritten — confirm them one by one below`
+        : `Projected ${supportedCombos.length} combinations to your local Agent global directories (simulated write)`,
     )
   }
 
@@ -105,17 +105,17 @@ export function GlobalDispatch({ query }: { query: string }) {
         <div className="flex items-start gap-2 rounded-xl border border-info/30 bg-info-soft px-3.5 py-2.5 text-xs leading-5 text-info">
           <Icon name="send" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            全局分发是<b>从本地库到本机 Agent 全局目录的单向写出</b>，不经过 Git，也不回写仓库。
-            勾选多条指令与多个工具后一次性投影；每个工具的全局目录都可以改成你本机的真实路径。
+            Global dispatch is a <b>one-way write from the local library to local Agent global directories</b>. It does not go through Git and never writes back to the repo.
+            Select multiple instructions and tools to project them in one pass; each tool's global directory can be changed to the real path on your machine.
           </span>
         </div>
 
         <section>
           <div className="mb-2 flex items-center gap-2">
-            <h3 className="text-sm font-semibold">全局目录（可改写）</h3>
-            <Badge variant="outline">{targets.length} 个 Agent</Badge>
+            <h3 className="text-sm font-semibold">Global directories (editable)</h3>
+            <Badge variant="outline">{targets.length} Agents</Badge>
             <span className="text-[11px] text-muted-foreground">
-              路径修改后，相关投影会标记为「待更新」，不会自动覆盖 Agent 侧改动
+              After a path change, affected projections are marked Stale; edits on the Agent side are never overwritten automatically
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2.5">
@@ -134,14 +134,14 @@ export function GlobalDispatch({ query }: { query: string }) {
 
         <section className="rounded-xl border border-border bg-card">
           <div className="flex flex-wrap items-center gap-2 border-b border-border px-3.5 py-2.5">
-            <h3 className="text-sm font-semibold">选择要同步的指令</h3>
-            <Badge variant="outline">{contracts.length} 条可选</Badge>
+            <h3 className="text-sm font-semibold">Select instructions</h3>
+            <Badge variant="outline">{contracts.length} available</Badge>
             <Select
               className="ml-auto h-8 w-40 text-xs"
               value={folderFilter}
               onChange={(e) => setFolderFilter(e.target.value)}
             >
-              <option value="">全部文件夹</option>
+              <option value="">All folders</option>
               {folders.map((folder) => (
                 <option key={folder} value={folder}>
                   {folder}
@@ -158,13 +158,13 @@ export function GlobalDispatch({ query }: { query: string }) {
               }
             >
               {contracts.every((c) => selectedContracts.includes(c.id)) && contracts.length > 0
-                ? '取消全选'
-                : '全选当前'}
+                ? 'Deselect all'
+                : 'Select all'}
             </Button>
           </div>
           <div className="max-h-72 overflow-y-auto">
             {contracts.length === 0 ? (
-              <p className="px-4 py-8 text-center text-xs text-muted-foreground">当前搜索或文件夹筛选下没有指令</p>
+              <p className="px-4 py-8 text-center text-xs text-muted-foreground">No instructions match the current search or folder filter</p>
             ) : (
               contracts.map((contract) => {
                 const active = selectedContracts.includes(contract.id)
@@ -192,10 +192,10 @@ export function GlobalDispatch({ query }: { query: string }) {
                           {ACTIVATION_META[contract.activation.mode].short}
                         </Badge>
                         <span className="text-[10px] text-muted-foreground">{contractVersionLabel(contract)}</span>
-                        {existingCount > 0 && <Badge variant="success">已在 {existingCount} 个全局目录</Badge>}
+                        {existingCount > 0 && <Badge variant="success">In {existingCount} global directories</Badge>}
                       </span>
                       <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                        {contract.description || '（无描述）'}
+                        {contract.description || '(No description)'}
                       </span>
                     </span>
                   </div>
@@ -207,14 +207,14 @@ export function GlobalDispatch({ query }: { query: string }) {
 
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-3">
           <span className="text-xs text-muted-foreground">
-            已选 <b className="text-foreground">{selectedContractObjects.length}</b> 条指令 ×{' '}
-            <b className="text-foreground">{selectedTargetObjects.length}</b> 个全局目录
+            Selected <b className="text-foreground">{selectedContractObjects.length}</b> instructions ×{' '}
+            <b className="text-foreground">{selectedTargetObjects.length}</b> global directories
           </span>
           {unsupportedCount > 0 && (
-            <Badge variant="warning">{unsupportedCount} 个组合因激活方式不兼容会跳过</Badge>
+            <Badge variant="warning">{unsupportedCount} combinations skipped due to incompatible activation</Badge>
           )}
           {driftedCombos.length > 0 && (
-            <Badge variant="danger">{driftedCombos.length} 个组合漂移，批量不会覆盖</Badge>
+            <Badge variant="danger">{driftedCombos.length} combinations drifted; bulk projection will not overwrite them</Badge>
           )}
           <div className="ml-auto flex items-center gap-2">
             <Button
@@ -224,7 +224,7 @@ export function GlobalDispatch({ query }: { query: string }) {
               onClick={() => setPreviewOpen(true)}
             >
               <Icon name="eye" className="h-3.5 w-3.5" />
-              预览写入内容
+              Preview writes
             </Button>
             <Button
               size="sm"
@@ -232,53 +232,53 @@ export function GlobalDispatch({ query }: { query: string }) {
               onClick={project}
             >
               <Icon name="send" className="h-3.5 w-3.5" />
-              投影所选
+              Project selected
             </Button>
           </div>
         </div>
 
         <section>
           <div className="mb-2 flex items-center gap-2">
-            <h3 className="text-sm font-semibold">全局投影记录</h3>
-            <Badge variant="outline">{records.length} 条</Badge>
-            <span className="text-[11px] text-muted-foreground">漂移项只能逐条覆盖；移除只影响本机文件</span>
+            <h3 className="text-sm font-semibold">Global projection records</h3>
+            <Badge variant="outline">{records.length} records</Badge>
+            <span className="text-[11px] text-muted-foreground">Drifted items can only be overwritten one by one; removal only affects local files</span>
           </div>
           {records.length === 0 ? (
             <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-xs text-muted-foreground">
-              还没有全局投影。勾选上方指令与全局目录后点「投影所选」。
+              No global projections yet. Select instructions and global directories above, then click "Project selected".
             </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-border bg-card">
               <table className="w-full min-w-max border-collapse text-left">
                 <thead>
                   <tr className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
-                    <th className="px-3 py-2.5 font-medium">指令</th>
-                    <th className="px-3 py-2.5 font-medium">全局目录</th>
-                    <th className="px-3 py-2.5 font-medium">写入路径</th>
-                    <th className="px-3 py-2.5 font-medium">状态</th>
-                    <th className="px-3 py-2.5 font-medium">版本 / 时间</th>
-                    <th className="px-3 py-2.5 font-medium">操作</th>
+                    <th className="px-3 py-2.5 font-medium">Instruction</th>
+                    <th className="px-3 py-2.5 font-medium">Global directory</th>
+                    <th className="px-3 py-2.5 font-medium">Write path</th>
+                    <th className="px-3 py-2.5 font-medium">Status</th>
+                    <th className="px-3 py-2.5 font-medium">Version / time</th>
+                    <th className="px-3 py-2.5 font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {records.map(({ projection, contract, target, path }) => {
                     const meta = PROJECTION_META[projection.status]
-                    const title = contract?.title ?? projection.contractTitle ?? '已删除的指令'
+                    const title = contract?.title ?? projection.contractTitle ?? 'Deleted instruction'
                     return (
                       <tr key={projection.id} className="border-b border-border/60 last:border-0 hover:bg-muted/20">
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-1.5">
                             <span className="truncate text-xs font-medium">{title}</span>
-                            {!contract && <Badge variant="warning">已删除</Badge>}
+                            {!contract && <Badge variant="warning">Deleted</Badge>}
                           </div>
                           <div className="text-[10px] text-muted-foreground">
-                            {contract ? contractVersionLabel(contract) : '只能移除或回滚'}
+                            {contract ? contractVersionLabel(contract) : 'Can only be removed or rolled back'}
                           </div>
                         </td>
                         <td className="px-3 py-2">
                           <div className="text-xs">{target.label}</div>
                           <div className="text-[10px] text-muted-foreground">
-                            {target.agentName} · {target.merge === 'single-file' ? '合并文件' : '独立文件'}
+                            {target.agentName} · {target.merge === 'single-file' ? 'Merged file' : 'Separate file'}
                           </div>
                         </td>
                         <td className="max-w-64 px-3 py-2">
@@ -312,11 +312,11 @@ export function GlobalDispatch({ query }: { query: string }) {
                                     setDriftConfirm({ projectionId: projection.id, title, path })
                                   } else {
                                     syncGlobalProjection(projection.id)
-                                    toast.success(`已重新投影「${title}」→ ${target.label}`)
+                                    toast.success(`Reprojected "${title}" → ${target.label}`)
                                   }
                                 }}
                               >
-                                {projection.status === 'drifted' ? '覆盖' : '重新投影'}
+                                {projection.status === 'drifted' ? 'Overwrite' : 'Reproject'}
                               </Button>
                             )}
                             <Button
@@ -325,7 +325,7 @@ export function GlobalDispatch({ query }: { query: string }) {
                               className="text-danger"
                               onClick={() => setRemoveConfirm({ projectionId: projection.id, title, path })}
                             >
-                              移除
+                              Remove
                             </Button>
                             {projection.previousVersion && (
                               <Button
@@ -333,10 +333,10 @@ export function GlobalDispatch({ query }: { query: string }) {
                                 variant="ghost"
                                 onClick={() => {
                                   rollbackGlobalProjection(projection.id)
-                                  toast.warning(`已回滚到 ${projection.previousVersion}；本地库与仓库未变`)
+                                  toast.warning(`Rolled back to ${projection.previousVersion}; local library and repo unchanged`)
                                 }}
                               >
-                                回滚
+                                Roll back
                               </Button>
                             )}
                           </div>
@@ -367,15 +367,15 @@ export function GlobalDispatch({ query }: { query: string }) {
         onConfirm={() => {
           if (driftConfirm) {
             syncGlobalProjection(driftConfirm.projectionId)
-            toast.warning('已显式覆盖全局目录中的手工修改；该操作可回滚')
+            toast.warning('Manual edits in the global directory were explicitly overwritten; this can be rolled back')
           }
         }}
-        title="覆盖 Agent 全局目录中的手工修改？"
-        confirmText="覆盖并投影"
+        title="Overwrite manual edits in the Agent global directory?"
+        confirmText="Overwrite and project"
         message={
           <>
-            目标文件「<b className="text-foreground">{driftConfirm?.path ?? ''}</b>」
-            在 Agent 侧被手工修改过。重新投影只会重写 Prompt Keeper 管理的 block 或文件，手工修改将被覆盖。
+            Target file "<b className="text-foreground">{driftConfirm?.path ?? ''}</b>"
+            was edited by hand on the Agent side. Reprojecting only rewrites the block or file managed by Prompt Keeper; those edits will be overwritten.
           </>
         }
       />
@@ -386,15 +386,15 @@ export function GlobalDispatch({ query }: { query: string }) {
         onConfirm={() => {
           if (removeConfirm) {
             removeGlobalProjection(removeConfirm.projectionId)
-            toast.success('已移除全局投影；本地库与仓库不受影响')
+            toast.success('Global projection removed; local library and repo unaffected')
           }
         }}
-        title="移除这条全局投影？"
-        confirmText="移除"
+        title="Remove this global projection?"
+        confirmText="Remove"
         message={
           <>
-            将从「<b className="text-foreground">{removeConfirm?.path ?? ''}</b>」移除这条指令（原型模拟）。
-            本地库与 Git 仓库不受影响。
+            Removes this instruction from "<b className="text-foreground">{removeConfirm?.path ?? ''}</b>" (simulated in this prototype).
+            The local library and Git repo are unaffected.
           </>
         }
       />
@@ -427,12 +427,12 @@ function GlobalTargetCard({
 
   const commit = () => {
     if (!globalPathIsValid(draft)) {
-      setError('必须是以 ~ 或 / 开头的绝对路径')
+      setError('Must be an absolute path starting with ~ or /')
       return
     }
     if (draft.trim() !== target.path) {
       updateGlobalTargetPath(target.id, draft)
-      toast.success(`已更新 ${target.label} 的全局目录`)
+      toast.success(`Updated the global directory for ${target.label}`)
     }
     setError(null)
   }
@@ -449,10 +449,10 @@ function GlobalTargetCard({
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-xs font-medium">{target.label}</span>
-            <Badge variant={detected ? 'success' : 'outline'}>{detected ? '已检测' : '未检测'}</Badge>
+            <Badge variant={detected ? 'success' : 'outline'}>{detected ? 'Detected' : 'Not detected'}</Badge>
           </div>
           <div className="text-[10px] text-muted-foreground">
-            {target.agentName} · {target.pathMode === 'file' ? '单文件' : '独立文件'} · 已投影 {projectedCount}
+            {target.agentName} · {target.pathMode === 'file' ? 'Single file' : 'Separate file'} · {projectedCount} projected
           </div>
         </div>
         <Button
@@ -465,9 +465,9 @@ function GlobalTargetCard({
             setError(null)
           }}
           disabled={target.path === target.defaultPath}
-          title="恢复默认路径"
+          title="Restore default path"
         >
-          默认
+          Default
         </Button>
       </div>
       <div className="mt-2 flex items-center gap-1.5">
@@ -528,26 +528,26 @@ function GlobalPreviewModal({
       open
       onClose={onClose}
       width="max-w-3xl"
-      title="全局目录写入预览"
-      subtitle="只显示即将写入本机 Agent 目录的文件；真实写入前还会检查路径与漂移"
+      title="Global directory write preview"
+      subtitle="Only files about to be written to local Agent directories are shown; real writes also check paths and drift"
       footer={
         <Button variant="outline" onClick={onClose}>
-          关闭
+          Close
         </Button>
       }
     >
       <div className="space-y-3">
         {files.length === 0 ? (
-          <p className="text-xs text-muted-foreground">没有可预览的文件。</p>
+          <p className="text-xs text-muted-foreground">No files to preview.</p>
         ) : (
           files.map((file) => (
             <div key={`${file.target.id}-${file.path}`} className="rounded-lg border border-border">
               <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2">
                 <Icon name="file" className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs font-medium">{file.target.label}</span>
-                <Badge variant="outline">{file.target.merge === 'single-file' ? '合并文件' : '独立文件'}</Badge>
+                <Badge variant="outline">{file.target.merge === 'single-file' ? 'Merged file' : 'Separate file'}</Badge>
                 <span className="text-[10px] text-muted-foreground">
-                  {file.target.merge === 'single-file' ? `${file.contractCount} 条指令合并` : '单条指令'}
+                  {file.target.merge === 'single-file' ? `${file.contractCount} instructions merged` : 'Single instruction'}
                 </span>
                 <code className="ml-auto max-w-full truncate font-mono text-[10px] text-muted-foreground">
                   {file.path}

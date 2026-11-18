@@ -25,23 +25,23 @@ export function ContractList({
     return hasFilter ? (
       <EmptyState
         icon="search"
-        title="未找到匹配的指令契约"
-        description="当前搜索或筛选条件下没有结果。"
+        title="No matching instruction contracts"
+        description="No results for the current search or filters."
         action={
           <Button variant="outline" size="sm" onClick={onClearFilter}>
-            清除筛选
+            Clear filters
           </Button>
         }
       />
     ) : (
       <EmptyState
         icon="file"
-        title="还没有 Agent 指令契约"
-        description="把 AGENTS.md、CLAUDE.md、.cursor/rules 这类每次会话都要遵守的规则收进来，统一编辑与投影。"
+        title="No Agent instruction contracts yet"
+        description="Bring rules that must be followed every session — AGENTS.md, CLAUDE.md, .cursor/rules — into one place to edit and project."
         action={
           <Button size="sm" onClick={onCreate}>
             <Icon name="plus" className="h-3.5 w-3.5" />
-            新建第一条契约
+            Create your first contract
           </Button>
         }
       />
@@ -86,7 +86,7 @@ export function ContractList({
                   </span>
                 </div>
                 <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
-                  {contract.description || '（无描述）'}
+                  {contract.description || '(No description)'}
                 </p>
                 <div className="mt-2 flex flex-nowrap items-center gap-1.5 overflow-hidden">
                   <Badge variant="secondary" className="shrink-0 gap-1 font-normal">
@@ -103,7 +103,7 @@ export function ContractList({
                     {activation.short}
                   </Badge>
                   <Badge variant="outline" className="tabular shrink-0 font-normal">
-                    {contract.targets.length} 目标
+                    {contract.targets.length} targets
                   </Badge>
                   <AssetSyncBadge
                     kind="contract"

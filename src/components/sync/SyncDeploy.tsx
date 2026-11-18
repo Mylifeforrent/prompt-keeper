@@ -73,8 +73,8 @@ export function SyncDeploy() {
       <div className="flex items-start gap-2 rounded-xl border border-info/30 bg-info-soft px-3.5 py-2.5 text-xs leading-5 text-info">
         <Icon name="send" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
-          分发层是<b>单向写出</b>：本地库 → 各 Agent 默认目录，不回写仓库。
-          Agent 内被手工改过的文件标记为<b>漂移</b>，不会在批量同步中被覆盖；需要逐项确认。
+          Dispatch is <b>one-way</b>: local library → each Agent's default directory, never written back to the repo.
+          Files edited by hand inside an Agent are marked <b>Drifted</b> and are never overwritten by batch sync; each needs individual confirmation.
         </span>
       </div>
 
@@ -82,7 +82,7 @@ export function SyncDeploy() {
         <div className="inline-flex items-center gap-1 rounded-lg bg-muted p-1">
           {(
             [
-              { v: 'all', label: '全部' },
+              { v: 'all', label: 'All' },
               { v: 'skill', label: 'Skills' },
               { v: 'mcp', label: 'MCP' },
             ] as const
@@ -100,28 +100,28 @@ export function SyncDeploy() {
             </button>
           ))}
         </div>
-        <Checkbox checked={onlyAttention} onChange={setOnlyAttention} label={<span className="text-xs">只看异常</span>} />
+        <Checkbox checked={onlyAttention} onChange={setOnlyAttention} label={<span className="text-xs">Issues only</span>} />
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Switch checked={showAll} onChange={setShowAll} label="显示未检测到的 Agent" />
-          显示未检测到的 Agent
+          <Switch checked={showAll} onChange={setShowAll} label="Show undetected Agents" />
+          Show undetected Agents
         </div>
         <span className="ml-auto text-[11px] text-muted-foreground">
-          已检测 {state.detectedAgents.length} 个 · 过时 {staleTotal} · 漂移 {driftedTotal}
+          Detected {state.detectedAgents.length} · Stale {staleTotal} · Drifted {driftedTotal}
         </span>
-        <Button size="sm" variant="outline" onClick={() => toast.info(`检测完成：${redetectAgents().length} 个 Agent`)}>
+        <Button size="sm" variant="outline" onClick={() => toast.info(`Detection complete: ${redetectAgents().length} Agents`)}>
           <Icon name="refresh" className="h-3.5 w-3.5" />
-          重新检测
+          Redetect
         </Button>
         <Button
           size="sm"
           disabled={staleTotal === 0}
           onClick={() => {
             syncAllStale()
-            toast.success(`已重新分发 ${staleTotal} 项过时资产；漂移项未自动覆盖`)
+            toast.success(`Redistributed ${staleTotal} stale assets; drifted items were not overwritten`)
           }}
         >
           <Icon name="refresh" className="h-3.5 w-3.5" />
-          同步全部过时（{staleTotal}）
+          Sync all stale ({staleTotal})
         </Button>
       </div>
 
@@ -129,15 +129,15 @@ export function SyncDeploy() {
         <table className="w-full min-w-max border-collapse text-left">
           <thead>
             <tr className="border-b border-border bg-muted/40">
-              <th className="sticky left-0 z-10 min-w-[210px] bg-card px-3 py-2.5 text-xs font-medium">资产</th>
+              <th className="sticky left-0 z-10 min-w-[210px] bg-card px-3 py-2.5 text-xs font-medium">Asset</th>
               {agents.map((a) => (
                 <th key={a.id} className="min-w-[112px] px-2 py-2.5 text-xs font-medium">
                   <div className="flex items-center gap-1">
                     {a.name}
                     {state.detectedAgents.includes(a.id) ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-success" title="本机已检测" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-success" title="Detected on this machine" />
                     ) : (
-                      <span className="h-1.5 w-1.5 rounded-full bg-border" title="未检测到" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-border" title="Not detected" />
                     )}
                   </div>
                   <div className="mt-0.5 max-w-[104px] truncate font-mono text-[9px] font-normal text-muted-foreground">
@@ -169,7 +169,7 @@ export function SyncDeploy() {
                   if (!supported) {
                     return (
                       <td key={agent.id} className="px-2 py-2">
-                        <span className="text-[10px] text-muted-foreground">不支持</span>
+                        <span className="text-[10px] text-muted-foreground">Unsupported</span>
                       </td>
                     )
                   }
@@ -203,13 +203,13 @@ export function SyncDeploy() {
 
       {assets.length === 0 && (
         <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-xs text-muted-foreground">
-          当前筛选下没有资产。
+          No assets match the current filter.
         </p>
       )}
 
       <p className="text-[11px] leading-5 text-muted-foreground">
-        默认以 symlink 发布，库内编辑即时生效；文件系统不支持时回退 copy 并逐条提示。
-        分发目标路径按工具规范生成，已停用的 MCP 不允许分发。
+        Published as symlinks by default, so library edits take effect immediately; when the filesystem does not support them, it falls back to copy with per-item prompts.
+        Target paths follow each tool's conventions, and disabled MCP servers cannot be dispatched.
       </p>
 
       {cell && <DeploymentModal asset={cell.asset} agent={cell.agent} onClose={() => setCell(null)} />}
@@ -263,33 +263,33 @@ function DeploymentModal({
         onClose={onClose}
         width="max-w-xl"
         title={`${asset.name} → ${agent.name}`}
-        subtitle={`${asset.kind === 'skill' ? '技能' : 'MCP'} ${asset.version} · 分发是单向写出，不修改仓库`}
+        subtitle={`${asset.kind === 'skill' ? 'Skill' : 'MCP'} ${asset.version} · Dispatch is one-way and never modifies the repo`}
         footer={
           <>
             {deployment && (
               <Button variant="ghost" className="mr-auto text-danger" onClick={() => setConfirmRemove(true)}>
                 <Icon name="trash" className="h-3.5 w-3.5" />
-                移除分发
+                Remove dispatch
               </Button>
             )}
             <Button variant="outline" onClick={onClose}>
-              关闭
+              Close
             </Button>
             <Button
               disabled={mcpDisabled}
-              title={mcpDisabled ? '已停用的 MCP 禁止分发，请先在「我的 MCP」启用' : ''}
+              title={mcpDisabled ? 'Disabled MCP cannot be dispatched; enable it in "My MCP" first' : ''}
               onClick={() => {
                 if (deployment) {
                   syncDeployment(deployment.id)
-                  toast.success(`已重新同步 ${asset.name} → ${agent.name}（${mode}）`)
+                  toast.success(`Resynced ${asset.name} → ${agent.name} (${mode})`)
                 } else {
                   deployAsset(asset.kind, asset.id, agent.id, mode)
-                  toast.success(`已分发 ${asset.name} → ${agent.name}（${mode}）`)
+                  toast.success(`Dispatched ${asset.name} → ${agent.name} (${mode})`)
                 }
               }}
             >
               <Icon name="send" />
-              {deployment ? '重新同步' : '分发到此 Agent'}
+              {deployment ? 'Resync' : 'Dispatch to this Agent'}
             </Button>
           </>
         }
@@ -302,20 +302,20 @@ function DeploymentModal({
             </Badge>
             <span className="text-xs text-muted-foreground">
               {deployment
-                ? `当前 ${deployment.deployedVersion} · 部署于 ${formatDate(deployment.deployedAt)}`
-                : '该 Agent 目录中还没有此资产'}
+                ? `Current ${deployment.deployedVersion} · deployed ${formatDate(deployment.deployedAt)}`
+                : 'This asset is not in this Agent directory yet'}
             </span>
           </div>
 
           <div className="rounded-lg border border-border px-3 py-2">
-            <div className="text-[11px] text-muted-foreground">目标路径</div>
+            <div className="text-[11px] text-muted-foreground">Target path</div>
             <div className="mt-0.5 break-all font-mono text-xs">{targetPath}</div>
           </div>
 
           {mcpDisabled && (
             <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
               <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              服务「{asset.name}」已停用，禁止分发或重新同步。请先在「我的 MCP」中启用。
+              The service "{asset.name}" is disabled and cannot be dispatched or resynced. Enable it in "My MCP" first.
             </div>
           )}
 
@@ -327,12 +327,12 @@ function DeploymentModal({
           )}
 
           <div>
-            <div className="mb-1.5 text-xs font-medium text-muted-foreground">安装模式</div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Install mode</div>
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
-                  { v: 'symlink', title: 'symlink（推荐）', desc: '库内编辑即时生效，多工具共享同一份' },
-                  { v: 'copy', title: 'copy', desc: '各 Agent 独立副本，更新后需重新分发' },
+                  { v: 'symlink', title: 'symlink (recommended)', desc: 'Library edits take effect immediately; multiple tools share one copy' },
+                  { v: 'copy', title: 'copy', desc: 'Each Agent gets its own copy; redistribute after updates' },
                 ] as const
               ).map((o) => (
                 <button
@@ -357,24 +357,24 @@ function DeploymentModal({
           {mcp && (
             <div>
               <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                写入内容预览
+                Written content preview
                 <Badge variant="outline">
                   <Icon name="lock" className="h-3 w-3" />
-                  凭据 [REDACTED]
+                  Credentials [REDACTED]
                 </Badge>
               </div>
               <pre className="max-h-48 overflow-auto rounded-lg border border-border bg-muted/60 p-3 font-mono text-[11px] leading-5">
                 {mcpPreview}
               </pre>
               <p className="mt-1 text-[10px] text-muted-foreground">
-                真实密钥在写入时从本机钥匙串解密注入，不会进入日志、版本快照或仓库。
+                The real secret is decrypted from the local keychain and injected at write time; it never enters logs, version snapshots, or the repo.
               </p>
             </div>
           )}
 
           {deployment && (
             <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-2">
-              <span className="text-[11px] text-muted-foreground">最近更新 {relativeTime(deployment.deployedAt)}</span>
+              <span className="text-[11px] text-muted-foreground">Last updated {relativeTime(deployment.deployedAt)}</span>
               {deployment.previousVersion && (
                 <Button
                   size="sm"
@@ -382,11 +382,11 @@ function DeploymentModal({
                   className="ml-auto"
                   onClick={() => {
                     rollbackDeployment(deployment.id)
-                    toast.warning(`已回滚到 ${deployment.previousVersion}；本地库与仓库未变`)
+                    toast.warning(`Rolled back to ${deployment.previousVersion}; the local library and repo are unchanged`)
                   }}
                 >
                   <Icon name="undo" className="h-3.5 w-3.5" />
-                  回滚到 {deployment.previousVersion}
+                  Roll back to {deployment.previousVersion}
                 </Button>
               )}
             </div>
@@ -400,13 +400,13 @@ function DeploymentModal({
         onConfirm={() => {
           if (deployment) {
             removeDeployment(deployment.id)
-            toast.success(`已从 ${agent.name} 移除 ${asset.name}；本地库与仓库不受影响`)
+            toast.success(`Removed ${asset.name} from ${agent.name}; the local library and repo are unaffected`)
           }
           onClose()
         }}
-        title="移除分发？"
-        confirmText="移除"
-        message={`将删除 ${targetPath} 下的内容（原型模拟）。本地资产库与 Git 仓库不受影响。`}
+        title="Remove dispatch?"
+        confirmText="Remove"
+        message={`This deletes the contents under ${targetPath} (prototype simulation). The local asset library and Git repo are unaffected.`}
       />
     </>
   )
