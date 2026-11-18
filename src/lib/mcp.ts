@@ -1,4 +1,5 @@
 import type { HealthIssue, McpServer, McpTarget } from '../types'
+import { repoFilePath, safePathSegment } from './folders'
 
 const SECRET_KEY_RE = /(KEY|TOKEN|SECRET|PASSWORD|PASSWD)/i
 const PLACEHOLDER_RE = /<[^>]+>|xxx+|\.\.\.|your[-_]/i
@@ -24,6 +25,69 @@ export function redactServerConfig(server: McpServer): Record<string, unknown> {
 
 export function serverConfigJson(server: McpServer): string {
   return JSON.stringify(redactServerConfig(server), null, 2)
+}
+
+/** 每个 MCP server 一个 JSON 文件：mcp/<folder>/<name>.json */
+export function mcpFilePath(
+  server: Pick<McpServer, 'id' | 'name'> & { folder?: string | null },
+  mcpDir = 'mcp',
+): string {
+  return repoFilePath(mcpDir, server.folder, `${safePathSegment(server.name, server.id)}.json`)
+}
+
+/**
+ * 写入仓库的 MCP 模板：凭据只保留 ${VAR} 占位，
+ * 真实值只存在本机库 / 钥匙串，不进入 Git 历史。
+ */
+export function serializeMcpRepoFile(server: McpServer): string {
+  const env: Record<string, string> = {}
+  for (const [key, value] of Object.entries(server.env ?? {})) {
+    env[key] = isSecretKey(key) ? `\${${key}}` : value
+  }
+  const headers: Record<string, string> = {}
+  for (const [key, value] of Object.entries(server.headers ?? {})) {
+    const secret = isSecretKey(key) || key.toLowerCase() === 'authorization'
+    headers[key] = secret ? `\${${key.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}}` : value
+  }
+  return JSON.stringify(
+    {
+      name: server.name,
+      description: server.description,
+      transport: server.transport,
+      ...(server.transport === 'stdio'
+        ? { command: server.command, args: server.args ?? [] }
+        : { url: server.url, headers }),
+      env,
+      ...(server.requiredEnv?.length ? { requiredEnv: server.requiredEnv } : {}),
+    },
+    null,
+    2,
+  )
+}
+
+export function parseMcpRepoFile(text: string): Partial<McpServer> | null {
+  try {
+    const parsed = JSON.parse(text) as Record<string, unknown>
+    if (!parsed || typeof parsed !== 'object') return null
+    const name = typeof parsed.name === 'string' ? parsed.name : ''
+    if (!name) return null
+    return {
+      name,
+      description: typeof parsed.description === 'string' ? parsed.description : '',
+      transport: parsed.transport === 'http' ? 'http' : 'stdio',
+      command: typeof parsed.command === 'string' ? parsed.command : undefined,
+      args: Array.isArray(parsed.args) ? parsed.args.map(String) : [],
+      url: typeof parsed.url === 'string' ? parsed.url : undefined,
+      env: parsed.env && typeof parsed.env === 'object' ? (parsed.env as Record<string, string>) : {},
+      headers:
+        parsed.headers && typeof parsed.headers === 'object'
+          ? (parsed.headers as Record<string, string>)
+          : {},
+      requiredEnv: Array.isArray(parsed.requiredEnv) ? parsed.requiredEnv.map(String) : [],
+    }
+  } catch {
+    return null
+  }
 }
 
 /** 健康检查（原型为静态规则，真实产品检查 PATH / 网络） */

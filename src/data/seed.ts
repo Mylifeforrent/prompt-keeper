@@ -52,8 +52,6 @@ export const AI_MODELS: ModelOption[] = [
   { id: 'deepseek-v4', name: 'DeepSeek V4' },
 ]
 
-export const FOLDERS = ['默认', '编程', '写作']
-
 /* ---------------- Prompt 种子 ---------------- */
 
 const reviewV1 = {
@@ -63,14 +61,14 @@ const reviewV1 = {
   userPrompt: '请审查以下 {{language}} 代码：\n\n```\n{{code}}\n```\n\n重点关注：{{focus}}',
 }
 
-export const SEED_PROMPTS: Prompt[] = [
+const PROMPT_SEEDS: Omit<Prompt, 'syncPolicy'>[] = [
   {
     id: 'p-review',
     title: '代码审查助手',
     description: '按正确性 / 可读性 / 性能 / 安全四个维度审查代码',
     systemPrompt: reviewV1.systemPrompt,
     userPrompt: reviewV1.userPrompt,
-    folder: '编程',
+    folder: '编程/代码质量',
     tags: ['编程', '代码审查'],
     isFavorite: true,
     isPinned: true,
@@ -99,7 +97,7 @@ export const SEED_PROMPTS: Prompt[] = [
     description: '依据 diff 产出 Conventional Commits 规范的提交信息',
     systemPrompt: '你是 Conventional Commits 专家。根据用户提供的 diff 产出一条符合规范的提交信息：一行主题（不超过 50 字符），空一行后跟正文要点。只输出提交信息本身，不要任何解释。',
     userPrompt: '{{diff}}',
-    folder: '编程',
+    folder: '编程/Git',
     tags: ['编程', 'Git'],
     isFavorite: true,
     isPinned: false,
@@ -115,7 +113,7 @@ export const SEED_PROMPTS: Prompt[] = [
     description: '逐段解释正则含义，指出回溯风险',
     systemPrompt: '你是正则表达式专家。请逐段解释用户给出的正则表达式，并用表格总结每个捕获组；最后指出潜在的灾难性回溯风险。',
     userPrompt: '请解释这个正则表达式：{{regex}}',
-    folder: '编程',
+    folder: '编程/基础',
     tags: ['编程'],
     isFavorite: false,
     isPinned: false,
@@ -131,7 +129,7 @@ export const SEED_PROMPTS: Prompt[] = [
     description: '把本周提交记录整理成一份结构化周报',
     systemPrompt: '你是项目助理。把用户提供的提交记录整理为周报：本周概览（2 句）、按模块分类的要点列表、下周计划建议。语气：{{tone}}。',
     userPrompt: '本周提交记录：\n{{commits}}',
-    folder: '写作',
+    folder: '写作/汇报',
     tags: ['效率', '写作'],
     isFavorite: true,
     isPinned: false,
@@ -150,7 +148,7 @@ export const SEED_PROMPTS: Prompt[] = [
     description: '把中文说明改写为地道的英文技术文档段落',
     systemPrompt: '你是技术写作编辑。把用户的中文说明改写为地道、简洁的英文技术文档段落，保留代码块原样，输出仅含英文改写结果。',
     userPrompt: '{{text}}',
-    folder: '写作',
+    folder: '写作/文档',
     tags: ['写作', '英文'],
     isFavorite: false,
     isPinned: false,
@@ -166,7 +164,7 @@ export const SEED_PROMPTS: Prompt[] = [
     description: '为函数生成覆盖边界条件的单元测试',
     systemPrompt: '你是测试工程师。为用户提供的函数编写覆盖正常路径与边界条件的单元测试，先列出用例清单再给完整代码。',
     userPrompt: '语言：{{language}}\n测试框架：{{framework}}\n函数：\n```\n{{code}}\n```',
-    folder: '编程',
+    folder: '编程/测试',
     tags: ['编程', '测试'],
     isFavorite: false,
     isPinned: false,
@@ -186,7 +184,7 @@ export const SEED_PROMPTS: Prompt[] = [
     description: '分析执行计划风险并给出优化建议',
     systemPrompt: '你是数据库优化专家。分析用户给出的 SQL：指出可能的执行计划风险、缺失索引与改写方案，按收益从高到低排列建议。',
     userPrompt: '请优化这条 SQL（表结构见注释）：\n\n{{sql}}',
-    folder: '编程',
+    folder: '编程/数据库',
     tags: ['数据库'],
     isFavorite: false,
     isPinned: false,
@@ -202,7 +200,7 @@ export const SEED_PROMPTS: Prompt[] = [
     description: '翻译英文报错并给出排查步骤',
     systemPrompt: '你是调试助手。把用户的英文报错翻译成中文，解释最可能的原因，并给出 2-3 个排查步骤，按可能性排序。',
     userPrompt: '{{error}}',
-    folder: '默认',
+    folder: null,
     tags: ['效率'],
     isFavorite: false,
     isPinned: false,
@@ -212,9 +210,30 @@ export const SEED_PROMPTS: Prompt[] = [
     createdAt: daysAgo(25),
     updatedAt: daysAgo(11),
   },
+  {
+    id: 'p-api-debug',
+    title: '内部 API 调试助手',
+    description: '根据接口定义生成联调请求、错误码排查步骤与修复建议',
+    systemPrompt: '你是后端联调助手。根据接口定义给出可直接执行的 curl 请求、常见错误码排查步骤与修复建议。',
+    userPrompt: '接口：{{endpoint}}\n测试 Token：sk-live-8f3a2c9d4e5b6a71\n请生成联调请求，并在示例中复用该 Token。',
+    folder: '编程/调试',
+    tags: ['API', '调试'],
+    isFavorite: false,
+    isPinned: false,
+    usageCount: 6,
+    variables: [{ name: 'endpoint', type: 'text', required: true, example: 'GET /v1/orders' }],
+    versions: [snap(1, daysAgo(2), { title: '内部 API 调试助手', description: '根据接口定义生成联调请求、错误码排查步骤与修复建议', systemPrompt: '你是后端联调助手。根据接口定义给出可直接执行的 curl 请求、常见错误码排查步骤与修复建议。', userPrompt: '接口：{{endpoint}}\n测试 Token：sk-live-8f3a2c9d4e5b6a71\n请生成联调请求，并在示例中复用该 Token。' })],
+    createdAt: daysAgo(2),
+    updatedAt: daysAgo(2),
+  },
 ]
 
-/* ---------------- Skill 种子 ---------------- */
+export const SEED_PROMPTS: Prompt[] = PROMPT_SEEDS.map((p) => ({
+  ...p,
+  // 演示：个人排障速记默认仅本机；其余跟随仓库策略（v0.3 默认开启 Prompt 同步）
+  syncPolicy: p.id === 'p-error' ? 'local' : 'inherit',
+  inRepo: p.id !== 'p-error' && p.id !== 'p-api-debug',
+}))
 
 const commitHelperMd = `# Commit Helper
 
@@ -297,6 +316,7 @@ export const SEED_SKILLS: Skill[] = [
     version: '1.2.0',
     source: 'official',
     category: '开发流程',
+    folder: '开发流程/Git',
     tags: ['git', '规范'],
     instructions: commitHelperMd,
     installs: { claude: 'symlink', cursor: 'copy' },
@@ -312,6 +332,7 @@ export const SEED_SKILLS: Skill[] = [
     version: '2.0.1',
     source: 'official',
     category: '代码质量',
+    folder: '开发流程/代码质量',
     tags: ['审查'],
     instructions: codeReviewerMd,
     installs: { claude: 'symlink' },
@@ -327,6 +348,7 @@ export const SEED_SKILLS: Skill[] = [
     version: '1.0.0',
     source: 'community',
     category: '测试',
+    folder: '开发流程/测试',
     tags: ['测试'],
     instructions: testWriterMd,
     installs: { codex: 'copy' },
@@ -342,6 +364,7 @@ export const SEED_SKILLS: Skill[] = [
     version: '1.4.2',
     source: 'official',
     category: '文档',
+    folder: '文档/技术写作',
     tags: ['文档'],
     instructions: docWriterMd,
     installs: { cursor: 'copy', kiro: 'symlink' },
@@ -357,6 +380,7 @@ export const SEED_SKILLS: Skill[] = [
     version: '0.9.0',
     source: 'community',
     category: '设计',
+    folder: '设计/前端',
     tags: ['前端', '设计'],
     instructions: frontendDesignMd,
     installs: {},
@@ -372,6 +396,7 @@ export const SEED_SKILLS: Skill[] = [
     version: '1.1.0',
     source: 'import',
     category: '语言规范',
+    folder: '语言规范/Python',
     tags: ['python'],
     instructions: pythonStandardsMd,
     installs: { windsurf: 'copy', claude: 'external' },
@@ -505,6 +530,7 @@ export const SEED_MCPS: McpServer[] = [
     env: {},
     enabled: true,
     isFavorite: true,
+    folder: '本地工具/文件',
     tags: ['文件'],
     source: 'manual',
     installs: { 'claude-desktop': true, cursor: true },
@@ -527,6 +553,7 @@ export const SEED_MCPS: McpServer[] = [
     requiredEnv: ['GITHUB_PERSONAL_ACCESS_TOKEN'],
     enabled: true,
     isFavorite: true,
+    folder: '开发/GitHub',
     tags: ['开发'],
     source: 'market',
     installs: { 'claude-desktop': true },
@@ -546,6 +573,7 @@ export const SEED_MCPS: McpServer[] = [
     requiredEnv: ['AMAP_API_KEY'],
     enabled: true,
     isFavorite: false,
+    folder: '外部服务/地图',
     tags: ['地图'],
     source: 'market',
     installs: {},
@@ -563,6 +591,7 @@ export const SEED_MCPS: McpServer[] = [
     headers: { Authorization: 'Bearer fk_live_9f8e7d6c5b4a' },
     enabled: false,
     isFavorite: false,
+    folder: '外部服务/网络',
     tags: ['网络'],
     source: 'import',
     installs: { cursor: true },
@@ -581,6 +610,7 @@ export const SEED_MCPS: McpServer[] = [
     env: {},
     enabled: true,
     isFavorite: false,
+    folder: '本地工具/数据',
     tags: ['数据'],
     source: 'manual',
     installs: { claude: true },
@@ -600,6 +630,7 @@ export const SEED_MCPS: McpServer[] = [
     requiredEnv: ['SLACK_BOT_TOKEN'],
     enabled: false,
     isFavorite: false,
+    folder: '外部服务/办公',
     tags: ['办公'],
     source: 'manual',
     installs: {},

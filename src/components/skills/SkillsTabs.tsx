@@ -8,7 +8,7 @@ export function SkillsTabs({ query }: { query: string }) {
   const [tab, setTab] = useState('mine')
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b border-border px-4 py-2.5">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5">
         <Tabs
           tabs={[
             { value: 'mine', label: '我的技能' },
@@ -18,8 +18,12 @@ export function SkillsTabs({ query }: { query: string }) {
           value={tab}
           onChange={setTab}
         />
+        <span className="ml-auto hidden items-center gap-1.5 text-[11px] text-muted-foreground lg:flex">
+          <Icon name="layers" className="h-3.5 w-3.5" />
+          <span className="whitespace-nowrap">SKILL.md + scripts · 支持 symlink / copy 分发</span>
+        </span>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className={tab === 'mine' ? 'min-h-0 flex-1 overflow-hidden' : 'min-h-0 flex-1 overflow-y-auto'}>
         {tab === 'mine' && <MySkills query={query} />}
         {tab === 'store' && <StoreTab query={query} />}
         {tab === 'projects' && (

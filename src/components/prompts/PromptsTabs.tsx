@@ -26,7 +26,7 @@ export function PromptsTabs({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-2.5">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5">
         <Tabs
           tabs={[
             { value: 'mine', label: '我的 Prompt', count: state.prompts.length },
@@ -35,16 +35,21 @@ export function PromptsTabs({
           value={tab}
           onChange={(v) => setTab(v as typeof tab)}
         />
-        <span className="ml-auto flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span className="ml-auto hidden items-center gap-1.5 text-[11px] text-muted-foreground lg:flex">
           {tab === 'mine' ? (
             <>
-              <Badge variant="outline">仅本地</Badge>
-              不参与 Git 同步与 Agent 分发
+              <Badge variant={state.repo.policies.prompts ? 'info' : 'outline'}>
+                {state.repo.policies.prompts ? 'Git 可选同步' : 'Git 未启用'}
+              </Badge>
+              <span className="whitespace-nowrap">
+                {state.prompts.filter((p) => p.syncPolicy === 'local' || !state.repo.policies.prompts).length} 条仅本机 ·
+                不写入 Agent 目录
+              </span>
             </>
           ) : (
             <>
               <Badge variant="info">平台来源</Badge>
-              按需搜索、复制或保存到本地
+              <span className="whitespace-nowrap">按需搜索、复制或保存到本地</span>
             </>
           )}
         </span>

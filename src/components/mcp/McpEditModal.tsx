@@ -4,9 +4,11 @@ import { Button, Input, Select, Textarea } from '../ui/core'
 import { Modal } from '../ui/modal'
 import { Icon } from '../../lib/icons'
 import { cn, nowIso, uid } from '../../lib/utils'
-import { isSecretKey } from '../../lib/mcp'
+import { isSecretKey, mcpFilePath } from '../../lib/mcp'
 import { useStore } from '../../store/store'
 import { useToast } from '../ui/toast'
+import { folderOptions, normalizeFolder } from '../../lib/folders'
+import { FolderField } from '../shared/FolderTree'
 
 interface EnvRow {
   key: string
@@ -26,6 +28,7 @@ const emptyServer = (): McpServer => ({
   headers: {},
   enabled: true,
   isFavorite: false,
+  folder: null,
   tags: [],
   source: 'manual',
   installs: {},
@@ -67,6 +70,7 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
   const [envRows, setEnvRows] = useState<EnvRow[]>([])
   const [reveal, setReveal] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
+  const folders = folderOptions(state.mcps, (m) => m.folder)
 
   useEffect(() => {
     if (!open) return
@@ -133,6 +137,7 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
     saveMcp({
       ...draft,
       name: draft.name.trim(),
+      folder: normalizeFolder(draft.folder),
       env,
       requiredEnv: draft.requiredEnv?.length ? draft.requiredEnv : requiredEnv,
       updatedAt: nowIso(),
@@ -187,6 +192,7 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
           <label className="block text-xs font-medium text-muted-foreground">命令 / URL / 本地路径 / GitHub 仓库</label>
           <div className="flex gap-2">
             <Input
+              aria-label="命令、URL 或本地路径"
               value={sourceInput}
               onChange={(e) => setSourceInput(e.target.value)}
               placeholder="npx -y @mcp/notion  ·  https://…/sse  ·  ~/projects/mcp-server  ·  gh:owner/repo"
@@ -209,6 +215,7 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
         <div className="mb-4 space-y-2">
           <label className="block text-xs font-medium text-muted-foreground">粘贴 mcpServers JSON（Claude Desktop / Cursor 格式）</label>
           <Textarea
+            aria-label="粘贴 mcpServers JSON"
             rows={5}
             className="font-mono text-xs"
             value={pasteText}
@@ -225,11 +232,11 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
         <div className="flex gap-3">
           <div className="flex-1">
             <label className="mb-1 block text-xs font-medium text-muted-foreground">名称 *（唯一）</label>
-            <Input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="notion" />
+            <Input aria-label="名称" value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="notion" />
           </div>
           <div className="w-40">
             <label className="mb-1 block text-xs font-medium text-muted-foreground">传输类型</label>
-            <Select value={draft.transport} onChange={(e) => set({ transport: e.target.value as McpTransport })}>
+            <Select aria-label="传输类型" value={draft.transport} onChange={(e) => set({ transport: e.target.value as McpTransport })}>
               <option value="stdio">stdio（本地命令）</option>
               <option value="http">http（远程 URL）</option>
             </Select>
@@ -238,18 +245,30 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
 
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">描述</label>
-          <Input value={draft.description} onChange={(e) => set({ description: e.target.value })} placeholder="这个服务能做什么" />
+          <Input aria-label="描述" value={draft.description} onChange={(e) => set({ description: e.target.value })} placeholder="这个服务能做什么" />
         </div>
+
+        <FolderField
+          value={draft.folder}
+          onChange={(folder) => set({ folder })}
+          options={folders}
+          pathPreview={mcpFilePath(
+            { ...draft, name: draft.name || 'untitled', folder: draft.folder },
+            state.repo.layout.mcp,
+          )}
+          hint="每个 server 一个 JSON 文件；文件夹决定它在仓库中的位置。"
+        />
 
         {draft.transport === 'stdio' ? (
           <div className="grid grid-cols-[1fr_2fr] gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">启动命令</label>
-              <Input value={draft.command ?? ''} onChange={(e) => set({ command: e.target.value })} placeholder="npx / uvx / node…" className="font-mono text-xs" />
+              <Input aria-label="启动命令" value={draft.command ?? ''} onChange={(e) => set({ command: e.target.value })} placeholder="npx / uvx / node…" className="font-mono text-xs" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">参数（空格分隔）</label>
               <Input
+                aria-label="参数"
                 value={(draft.args ?? []).join(' ')}
                 onChange={(e) => set({ args: e.target.value.split(/\s+/).filter(Boolean) })}
                 placeholder="-y @mcp/notion"
@@ -260,7 +279,7 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
         ) : (
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">服务 URL</label>
-            <Input value={draft.url ?? ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://mcp.example.dev/sse" className="font-mono text-xs" />
+            <Input aria-label="服务 URL" value={draft.url ?? ''} onChange={(e) => set({ url: e.target.value })} placeholder="https://mcp.example.dev/sse" className="font-mono text-xs" />
           </div>
         )}
 
@@ -276,6 +295,7 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
               return (
                 <div key={idx} className="flex items-center gap-1.5">
                   <Input
+                    aria-label={`环境变量名 ${idx + 1}`}
                     className="w-48 font-mono text-xs"
                     placeholder="API_KEY"
                     value={row.key}
@@ -283,6 +303,7 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
                   />
                   <div className="relative flex-1">
                     <Input
+                      aria-label={`环境变量值 ${idx + 1}`}
                       className="pr-9 font-mono text-xs"
                       type={masked ? 'password' : 'text'}
                       placeholder={secret ? '已加密存储' : 'value'}
@@ -292,6 +313,7 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
                     {secret && (
                       <button
                         type="button"
+                        aria-label={masked ? '显示凭据' : '隐藏凭据'}
                         className="absolute right-2 top-2 cursor-pointer text-muted-foreground hover:text-foreground"
                         onClick={() => setReveal((prev) => ({ ...prev, [idx]: !prev[idx] }))}
                       >
@@ -299,7 +321,13 @@ export function McpEditModal({ open, server, onClose }: { open: boolean; server?
                       </button>
                     )}
                   </div>
-                  <Button size="icon" variant="ghost" className="text-danger" onClick={() => setEnvRows((prev) => prev.filter((_, i) => i !== idx))}>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-danger"
+                    aria-label={`删除环境变量 ${idx + 1}`}
+                    onClick={() => setEnvRows((prev) => prev.filter((_, i) => i !== idx))}
+                  >
                     <Icon name="x" />
                   </Button>
                 </div>

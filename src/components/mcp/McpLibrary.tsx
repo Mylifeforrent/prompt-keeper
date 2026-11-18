@@ -6,11 +6,13 @@ import { Badge, Button, Switch, Textarea } from '../ui/core'
 import { Modal } from '../ui/modal'
 import { Icon } from '../../lib/icons'
 import { cn, formatDate } from '../../lib/utils'
-import { checkHealth, healthBadge, projectForTarget, serverConfigJson } from '../../lib/mcp'
+import { checkHealth, healthBadge, mcpFilePath, projectForTarget, serverConfigJson } from '../../lib/mcp'
 import { useToast } from '../ui/toast'
 import { McpEditModal } from './McpEditModal'
 import { VersionHistoryModal } from '../shared/VersionHistoryModal'
 import { AssetSyncBadge } from '../sync/AssetSyncBadge'
+import { folderLabel, folderMatches } from '../../lib/folders'
+import { FolderTree } from '../shared/FolderTree'
 
 /** 目标平台当前对某 server 的状态 */
 export type TargetStatus = 'managed' | 'missing' | 'external'
@@ -151,16 +153,22 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
   const [versionOf, setVersionOf] = useState<McpServer | null>(null)
   const [deleteOf, setDeleteOf] = useState<McpServer | null>(null)
   const [favOnly, setFavOnly] = useState(false)
+  const [folderFilter, setFolderFilter] = useState('')
 
   const q = query.trim().toLowerCase()
   const list = useMemo(
     () =>
       state.mcps.filter((m) => {
         if (favOnly && !m.isFavorite) return false
-        if (q && ![m.name, m.description, m.tags.join(' ')].join(' ').toLowerCase().includes(q)) return false
+        if (folderFilter && !folderMatches(m.folder, folderFilter)) return false
+        if (
+          q &&
+          ![m.name, m.description, m.tags.join(' '), m.folder ?? ''].join(' ').toLowerCase().includes(q)
+        )
+          return false
         return true
       }),
-    [state.mcps, q, favOnly],
+    [state.mcps, q, favOnly, folderFilter],
   )
 
   const selected = state.mcps.find((m) => m.id === selectedId) ?? list[0] ?? null
@@ -173,26 +181,53 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
 
   return (
     <div className="flex h-full min-h-0">
+      <FolderTree
+        items={state.mcps}
+        getFolder={(m) => m.folder}
+        selected={folderFilter}
+        onSelect={setFolderFilter}
+        className="hidden w-[176px] shrink-0 border-r border-border bg-card/40 xl:flex"
+        title="MCP 文件夹"
+      />
       {/* 列表 */}
-      <div className="flex w-[360px] shrink-0 flex-col border-r border-border">
-        <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+      <div className="flex w-[360px] shrink-0 flex-col border-r border-border bg-background/40 xl:w-[380px]">
+        {folderFilter && (
+          <div className="flex items-center gap-1.5 border-b border-border bg-muted/25 px-4 py-1.5 text-[11px] text-muted-foreground">
+            <Icon name="folder" className="h-3 w-3" />
+            <span className="truncate text-foreground">{folderLabel(folderFilter)}</span>
+            <button
+              type="button"
+              onClick={() => setFolderFilter('')}
+              className="ml-auto shrink-0 cursor-pointer rounded px-1.5 py-0.5 transition-colors hover:bg-muted hover:text-foreground"
+            >
+              返回全部
+            </button>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5 border-b border-border px-3.5 py-3">
           <button
             type="button"
             onClick={() => setFavOnly((f) => !f)}
+            aria-pressed={favOnly}
+            aria-label="只看收藏"
             className={cn(
-              'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border transition-colors',
-              favOnly ? 'border-warning bg-warning-soft text-warning' : 'border-input text-muted-foreground hover:bg-muted',
+              'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors',
+              favOnly
+                ? 'border-warning/50 bg-warning-soft text-warning'
+                : 'border-input text-muted-foreground hover:border-border-strong hover:bg-muted hover:text-foreground',
             )}
             title="只看收藏"
           >
-            <Icon name="star" className="h-4 w-4" />
+            <Icon name="star" className="h-3.5 w-3.5" />
           </button>
-          <span className="text-xs text-muted-foreground">
+          <span className="tabular text-[11px] text-muted-foreground">
             {list.length} / {state.mcps.length} 个服务
           </span>
-          <Button size="sm" className="ml-auto" onClick={() => setCreating(true)}>
+          <Button size="sm" variant="outline" className="ml-auto h-7" onClick={() => setCreating(true)}
+            title="新建 MCP（快捷键 N）"
+          >
             <Icon name="plus" className="h-3.5 w-3.5" />
-            新建（N）
+            新建
           </Button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -201,42 +236,70 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
           ) : (
             list.map((m) => {
               const hb = healthOf(m)
+              const active = selected?.id === m.id
               return (
-                <button
+                <div
                   key={m.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedId(m.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setSelectedId(m.id)
+                    }
+                  }}
                   className={cn(
-                    'block w-full cursor-pointer border-b border-border/60 px-4 py-3 text-left transition-colors hover:bg-muted/60',
-                    selected?.id === m.id && 'bg-primary-soft',
+                    'block w-full cursor-pointer border-b border-border/60 px-4 py-3 text-left transition-colors focus-visible:bg-muted/50',
+                    active
+                      ? 'bg-primary-soft/40 shadow-[inset_2px_0_0_var(--primary)]'
+                      : 'hover:bg-muted/50',
                   )}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">{m.name}</span>
-                    <Badge variant={m.transport === 'stdio' ? 'secondary' : 'info'}>{m.transport}</Badge>
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-[13px] font-medium">{m.name}</span>
+                    <Badge variant={m.transport === 'stdio' ? 'secondary' : 'info'} className="shrink-0 font-normal">
+                      {m.transport}
+                    </Badge>
                     {hb !== 'ok' && (
-                      <Badge variant={hb === 'error' ? 'danger' : 'warning'}>
+                      <Badge
+                        variant={hb === 'error' ? 'danger' : 'warning'}
+                        className="shrink-0 gap-1 font-normal"
+                      >
                         <Icon name="alert" className="h-3 w-3" />
                         {hb === 'error' ? 'error' : 'warn'}
                       </Badge>
                     )}
-                    {m.isFavorite && <Icon name="star" className="h-3.5 w-3.5 text-warning" />}
-                    <span className="ml-auto" onClick={(e) => e.stopPropagation()}>
+                    {m.isFavorite && <Icon name="star" className="h-3.5 w-3.5 shrink-0 text-warning" />}
+                    <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
                       <Switch
                         checked={m.enabled}
                         onChange={() => toggleMcpEnabled(m.id)}
+                        label={`${m.enabled ? '停用' : '启用'} ${m.name}`}
                       />
                     </span>
                   </div>
-                  <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{m.description}</p>
-                  <div className="mt-1.5 flex items-center gap-1.5">
+                  <p className="mt-1 line-clamp-1 text-[11px] text-muted-foreground">{m.description}</p>
+                  <div className="mt-1.5 flex items-center gap-1.5 overflow-hidden">
+                    <span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-muted-foreground">
+                      <Icon name="folder" className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{folderLabel(m.folder)}</span>
+                    </span>
                     {Object.keys(m.installs).length > 0 && (
-                      <Badge variant="success">已分发 {Object.keys(m.installs).length}</Badge>
+                      <Badge variant="success" className="shrink-0 font-normal">
+                        已分发 {Object.keys(m.installs).length}
+                      </Badge>
                     )}
-                    {!m.enabled && <Badge variant="warning">已停用</Badge>}
-                    <span className="ml-auto text-[11px] text-muted-foreground">{formatDate(m.updatedAt, false)}</span>
+                    {!m.enabled && (
+                      <Badge variant="warning" className="shrink-0 font-normal">
+                        已停用
+                      </Badge>
+                    )}
+                    <span className="tabular ml-auto shrink-0 text-[10px] text-muted-foreground">
+                      {formatDate(m.updatedAt, false)}
+                    </span>
                   </div>
-                </button>
+                </div>
               )
             })
           )}
@@ -244,7 +307,7 @@ export function McpLibrary({ query, createSignal }: { query: string; createSigna
       </div>
 
       {/* 详情 */}
-      <div className="min-w-0 flex-1 overflow-y-auto">
+      <div className="min-w-0 flex-1 overflow-y-auto bg-background/30">
         {selected ? (
           <McpDetail
             server={selected}
@@ -313,6 +376,7 @@ function McpDetail({
   onToggleFavorite: () => void
   onNotes: (notes: string) => void
 }) {
+  const { state } = useStore()
   const toast = useToast()
   const [tab, setTab] = useState<'config' | 'health' | 'deploy'>('config')
   const [notesDraft, setNotesDraft] = useState(server.notes)
@@ -320,37 +384,75 @@ function McpDetail({
   const hb = healthBadge(issues)
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-border px-5 py-4">
-        <div className="flex items-center gap-2">
-          <Icon name="server" className="text-primary" />
-          <h2 className="text-base font-semibold">{server.name}</h2>
-          <Badge variant={server.transport === 'stdio' ? 'secondary' : 'info'}>{server.transport}</Badge>
-          <Badge variant={server.source === 'manual' ? 'outline' : server.source === 'market' ? 'primary' : 'warning'}>
-            {server.source === 'manual' ? '手动创建' : server.source === 'market' ? '来自商店' : '导入'}
-          </Badge>
-          <AssetSyncBadge kind="mcp" name={server.name} />
-          {hb !== 'ok' && (
-            <Badge variant={hb === 'error' ? 'danger' : 'warning'}>
-              <Icon name="alert" className="h-3 w-3" />
-              健康检查 {hb === 'error' ? 'error' : 'warning'}
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 border-b border-border bg-card/60 px-5 py-4 backdrop-blur-sm">
+        <div className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+            <Icon name="server" className="text-primary" />
+            <h2 className="text-[17px] font-semibold leading-6 tracking-tight">{server.name}</h2>
+            <Badge variant={server.transport === 'stdio' ? 'secondary' : 'info'} className="font-normal">
+              {server.transport}
             </Badge>
-          )}
-          <Button size="icon" variant="ghost" className="ml-auto" title="收藏" onClick={onToggleFavorite}>
-            <Icon name="star" className={server.isFavorite ? 'text-warning' : ''} />
-          </Button>
+            <Badge variant="secondary" className="gap-1 font-normal">
+              <Icon name="folder" className="h-3 w-3" />
+              {folderLabel(server.folder)}
+            </Badge>
+            <Badge variant={server.source === 'manual' ? 'outline' : server.source === 'market' ? 'primary' : 'warning'} className="font-normal">
+              {server.source === 'manual' ? '手动创建' : server.source === 'market' ? '来自商店' : '导入'}
+            </Badge>
+            <AssetSyncBadge kind="mcp" name={server.name} />
+            {hb !== 'ok' && (
+              <Badge variant={hb === 'error' ? 'danger' : 'warning'} className="gap-1 font-normal">
+                <Icon name="alert" className="h-3 w-3" />
+                健康检查 {hb === 'error' ? 'error' : 'warning'}
+              </Badge>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              aria-label={server.isFavorite ? '取消收藏' : '收藏'}
+              aria-pressed={server.isFavorite}
+              title={server.isFavorite ? '取消收藏' : '收藏'}
+              onClick={onToggleFavorite}
+            >
+              <Icon name="star" className={server.isFavorite ? 'fill-warning/20 text-warning' : ''} />
+            </Button>
+            <span className="mx-0.5 h-4 w-px bg-border/80" />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-muted-foreground hover:bg-danger-soft hover:text-danger"
+              aria-label="删除 MCP 服务"
+              title="删除"
+              onClick={onDelete}
+            >
+              <Icon name="trash" className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">{server.description}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{server.description}</p>
+        <div className="mt-2 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+          <Icon name="gitBranch" className="h-3 w-3 shrink-0" />
+          <span className="shrink-0">仓库文件</span>
+          <code className="truncate rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 font-mono text-[10px]">
+            {mcpFilePath(server, state.repo.layout.mcp)}
+          </code>
+        </div>
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           {server.tags.map((t) => (
-            <Badge key={t} variant="primary">
-              {t}
+            <Badge key={t} variant="primary" className="font-normal">
+              #{t}
             </Badge>
           ))}
-          <span className="ml-auto text-[11px] text-muted-foreground">更新于 {formatDate(server.updatedAt)}</span>
+          <span className="tabular ml-auto whitespace-nowrap text-[10.5px] text-muted-foreground">
+            更新于 {formatDate(server.updatedAt)}
+          </span>
         </div>
-        <div className="mt-3 flex items-center gap-2">
-          <Button onClick={onDeploy} disabled={!server.enabled} title={server.enabled ? '' : '已停用的服务禁止分发'}>
+        <div className="mt-3.5 flex flex-wrap items-center gap-2">
+          <Button onClick={onDeploy} disabled={!server.enabled} className="shadow-sm" title={server.enabled ? '' : '已停用的服务禁止分发'}>
             <Icon name="send" />
             应用到平台
           </Button>
@@ -362,14 +464,10 @@ function McpDetail({
             <Icon name="history" />
             版本（{server.versions.length}）
           </Button>
-          <Button variant="ghost" className="ml-auto text-danger" onClick={onDelete}>
-            <Icon name="trash" />
-            删除
-          </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 border-b border-border px-5 pt-2.5">
+      <div className="flex shrink-0 items-center gap-5 border-b border-border px-5 pt-2.5">
         {(
           [
             { v: 'config', label: '配置（脱敏）' },
@@ -382,8 +480,10 @@ function McpDetail({
             type="button"
             onClick={() => setTab(t.v)}
             className={cn(
-              '-mb-px cursor-pointer border-b-2 px-1 pb-2 pt-1 text-sm',
-              tab === t.v ? 'border-primary font-medium text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
+              '-mb-px cursor-pointer border-b-2 px-0.5 pb-2.5 pt-1.5 text-[13px] transition-colors',
+              tab === t.v
+                ? 'border-primary font-medium text-primary'
+                : 'border-transparent text-muted-foreground hover:border-border-strong hover:text-foreground',
             )}
           >
             {t.label}
@@ -422,6 +522,7 @@ function McpDetail({
               <div>
                 <div className="mb-1 text-xs font-medium text-muted-foreground">个人备注（不产生版本）</div>
                 <Textarea
+                  aria-label="个人备注"
                   rows={2}
                   value={notesDraft}
                   onChange={(e) => setNotesDraft(e.target.value)}

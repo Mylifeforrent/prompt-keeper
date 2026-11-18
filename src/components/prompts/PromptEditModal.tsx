@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { Prompt, PromptVariable } from '../../types'
-import { Badge, Button, Input, Select, Textarea } from '../ui/core'
+import { Badge, Button, Input, Textarea } from '../ui/core'
 import { Modal } from '../ui/modal'
 import { Icon } from '../../lib/icons'
 import { cn, nowIso, uid } from '../../lib/utils'
 import { mergeVariableDefs } from '../../lib/variables'
 import { useStore } from '../../store/store'
-import { FOLDERS } from '../../data/seed'
+import { promptFilePath } from '../../lib/promptSync'
+import { folderOptions, normalizeFolder } from '../../lib/folders'
+import { FolderField } from '../shared/FolderTree'
 
 const emptyDraft = (): Prompt => ({
   id: '',
@@ -14,12 +16,14 @@ const emptyDraft = (): Prompt => ({
   description: '',
   systemPrompt: '',
   userPrompt: '',
-  folder: '默认',
+  folder: null,
   tags: [],
   isFavorite: false,
   isPinned: false,
   usageCount: 0,
   variables: [],
+  syncPolicy: 'inherit',
+  inRepo: false,
   versions: [],
   createdAt: nowIso(),
   updatedAt: nowIso(),
@@ -48,6 +52,7 @@ export function PromptEditModal({
   }, [open, prompt])
 
   const variableDefs = mergeVariableDefs([draft.systemPrompt, draft.userPrompt], draft.variables)
+  const folders = folderOptions(state.prompts, (p) => p.folder)
   const set = (patch: Partial<Prompt>) => setDraft((d) => ({ ...d, ...patch }))
 
   const submit = () => {
@@ -63,6 +68,7 @@ export function PromptEditModal({
       ...draft,
       id: draft.id || uid(),
       title: draft.title.trim(),
+      folder: normalizeFolder(draft.folder),
       variables: variableDefs,
       updatedAt: nowIso(),
     }
@@ -87,36 +93,35 @@ export function PromptEditModal({
       }
     >
       <div className="space-y-4">
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">标题 *</label>
-            <Input value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="例如：代码审查助手" />
-          </div>
-          <div className="w-36">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">文件夹</label>
-            <Select value={draft.folder ?? ''} onChange={(e) => set({ folder: e.target.value || null })}>
-              {FOLDERS.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </Select>
-          </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">标题 *</label>
+          <Input aria-label="标题" value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="例如：代码审查助手" />
         </div>
+
+        <FolderField
+          value={draft.folder}
+          onChange={(folder) => set({ folder })}
+          options={folders}
+          pathPreview={promptFilePath(
+            { ...draft, title: draft.title || 'untitled', folder: draft.folder },
+            state.repo.layout.prompts,
+          )}
+          hint="保存后文件夹会成为仓库目录；移动文件夹会同步移动文件路径。"
+        />
 
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">描述</label>
-          <Input value={draft.description} onChange={(e) => set({ description: e.target.value })} placeholder="一句话说明用途" />
+          <Input aria-label="描述" value={draft.description} onChange={(e) => set({ description: e.target.value })} placeholder="一句话说明用途" />
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">System Prompt</label>
-          <Textarea rows={4} value={draft.systemPrompt} onChange={(e) => set({ systemPrompt: e.target.value })} placeholder="设定角色与输出要求…" />
+          <Textarea aria-label="System Prompt" rows={4} value={draft.systemPrompt} onChange={(e) => set({ systemPrompt: e.target.value })} placeholder="设定角色与输出要求…" />
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">User Prompt</label>
-          <Textarea rows={5} value={draft.userPrompt} onChange={(e) => set({ userPrompt: e.target.value })} placeholder="正文模板，可用 {{变量名}} 或 {{变量名:示例值}}…" />
+          <Textarea aria-label="User Prompt" rows={5} value={draft.userPrompt} onChange={(e) => set({ userPrompt: e.target.value })} placeholder="正文模板，可用 {{变量名}} 或 {{变量名:示例值}}…" />
         </div>
 
         <div>
@@ -130,6 +135,7 @@ export function PromptEditModal({
                 {t}
                 <button
                   type="button"
+                  aria-label={`移除标签 ${t}`}
                   className="cursor-pointer"
                   onClick={() => set({ tags: draft.tags.filter((x) => x !== t) })}
                 >
@@ -138,7 +144,8 @@ export function PromptEditModal({
               </Badge>
             ))}
             <input
-              className="min-w-24 flex-1 bg-transparent text-sm outline-none"
+              aria-label="添加标签"
+              className="min-w-24 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/80"
               value={tagInput}
               placeholder={draft.tags.length ? '' : '编程、写作…'}
               onChange={(e) => setTagInput(e.target.value)}
@@ -151,6 +158,46 @@ export function PromptEditModal({
               }}
             />
           </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            同步范围
+            <span className="font-normal">Git 仓库是可选的；私密 Prompt 建议仅本机</span>
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                { v: 'inherit', title: '跟随仓库策略', desc: '仓库开启 Prompt 同步时参与' },
+                { v: 'sync', title: '参与同步', desc: '显式推送到 Git 仓库' },
+                { v: 'local', title: '仅本机', desc: '不进入 Git，也不生成待推送' },
+              ] as const
+            ).map((o) => {
+              const disabled = o.v === 'sync' && !state.repo.policies.prompts
+              const active = draft.syncPolicy === o.v
+              return (
+                <button
+                  key={o.v}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => set({ syncPolicy: o.v })}
+                  className={cn(
+                    'cursor-pointer rounded-lg border p-2.5 text-left transition-colors',
+                    active ? 'border-primary bg-primary-soft' : 'border-border hover:bg-muted',
+                    disabled && 'cursor-not-allowed opacity-55 hover:bg-transparent',
+                  )}
+                >
+                  <div className="text-xs font-medium">{o.title}</div>
+                  <div className="mt-0.5 text-[10px] leading-4 text-muted-foreground">{o.desc}</div>
+                </button>
+              )
+            })}
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {state.repo.connected
+              ? '保存后在详情页仍可调整；参与同步的改动会进入「待推送」，不会自动提交。'
+              : '当前未连接仓库；同步范围只作为偏好保存。'}
+          </p>
         </div>
 
         <div>
@@ -175,6 +222,7 @@ function VariableChip({ v }: { v: PromptVariable }) {
   return (
     <button
       type="button"
+      aria-expanded={showDetail}
       onClick={() => setShowDetail((s) => !s)}
       className={cn(
         'cursor-pointer rounded-md border px-2 py-1 text-left text-[11px] transition-colors',

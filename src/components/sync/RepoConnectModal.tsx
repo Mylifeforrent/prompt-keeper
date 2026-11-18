@@ -20,9 +20,11 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
   const [cloneMode, setCloneMode] = useState<'managed' | 'existing'>('managed')
   const [localPath, setLocalPath] = useState(state.repo.localPath)
   const [skillsDir, setSkillsDir] = useState(state.repo.layout.skills)
-  const [mcpFile, setMcpFile] = useState(state.repo.layout.mcp)
+  const [mcpDir, setMcpDir] = useState(state.repo.layout.mcp)
   const [promptsDir, setPromptsDir] = useState(state.repo.layout.prompts)
+  const [contractsDir, setContractsDir] = useState(state.repo.layout.contracts)
   const [syncPrompts, setSyncPrompts] = useState(state.repo.policies.prompts)
+  const [syncContracts, setSyncContracts] = useState(state.repo.policies.contracts)
   const [autoFetch, setAutoFetch] = useState(state.repo.autoFetch)
   const [interval, setInterval] = useState(String(state.repo.fetchIntervalMin))
   const [pushMode, setPushMode] = useState<RepoConfig['pushMode']>(state.repo.pushMode)
@@ -39,9 +41,11 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
     setCloneMode('managed')
     setLocalPath(state.repo.localPath)
     setSkillsDir(state.repo.layout.skills)
-    setMcpFile(state.repo.layout.mcp)
+    setMcpDir(state.repo.layout.mcp)
     setPromptsDir(state.repo.layout.prompts)
+    setContractsDir(state.repo.layout.contracts)
     setSyncPrompts(state.repo.policies.prompts)
+    setSyncContracts(state.repo.policies.contracts)
     setAutoFetch(state.repo.autoFetch)
     setInterval(String(state.repo.fetchIntervalMin))
     setPushMode(state.repo.pushMode)
@@ -56,8 +60,11 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
         return
       }
     }
-    if (step === 2 && (!skillsDir.trim() || !mcpFile.trim())) {
-      setError('技能目录与 MCP 配置文件路径必填')
+    if (
+      step === 2 &&
+      (!skillsDir.trim() || !mcpDir.trim() || !promptsDir.trim() || !contractsDir.trim())
+    ) {
+      setError('技能目录、MCP 目录、Prompt 目录与 Agent 指令目录路径必填')
       return
     }
     setError(null)
@@ -76,8 +83,13 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
       autoFetch,
       fetchIntervalMin: Number(interval),
       pushMode,
-      layout: { skills: skillsDir.trim(), mcp: mcpFile.trim(), prompts: promptsDir.trim() },
-      policies: { skills: true, mcp: true, prompts: syncPrompts },
+      layout: {
+        skills: skillsDir.trim(),
+        mcp: mcpDir.trim(),
+        prompts: promptsDir.trim(),
+        contracts: contractsDir.trim(),
+      },
+      policies: { skills: true, mcp: true, prompts: syncPrompts, contracts: syncContracts },
     })
     toast.success(
       state.repo.connected
@@ -142,7 +154,7 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
           <div className="space-y-4">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">仓库地址 *</label>
-              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="owner/repo 或完整 Git URL" />
+              <Input aria-label="仓库地址" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="owner/repo 或完整 Git URL" />
               <p className="mt-1 text-[11px] text-muted-foreground">
                 支持 GitHub / GitLab / 自建 Git。示例：tony/ai-assets。私有仓库使用本机已有的 Git 凭据或 SSH Key，不在应用中保存 Token。
               </p>
@@ -150,11 +162,11 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">分支</label>
-                <Input value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="main" />
+                <Input aria-label="分支" value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="main" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">认证方式</label>
-                <Select value={auth} onChange={(e) => setAuth(e.target.value as RepoConfig['auth'])}>
+                <Select aria-label="认证方式" value={auth} onChange={(e) => setAuth(e.target.value as RepoConfig['auth'])}>
                   <option value="credential">系统 Git 凭据（推荐）</option>
                   <option value="ssh">SSH Key</option>
                   <option value="token">访问令牌（仅本次会话）</option>
@@ -188,6 +200,7 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">本地路径 *</label>
               <Input
+                aria-label="本地克隆路径"
                 value={localPath}
                 onChange={(e) => setLocalPath(e.target.value)}
                 className="font-mono text-xs"
@@ -203,11 +216,18 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
               <Icon name="gitBranch" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               已自动识别仓库结构。若你的仓库使用别的目录，可在此改写映射；未匹配到的资产会进入「未归档」并提示你选择。
             </div>
+            <pre className="overflow-x-auto rounded-lg bg-muted/60 p-3 font-mono text-[11px] leading-5">
+{`prompts/编程/代码质量/review.prompt.md
+instructions/团队/前端/frontend.contract.md
+skills/开发流程/Git/commit-helper/SKILL.md
+mcp/开发/GitHub/github.json`}
+            </pre>
             {(
               [
-                { label: '技能目录', value: skillsDir, set: setSkillsDir, hint: '每个技能一个子目录，含 SKILL.md 与可选 scripts/' },
-                { label: 'MCP 配置文件', value: mcpFile, set: setMcpFile, hint: 'JSON / TOML；凭据必须以 ${VAR} 占位' },
-                { label: 'Prompt 目录（不参与同步）', value: promptsDir, set: setPromptsDir, hint: 'Prompt 默认只在本机与平台之间流转' },
+                { label: '技能目录', value: skillsDir, set: setSkillsDir, hint: '按分类建文件夹；每个技能一个子目录，含 SKILL.md 与可选 scripts/' },
+                { label: 'MCP 目录', value: mcpDir, set: setMcpDir, hint: '按分类建文件夹；每个 server 一个 <name>.json，凭据必须以 ${VAR} 占位' },
+                { label: 'Prompt 目录', value: promptsDir, set: setPromptsDir, hint: '可建多级文件夹；每个 Prompt 一个 .prompt.md，frontmatter 存元数据与变量定义，正文分 System / User 两段' },
+                { label: 'Agent 指令目录', value: contractsDir, set: setContractsDir, hint: '可建多级文件夹；每个契约一个 .contract.md，frontmatter 存 folder / scope / activation / targets' },
               ] as const
             ).map((f) => (
               <div key={f.label}>
@@ -215,18 +235,27 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
                   <label className="text-xs font-medium text-muted-foreground">{f.label}</label>
                   <Badge variant="success">已识别</Badge>
                 </div>
-                <Input value={f.value} onChange={(e) => f.set(e.target.value)} className="font-mono text-xs" />
+                <Input aria-label={f.label} value={f.value} onChange={(e) => f.set(e.target.value)} className="font-mono text-xs" />
                 <p className="mt-1 text-[11px] text-muted-foreground">{f.hint}</p>
               </div>
             ))}
             <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5">
               <div className="min-w-0">
-                <div className="text-sm">让 Prompt 也参与仓库同步</div>
+                <div className="text-sm">让 Prompt 参与仓库同步（推荐）</div>
                 <p className="text-[11px] text-muted-foreground">
-                  不推荐。Prompt 多以复制粘贴使用，进仓库会让 diff 噪音变大；平台发现与本地保存已覆盖复用需求。
+                  团队 Prompt 模板随仓库共享；每条 Prompt 仍可单独设为仅本机，私密内容不会被强制推送。
                 </p>
               </div>
-              <Switch checked={syncPrompts} onChange={setSyncPrompts} />
+              <Switch checked={syncPrompts} onChange={setSyncPrompts} label="让 Prompt 参与仓库同步" />
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5">
+              <div className="min-w-0">
+                <div className="text-sm">让 Agent 指令参与仓库同步（推荐）</div>
+                <p className="text-[11px] text-muted-foreground">
+                  AGENTS.md / CLAUDE.md / .cursor/rules 的规范源随仓库共享；每条契约仍可单独设为仅本机。
+                </p>
+              </div>
+              <Switch checked={syncContracts} onChange={setSyncContracts} label="让 Agent 指令参与仓库同步" />
             </div>
           </div>
         )}
@@ -239,13 +268,13 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
                 <p className="text-[11px] text-muted-foreground">只拉取远端元数据并提示差异，不会自动合并或改写本地资产。</p>
               </div>
               <div className="ml-auto flex items-center gap-2">
-                <Select className="h-8 w-24 text-xs" value={interval} onChange={(e) => setInterval(e.target.value)}>
+                <Select aria-label="fetch 间隔" className="h-8 w-24 text-xs" value={interval} onChange={(e) => setInterval(e.target.value)}>
                   <option value="5">每 5 分钟</option>
                   <option value="15">每 15 分钟</option>
                   <option value="30">每 30 分钟</option>
                   <option value="60">每小时</option>
                 </Select>
-                <Switch checked={autoFetch} onChange={setAutoFetch} />
+                <Switch checked={autoFetch} onChange={setAutoFetch} label="定时 fetch" />
               </div>
             </div>
 
@@ -280,8 +309,8 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
                 MCP 密钥策略（必须）
               </div>
               <p className="mt-1 leading-5">
-                仓库里只允许 ${'{'}VAR{'}'} 形式的变量占位。推送前会扫描 env / headers，发现明文 Token 直接阻断；真实值只存本机钥匙串，
-                分发到 Agent 时再按目标工具注入。
+                仓库里只允许 ${'{'}VAR{'}'} 形式的变量占位。推送前会扫描 env / headers、Prompt 与指令正文，发现明文 Token 直接阻断；
+                真实值只存本机钥匙串或由 Prompt 变量临时填写，分发到 Agent 时再按目标工具注入。
               </p>
             </div>
           </div>
@@ -292,9 +321,12 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
             <div className="space-y-1.5 rounded-lg border border-border">
               {(
                 [
-                  { icon: 'download' as const, label: '远端资产', value: '5 个技能 · 3 个 MCP 模板 · 1 个冲突', tone: 'text-foreground' },
+                  { icon: 'download' as const, label: '远端资产', value: '5 个技能 · 3 个 MCP 模板 · 4 个 Prompt 变更 · 2 个指令变更 · 2 个冲突', tone: 'text-foreground' },
+                  { icon: 'folder' as const, label: '目录结构', value: '四类资产的文件夹层级均可解析；空目录不写入，未知文件进入「未归档」', tone: 'text-success' },
                   { icon: 'alert' as const, label: '可执行脚本', value: '1 个新技能含 scripts/collect.sh，需审核后写入', tone: 'text-warning' },
-                  { icon: 'shield' as const, label: '凭据扫描', value: '通过：未发现明文密钥；1 个本地 MCP 待转为 ${VAR}', tone: 'text-success' },
+                  { icon: 'message' as const, label: 'Prompt 格式', value: '4 个 .prompt.md 通过结构校验；拉取时必须逐条预览', tone: 'text-success' },
+                  { icon: 'file' as const, label: '指令格式', value: '2 个 .contract.md 通过结构校验；frontmatter 与正文均可解析', tone: 'text-success' },
+                  { icon: 'shield' as const, label: '凭据扫描', value: 'Prompt 正文 1 处、MCP 1 处疑似凭据将被阻断或要求转换', tone: 'text-warning' },
                   { icon: 'folder' as const, label: '本地未提交改动', value: '无（应用托管的克隆目录）', tone: 'text-muted-foreground' },
                 ] as const
               ).map((r) => (
@@ -307,7 +339,7 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
             </div>
             <div className="rounded-lg bg-muted/60 px-3 py-2.5 text-[11px] leading-5 text-muted-foreground">
               连接后不会自动写入任何 Agent 目录：先进入「变更」审核并合入本地库，再由你在「分发」里选择目标 Agent。
-              首次分发默认 symlink；文件系统不支持时回退 copy 并逐条提示。
+              Prompt 与 Agent 指令变更必须逐条预览全文，不会进入批量接受。首次分发默认 symlink；文件系统不支持时回退 copy 并逐条提示。
             </div>
             <Checkbox
               checked={trusted}

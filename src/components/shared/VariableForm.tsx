@@ -24,13 +24,14 @@ export function VariableFields({
           </label>
           {v.type === 'textarea' ? (
             <Textarea
+              aria-label={v.label || v.name}
               rows={4}
               value={values[v.name] ?? ''}
               placeholder={v.example}
               onChange={(e) => onChange(v.name, e.target.value)}
             />
           ) : v.type === 'select' ? (
-            <Select value={values[v.name] ?? ''} onChange={(e) => onChange(v.name, e.target.value)}>
+            <Select aria-label={v.label || v.name} value={values[v.name] ?? ''} onChange={(e) => onChange(v.name, e.target.value)}>
               <option value="">请选择…</option>
               {(v.options ?? []).map((o) => (
                 <option key={o} value={o}>
@@ -40,6 +41,7 @@ export function VariableFields({
             </Select>
           ) : (
             <Input
+              aria-label={v.label || v.name}
               type={v.type === 'number' ? 'number' : 'text'}
               value={values[v.name] ?? ''}
               placeholder={v.example}

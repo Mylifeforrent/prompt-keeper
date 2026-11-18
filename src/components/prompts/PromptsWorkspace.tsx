@@ -9,12 +9,16 @@ import { copyToClipboard } from '../../lib/utils'
 import { PromptList, type PromptViewMode } from './PromptList'
 import { PromptDetail } from './PromptDetail'
 import { PromptEditModal } from './PromptEditModal'
+import { PromptSyncModal } from './PromptSyncModal'
 import { AiTestDrawer } from './AiTestDrawer'
 import { VariableFormModal } from '../shared/VariableForm'
 import { VersionHistoryModal } from '../shared/VersionHistoryModal'
 import { ConfirmDialog } from '../ui/modal'
 import { useToast } from '../ui/toast'
 import { renderTemplate } from '../../lib/variables'
+import { promptEffectiveSync } from '../../lib/promptSync'
+import { folderMatches, folderLabel } from '../../lib/folders'
+import { FolderTree } from '../shared/FolderTree'
 
 export function PromptsWorkspace({
   query,
@@ -31,7 +35,7 @@ export function PromptsWorkspace({
   )
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [favOnly, setFavOnly] = useState(false)
-  const [folderFilter, setFolderFilter] = useState('')
+  const [selectedFolder, setSelectedFolder] = useState('')
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'title' | 'usage'>('updated')
   const [selectedId, setSelectedId] = useState<string | null>(state.prompts[0]?.id ?? null)
 
@@ -40,6 +44,7 @@ export function PromptsWorkspace({
   const [testOf, setTestOf] = useState<Prompt | null>(null)
   const [varCopy, setVarCopy] = useState<Prompt | null>(null)
   const [deleteOf, setDeleteOf] = useState<Prompt | null>(null)
+  const [syncOf, setSyncOf] = useState<Prompt | null>(null)
 
   useEffect(() => {
     if (createSignal.page === 'prompts' && createSignal.n > 0) {
@@ -57,7 +62,7 @@ export function PromptsWorkspace({
     const q = query.trim().toLowerCase()
     let list = state.prompts.filter((p) => {
       if (favOnly && !p.isFavorite) return false
-      if (folderFilter && p.folder !== folderFilter) return false
+      if (selectedFolder && !folderMatches(p.folder, selectedFolder)) return false
       if (tagFilter.length && !tagFilter.every((t) => p.tags.includes(t))) return false
       if (q) {
         const hay = [p.title, p.description, p.systemPrompt, p.userPrompt, p.tags.join(' ')].join(' ').toLowerCase()
@@ -79,7 +84,7 @@ export function PromptsWorkspace({
       }
     })
     return list
-  }, [state.prompts, query, favOnly, folderFilter, tagFilter, sortBy])
+  }, [state.prompts, query, favOnly, selectedFolder, tagFilter, sortBy])
 
   const selected = filtered.find((p) => p.id === selectedId) ?? filtered[0] ?? null
 
@@ -92,57 +97,76 @@ export function PromptsWorkspace({
     toast[ok ? 'success' : 'error'](ok ? `已复制「${prompt.title}」到剪贴板，用量 +1` : '复制失败，请检查浏览器剪贴板权限')
   }
 
-  const hasFilter = !!query.trim() || favOnly || !!folderFilter || tagFilter.length > 0
+  const hasFilter = !!query.trim() || favOnly || !!selectedFolder || tagFilter.length > 0
 
   return (
     <div className="flex h-full min-h-0">
+      <FolderTree
+        items={state.prompts}
+        getFolder={(p) => p.folder}
+        selected={selectedFolder}
+        onSelect={setSelectedFolder}
+        className="hidden w-[176px] shrink-0 border-r border-border bg-card/40 xl:flex"
+        title="Prompt 文件夹"
+      />
+
       {/* 列表栏 */}
-      <div className="flex w-[400px] shrink-0 flex-col border-r border-border">
-        <div className="space-y-2 border-b border-border px-4 py-3">
-          <div className="flex items-center gap-2">
+      <div className="flex w-[360px] shrink-0 flex-col border-r border-border bg-background/40 xl:w-[400px]">
+        {selectedFolder && (
+          <div className="flex items-center gap-1.5 border-b border-border bg-muted/25 px-4 py-1.5 text-[11px] text-muted-foreground">
+            <Icon name="folder" className="h-3 w-3" />
+            <span className="truncate text-foreground">{folderLabel(selectedFolder)}</span>
+            <button
+              type="button"
+              onClick={() => setSelectedFolder('')}
+              className="ml-auto shrink-0 cursor-pointer rounded px-1.5 py-0.5 transition-colors hover:bg-muted hover:text-foreground"
+            >
+              返回全部
+            </button>
+          </div>
+        )}
+        <div className="space-y-2.5 border-b border-border px-3.5 py-3">
+          <div className="flex items-center gap-1.5">
             <Select className="h-8 flex-1 text-xs" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
               <option value="updated">按更新时间</option>
               <option value="created">按创建时间</option>
               <option value="title">按标题</option>
               <option value="usage">按使用次数</option>
             </Select>
-            <Select
-              className="h-8 w-28 text-xs"
-              value={folderFilter}
-              onChange={(e) => setFolderFilter(e.target.value)}
-            >
-              <option value="">全部文件夹</option>
-              {[...new Set(state.prompts.map((p) => p.folder).filter(Boolean))].map((f) => (
-                <option key={f} value={f as string}>
-                  {f}
-                </option>
-              ))}
-            </Select>
             <button
               type="button"
               onClick={() => setFavOnly((f) => !f)}
+              aria-pressed={favOnly}
+              aria-label="只看收藏"
               className={cn(
-                'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border transition-colors',
-                favOnly ? 'border-warning bg-warning-soft text-warning' : 'border-input text-muted-foreground hover:bg-muted',
+                'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors',
+                favOnly
+                  ? 'border-warning/50 bg-warning-soft text-warning'
+                  : 'border-input text-muted-foreground hover:border-border-strong hover:bg-muted hover:text-foreground',
               )}
               title="只看收藏"
             >
-              <Icon name="star" className="h-4 w-4" />
+              <Icon name="star" className="h-3.5 w-3.5" />
             </button>
-            <div className="inline-flex h-8 items-center rounded-lg border border-input p-0.5">
+            <div className="inline-flex h-8 shrink-0 items-center rounded-lg border border-input bg-card p-0.5">
               {(
                 [
-                  { v: 'card' as const, icon: 'grid' as const },
-                  { v: 'table' as const, icon: 'sliders' as const },
+                  { v: 'card' as const, icon: 'grid' as const, label: '卡片视图' },
+                  { v: 'table' as const, icon: 'sliders' as const, label: '表格视图' },
                 ]
               ).map((t) => (
                 <button
                   key={t.v}
                   type="button"
                   onClick={() => setView(t.v)}
+                  aria-label={t.label}
+                  aria-pressed={view === t.v}
+                  title={t.label}
                   className={cn(
-                    'flex h-6 w-7 cursor-pointer items-center justify-center rounded-md',
-                    view === t.v ? 'bg-muted text-foreground' : 'text-muted-foreground',
+                    'flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors',
+                    view === t.v
+                      ? 'bg-muted text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
                   <Icon name={t.icon} className="h-3.5 w-3.5" />
@@ -150,7 +174,14 @@ export function PromptsWorkspace({
               ))}
             </div>
           </div>
-          <div className="flex flex-wrap gap-1">
+          <div
+            role="group"
+            aria-label="标签筛选"
+            className="flex items-center gap-1 overflow-x-auto pb-0.5 pr-5 scrollbar-none [mask-image:linear-gradient(to_right,black_calc(100%-18px),transparent)]"
+          >
+            {allTags.length === 0 && (
+              <span className="text-[11px] text-muted-foreground/85">暂无标签</span>
+            )}
             {allTags.map((t) => {
               const active = tagFilter.includes(t)
               return (
@@ -158,9 +189,12 @@ export function PromptsWorkspace({
                   key={t}
                   type="button"
                   onClick={() => setTagFilter((prev) => (active ? prev.filter((x) => x !== t) : [...prev, t]))}
+                  aria-pressed={active}
                   className={cn(
-                    'cursor-pointer rounded-md border px-1.5 py-0.5 text-[11px] transition-colors',
-                    active ? 'border-primary bg-primary-soft text-primary' : 'border-border text-muted-foreground hover:bg-muted',
+                    'shrink-0 cursor-pointer whitespace-nowrap rounded-md border px-1.5 py-[3px] text-[10.5px] transition-colors',
+                    active
+                      ? 'border-primary/40 bg-primary-soft font-medium text-primary'
+                      : 'border-border/80 text-muted-foreground hover:border-border-strong hover:bg-muted',
                   )}
                 >
                   #{t}
@@ -180,17 +214,36 @@ export function PromptsWorkspace({
             onClearFilter={() => {
               setTagFilter([])
               setFavOnly(false)
-              setFolderFilter('')
+              setSelectedFolder('')
             }}
             onCreate={() => setEditing({ open: true, prompt: null })}
           />
         </div>
 
-        <div className="flex items-center border-t border-border px-4 py-2 text-[11px] text-muted-foreground">
-          {filtered.length} / {state.prompts.length} 条
-          <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setEditing({ open: true, prompt: null })}>
+        <div className="flex items-center gap-2 border-t border-border px-3.5 py-2 text-[11px] text-muted-foreground">
+          <span className="tabular">{filtered.length} / {state.prompts.length} 条</span>
+          {hasFilter && (
+            <button
+              type="button"
+              onClick={() => {
+                setTagFilter([])
+                setFavOnly(false)
+                setSelectedFolder('')
+              }}
+              className="cursor-pointer rounded px-1.5 py-0.5 text-primary transition-colors hover:bg-primary-soft"
+            >
+              清除筛选
+            </button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto h-7"
+            onClick={() => setEditing({ open: true, prompt: null })}
+            title="新建 Prompt（快捷键 N）"
+          >
             <Icon name="plus" className="h-3.5 w-3.5" />
-            新建（N）
+            新建
           </Button>
         </div>
       </div>
@@ -205,6 +258,7 @@ export function PromptsWorkspace({
             onCopy={() => (selected.variables.length ? setVarCopy(selected) : void doCopy(selected))}
             onDelete={() => setDeleteOf(selected)}
             onShowVersions={() => setVersionOf(selected)}
+            onSync={() => setSyncOf(selected)}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -256,6 +310,8 @@ export function PromptsWorkspace({
 
       {testOf && <AiTestDrawer prompt={testOf} onClose={() => setTestOf(null)} />}
 
+      {syncOf && <PromptSyncModal open prompt={syncOf} onClose={() => setSyncOf(null)} />}
+
       <ConfirmDialog
         open={!!deleteOf}
         onClose={() => setDeleteOf(null)}
@@ -270,6 +326,11 @@ export function PromptsWorkspace({
         message={
           <>
             将删除「<b className="text-foreground">{deleteOf?.title}</b>」及其全部 {deleteOf?.versions.length ?? 0} 个历史版本，此操作不可撤销。
+            {deleteOf && promptEffectiveSync(state.repo, deleteOf) && (
+              <p className="mt-2 rounded-lg border border-warning/30 bg-warning-soft px-2.5 py-2 text-xs leading-5 text-warning">
+                该 Prompt 参与仓库同步。本次只删除本地副本，不会修改仓库文件；远端若仍保留该文件，下次拉取会重新出现。
+              </p>
+            )}
           </>
         }
       />

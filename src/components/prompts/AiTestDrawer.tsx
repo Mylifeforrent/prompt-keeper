@@ -50,6 +50,19 @@ export function AiTestDrawer({ prompt, onClose }: { prompt: Prompt; onClose: () 
     setValues(loadVarCache(prompt.id))
   }, [prompt.id])
 
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener('keydown', handler)
+    }
+  }, [onClose])
+
   useEffect(() => () => {
     if (timer.current) clearInterval(timer.current)
   }, [])
@@ -89,12 +102,28 @@ export function AiTestDrawer({ prompt, onClose }: { prompt: Prompt; onClose: () 
   const missingRequired = prompt.variables.filter((v) => v.required && !(values[v.name] ?? '').trim())
 
   return (
-    <div className="fixed inset-y-0 right-0 z-40 flex w-[460px] flex-col border-l border-border bg-card shadow-2xl">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <Icon name="flask" className="text-primary" />
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 animate-fade-in bg-[var(--overlay)] backdrop-blur-[2px]" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`AI 测试 — ${prompt.title}`}
+        className="animate-slide-in-right absolute inset-y-0 right-0 flex w-[460px] max-w-[100vw] flex-col border-l border-border bg-card shadow-[var(--shadow-float)]"
+      >
+      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+          <Icon name="flask" className="h-3.5 w-3.5" />
+        </span>
         <h2 className="text-sm font-semibold">AI 测试</h2>
-        <span className="truncate text-xs text-muted-foreground">· {prompt.title}</span>
-        <Button size="icon" variant="ghost" className="ml-auto" onClick={onClose}>
+        <span className="truncate text-[11px] text-muted-foreground">· {prompt.title}</span>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="ml-auto h-8 w-8"
+          onClick={onClose}
+          aria-label="关闭 AI 测试"
+          title="关闭（Esc）"
+        >
           <Icon name="x" />
         </Button>
       </div>
@@ -192,6 +221,7 @@ export function AiTestDrawer({ prompt, onClose }: { prompt: Prompt; onClose: () 
           本响应由原型模拟生成；真实产品会持久化每次运行（模型 / 耗时 / 变量替换后正文）到 SQLite。
         </div>
       )}
+      </div>
     </div>
   )
 }

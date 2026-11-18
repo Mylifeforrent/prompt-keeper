@@ -1,11 +1,16 @@
 import type {
   AgentRuntime,
   Deployment,
+  Prompt,
   PromptPlatformItem,
   RepoConfig,
   SyncChange,
   SyncEvent,
 } from '../types'
+import { promptFilePath, serializePromptFile } from '../lib/promptSync'
+import { serializeMcpRepoFile } from '../lib/mcp'
+import { SEED_MCPS, SEED_PROMPTS } from './seed'
+import { SEED_CONTRACT_SYNC_CHANGES } from './contractSeed'
 
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
 const hoursAgo = (h: number) => minutesAgo(h * 60)
@@ -114,8 +119,8 @@ export const SEED_REPO: RepoConfig = {
   lastSyncedAt: hoursAgo(2),
   ahead: 2,
   behind: 3,
-  layout: { skills: 'skills', mcp: 'mcp/servers.json', prompts: 'prompts' },
-  policies: { skills: true, mcp: true, prompts: false },
+  layout: { skills: 'skills', mcp: 'mcp', prompts: 'prompts', contracts: 'instructions' },
+  policies: { skills: true, mcp: true, prompts: true, contracts: true },
 }
 
 /* ---------------- 待处理变更 ---------------- */
@@ -163,6 +168,22 @@ const releaseNotesRemote = `# Release Notes
 - 输出使用简体中文
 `
 
+const mcpSeed = (name: string) => {
+  const server = SEED_MCPS.find((m) => m.name === name)
+  if (!server) throw new Error(`missing mcp seed: ${name}`)
+  return server
+}
+
+const githubMcpRemote = serializeMcpRepoFile({
+  ...mcpSeed('github'),
+  args: [...(mcpSeed('github').args ?? []), '--toolsets', 'repos,issues,pull_requests'],
+})
+
+const sqliteMcpLocal = serializeMcpRepoFile({
+  ...mcpSeed('sqlite-explorer'),
+  args: ['mcp-server-sqlite', '--db-path', '${SQLITE_DB_PATH}'],
+})
+
 const commitHelperRemote = `# Commit Helper
 
 依据 **Conventional Commits** 规范生成提交信息。
@@ -183,12 +204,85 @@ git diff --staged | commit-helper
 \`\`\`
 `
 
+/* ---------------- Prompt 同步种子（.prompt.md） ---------------- */
+
+const promptById = (id: string): Prompt => {
+  const prompt = SEED_PROMPTS.find((p) => p.id === id)
+  if (!prompt) throw new Error(`missing prompt seed: ${id}`)
+  return prompt
+}
+
+const promptFile = (prompt: Prompt, patch: Partial<Prompt> = {}) =>
+  serializePromptFile({ ...prompt, ...patch })
+
+const apiContractRemote: Prompt = {
+  id: 'p-api-contract',
+  title: 'API 契约评审',
+  description: '从兼容性、错误结构、幂等与可观测性四方面评审 OpenAPI 契约',
+  systemPrompt:
+    '你是 API 平台负责人。评审用户提供的 OpenAPI 片段：按「兼容性 / 错误结构 / 幂等与重试 / 可观测性」四方面输出问题清单，标注破坏性变更，并给出可执行的修改建议。禁止只给原则性意见。',
+  userPrompt: '请评审以下 OpenAPI 契约：\n\n```yaml\n{{spec}}\n```',
+  folder: '编程',
+  tags: ['API', '评审'],
+  isFavorite: false,
+  isPinned: false,
+  usageCount: 0,
+  variables: [{ name: 'spec', type: 'textarea', required: true, label: 'OpenAPI 片段' }],
+  syncPolicy: 'inherit',
+  versions: [],
+  createdAt: daysAgo(1),
+  updatedAt: daysAgo(1),
+}
+
+const reviewLocal = promptById('p-review')
+const reviewBase: Prompt = {
+  ...reviewLocal,
+  systemPrompt:
+    '你是一位资深代码审查专家。请从正确性、可读性、性能、安全四个维度审查用户提交的代码，每个维度给出评分与具体改进建议。',
+  userPrompt: '请审查以下 {{language}} 代码：\n\n```\n{{code}}\n```',
+  updatedAt: daysAgo(6),
+}
+
+const unitLocal = promptById('p-unit-test')
+const unitRemote: Prompt = {
+  ...unitLocal,
+  systemPrompt:
+    '你是测试工程师。为用户提供的函数编写覆盖正常路径与边界条件的单元测试。先列出用例清单（至少包含空值、边界值、异常分支），再给完整代码；禁止只写 happy path。',
+  userPrompt:
+    '语言：{{language}}\n测试框架：{{framework}}\n函数：\n```\n{{code}}\n```\n\n要求：用表格列出用例清单，并标注每条用例覆盖的边界条件。',
+  updatedAt: daysAgo(1),
+}
+const unitBase: Prompt = {
+  ...unitLocal,
+  systemPrompt:
+    '你是测试工程师。为用户提供的函数编写覆盖正常路径与边界条件的单元测试，先列出用例清单再给完整代码。',
+  userPrompt: '语言：{{language}}\n测试框架：{{framework}}\n函数：\n```\n{{code}}\n```',
+  updatedAt: daysAgo(9),
+}
+
+const weeklyLocal = promptById('p-weekly')
+const weeklyRemote: Prompt = {
+  ...weeklyLocal,
+  systemPrompt:
+    '你是项目助理。把提交记录整理为周报：先给三行结论，再按「已完成 / 进行中 / 风险 / 需要决策」分类；风险项必须写明影响与建议动作。语气：{{tone}}。',
+  userPrompt:
+    '本周记录：\n{{commits}}\n\n请输出周报，并在末尾给出下周三个重点。',
+  tags: [...weeklyLocal.tags, '周报'],
+  updatedAt: daysAgo(1),
+}
+const weeklyBase: Prompt = {
+  ...weeklyLocal,
+  systemPrompt: '你是项目助理。把用户提供的提交记录整理为周报。语气：{{tone}}。',
+  userPrompt: '本周提交记录：\n{{commits}}',
+  updatedAt: daysAgo(6),
+}
+
 export const SEED_SYNC_CHANGES: SyncChange[] = [
   {
     id: 'sc-release-notes',
     kind: 'skill',
     assetName: 'release-notes',
-    path: 'skills/release-notes/SKILL.md',
+    path: 'skills/开发流程/发布/release-notes/SKILL.md',
     change: 'added',
     direction: 'incoming',
     summary: '新增技能：汇总两个 tag 之间的提交，生成面向用户的发布说明',
@@ -207,7 +301,7 @@ export const SEED_SYNC_CHANGES: SyncChange[] = [
     id: 'sc-commit-helper',
     kind: 'skill',
     assetName: 'commit-helper',
-    path: 'skills/commit-helper/SKILL.md',
+    path: 'skills/开发流程/Git/commit-helper/SKILL.md',
     change: 'modified',
     direction: 'incoming',
     summary: '规则更新：破坏性变更必须带 ! 并给出迁移提示',
@@ -223,7 +317,7 @@ export const SEED_SYNC_CHANGES: SyncChange[] = [
     id: 'sc-github-mcp',
     kind: 'mcp',
     assetName: 'github',
-    path: 'mcp/servers.json',
+    path: 'mcp/开发/GitHub/github.json',
     change: 'modified',
     direction: 'incoming',
     summary: '新增 toolsets 参数，凭据仍以 ${GITHUB_PERSONAL_ACCESS_TOKEN} 占位',
@@ -233,12 +327,13 @@ export const SEED_SYNC_CHANGES: SyncChange[] = [
     remoteVersion: 'v2',
     localVersion: 'v1',
     baseVersion: 'v1',
+    remoteContent: githubMcpRemote,
   },
   {
     id: 'sc-code-reviewer',
     kind: 'skill',
     assetName: 'code-reviewer',
-    path: 'skills/code-reviewer/SKILL.md',
+    path: 'skills/开发流程/代码质量/code-reviewer/SKILL.md',
     change: 'modified',
     direction: 'outgoing',
     summary: '新增「可维护性」审查维度与评分门槛',
@@ -252,7 +347,7 @@ export const SEED_SYNC_CHANGES: SyncChange[] = [
     id: 'sc-sqlite-mcp',
     kind: 'mcp',
     assetName: 'sqlite-explorer',
-    path: 'mcp/servers.json',
+    path: 'mcp/本地工具/数据/sqlite-explorer.json',
     change: 'modified',
     direction: 'outgoing',
     summary: '数据库路径改为 ${SQLITE_DB_PATH}，避免提交本机绝对路径',
@@ -261,12 +356,13 @@ export const SEED_SYNC_CHANGES: SyncChange[] = [
     risk: 'none',
     localVersion: 'v2',
     baseVersion: 'v1',
+    localContent: sqliteMcpLocal,
   },
   {
     id: 'sc-amap-mcp',
     kind: 'mcp',
     assetName: 'amap-maps',
-    path: 'mcp/servers.json',
+    path: 'mcp/外部服务/地图/amap-maps.json',
     change: 'modified',
     direction: 'outgoing',
     summary: '检测到明文 AMAP_API_KEY，已阻止推送',
@@ -281,7 +377,7 @@ export const SEED_SYNC_CHANGES: SyncChange[] = [
     id: 'sc-doc-writer',
     kind: 'skill',
     assetName: 'doc-writer',
-    path: 'skills/doc-writer/SKILL.md',
+    path: 'skills/文档/技术写作/doc-writer/SKILL.md',
     change: 'modified',
     direction: 'conflict',
     summary: '仓库新增「迁移指南格式」；本地修改了「输出格式」，双方都改动了同一文件',
@@ -295,6 +391,93 @@ export const SEED_SYNC_CHANGES: SyncChange[] = [
     localContent: docWriterLocal,
     baseContent: docWriterBase,
   },
+  {
+    id: 'sc-prompt-api-contract',
+    kind: 'prompt',
+    assetId: apiContractRemote.id,
+    assetName: apiContractRemote.title,
+    path: promptFilePath(apiContractRemote),
+    change: 'added',
+    direction: 'incoming',
+    summary: '新增团队 Prompt：从兼容性 / 错误结构 / 幂等 / 可观测性评审 API 契约',
+    additions: 24,
+    deletions: 0,
+    risk: 'none',
+    versionLabel: 'v1.0.0',
+    remoteVersion: 'v1.0.0',
+    remoteContent: promptFile(apiContractRemote),
+  },
+  {
+    id: 'sc-prompt-unit-test',
+    kind: 'prompt',
+    assetId: unitLocal.id,
+    assetName: unitLocal.title,
+    path: promptFilePath(unitLocal),
+    change: 'modified',
+    direction: 'incoming',
+    summary: '仓库补充边界条件用例清单与最小覆盖要求',
+    additions: 9,
+    deletions: 2,
+    risk: 'none',
+    remoteVersion: 'v2',
+    localVersion: 'v1',
+    baseVersion: 'v1',
+    remoteContent: promptFile(unitRemote),
+    localContent: promptFile(unitLocal),
+    baseContent: promptFile(unitBase),
+  },
+  {
+    id: 'sc-prompt-review',
+    kind: 'prompt',
+    assetId: reviewLocal.id,
+    assetName: reviewLocal.title,
+    path: promptFilePath(reviewLocal),
+    change: 'modified',
+    direction: 'outgoing',
+    summary: '本地新增「重点关注」变量，并要求输出总评',
+    additions: 11,
+    deletions: 3,
+    risk: 'none',
+    localVersion: 'v3',
+    baseVersion: 'v2',
+    localContent: promptFile(reviewLocal),
+    baseContent: promptFile(reviewBase),
+  },
+  {
+    id: 'sc-prompt-api-debug',
+    kind: 'prompt',
+    assetId: 'p-api-debug',
+    assetName: '内部 API 调试助手',
+    path: promptFilePath({ id: 'p-api-debug', title: '内部 API 调试助手', folder: '编程/调试' }),
+    change: 'added',
+    direction: 'outgoing',
+    summary: 'Prompt 正文检测到明文 sk-live Token，已阻止推送',
+    additions: 18,
+    deletions: 0,
+    risk: 'secrets',
+    blocked: true,
+    localVersion: 'v1',
+  },
+  {
+    id: 'sc-prompt-weekly',
+    kind: 'prompt',
+    assetId: weeklyLocal.id,
+    assetName: weeklyLocal.title,
+    path: promptFilePath(weeklyLocal),
+    change: 'modified',
+    direction: 'conflict',
+    summary: '仓库改为「结论先行」结构；本地补充了语气与格式要求，双方都改动了同一文件',
+    additions: 16,
+    deletions: 8,
+    risk: 'none',
+    remoteVersion: 'v4',
+    localVersion: 'v3',
+    baseVersion: 'v2',
+    remoteContent: promptFile(weeklyRemote),
+    localContent: promptFile(weeklyLocal),
+    baseContent: promptFile(weeklyBase),
+  },
+  ...SEED_CONTRACT_SYNC_CHANGES,
 ]
 
 /* ---------------- 分发矩阵 ---------------- */
@@ -366,6 +549,22 @@ export const SEED_SYNC_EVENTS: SyncEvent[] = [
     result: 'success',
   },
   {
+    id: 'ev-prompt-pull-1',
+    at: hoursAgo(3),
+    type: 'pull',
+    title: 'Prompt 同步启用 · 合入 2 个团队 Prompt 模板',
+    detail: 'unit-test / api-contract 进入本地库；「报错信息翻译」保持仅本机',
+    result: 'success',
+  },
+  {
+    id: 'ev-prompt-conflict-1',
+    at: hoursAgo(25),
+    type: 'conflict',
+    title: 'prompt:周报生成器 双向修改，已生成冲突',
+    detail: '仓库 v4 / 本地 v3 / 基线 v2，等待人工选择合并策略',
+    result: 'warning',
+  },
+  {
     id: 'ev-push-1',
     at: hoursAgo(26),
     type: 'push',
@@ -399,7 +598,7 @@ export const SEED_SYNC_EVENTS: SyncEvent[] = [
   },
 ]
 
-/* ---------------- 平台 Prompt（发现，不参与 Git 同步） ---------------- */
+/* ---------------- 平台 Prompt（发现；保存到本地后按 Prompt 同步范围决定） ---------------- */
 
 export const SEED_PLATFORM_PROMPTS: PromptPlatformItem[] = [
   {

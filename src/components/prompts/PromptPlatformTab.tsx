@@ -45,12 +45,14 @@ export function PromptPlatformTab({ query }: { query: string }) {
       description: item.description,
       systemPrompt: item.systemPrompt,
       userPrompt: item.userPrompt,
-      folder: '默认',
+      folder: `平台/${item.category}`,
       tags: item.tags,
       isFavorite: false,
       isPinned: false,
       usageCount: 0,
       variables: item.variables,
+      syncPolicy: 'inherit',
+      inRepo: false,
       versions: [
         {
           id: uid(),
@@ -68,7 +70,7 @@ export function PromptPlatformTab({ query }: { query: string }) {
       createdAt: nowIso(),
       updatedAt: nowIso(),
     })
-    toast.success('已保存到我的 Prompt；它只在本机，不参与 Git 同步')
+    toast.success('已保存到我的 Prompt；默认跟随仓库策略，可在详情页改为仅本机')
     setDetailOf(null)
   }
 
@@ -78,7 +80,7 @@ export function PromptPlatformTab({ query }: { query: string }) {
         <Icon name="sparkles" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
           <b>平台发现</b>是 Prompt 的主要复用入口：搜索、预览、填变量后直接复制。
-          Prompt 默认<b>不进入 Git 仓库、也不分发到 Agent</b>，避免把复制粘贴型资产变成仓库噪音。
+          保存到本地后，是否参与 Git 同步由该 Prompt 的同步范围决定；平台来源本身不进仓库，也不写入 Agent 目录。
         </span>
       </div>
 
@@ -86,8 +88,11 @@ export function PromptPlatformTab({ query }: { query: string }) {
         <button
           type="button"
           onClick={() => setCategory('')}
-          className={`cursor-pointer rounded-md border px-2 py-1 text-[11px] ${
-            !category ? 'border-primary bg-primary-soft text-primary' : 'border-border text-muted-foreground'
+          aria-pressed={!category}
+          className={`cursor-pointer rounded-md border px-2.5 py-[3px] text-[11px] transition-colors ${
+            !category
+              ? 'border-primary/40 bg-primary-soft font-medium text-primary'
+              : 'border-border text-muted-foreground hover:border-border-strong hover:bg-muted'
           }`}
         >
           全部分类
@@ -97,8 +102,11 @@ export function PromptPlatformTab({ query }: { query: string }) {
             key={c}
             type="button"
             onClick={() => setCategory(c)}
-            className={`cursor-pointer rounded-md border px-2 py-1 text-[11px] ${
-              category === c ? 'border-primary bg-primary-soft text-primary' : 'border-border text-muted-foreground'
+            aria-pressed={category === c}
+            className={`cursor-pointer rounded-md border px-2.5 py-[3px] text-[11px] transition-colors ${
+              category === c
+                ? 'border-primary/40 bg-primary-soft font-medium text-primary'
+                : 'border-border text-muted-foreground hover:border-border-strong hover:bg-muted'
             }`}
           >
             {c}
@@ -112,21 +120,21 @@ export function PromptPlatformTab({ query }: { query: string }) {
       {list.length === 0 ? (
         <EmptyState icon="search" title="未找到匹配 Prompt" description="换个关键词或分类；平台搜索只匹配标题、描述与标签" />
       ) : (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((p) => (
             <button
               key={p.id}
               type="button"
               onClick={() => setDetailOf(p)}
-              className="flex cursor-pointer flex-col rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary/40 hover:shadow-md"
+              className="group flex cursor-pointer flex-col rounded-xl border border-border bg-card p-4 text-left transition-all duration-150 hover:-translate-y-px hover:border-primary/35 hover:shadow-md"
             >
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary-soft text-primary">
                   <Icon name="message" className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{p.title}</div>
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="truncate text-[13px] font-medium leading-5">{p.title}</div>
+                  <div className="truncate text-[10.5px] text-muted-foreground">
                     {p.author} · {p.category}
                   </div>
                 </div>
@@ -136,15 +144,15 @@ export function PromptPlatformTab({ query }: { query: string }) {
                   </Badge>
                 )}
               </div>
-              <p className="mt-2 line-clamp-2 min-h-8 flex-1 text-xs leading-5 text-muted-foreground">{p.description}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-1">
+              <p className="mt-2 line-clamp-2 min-h-8 flex-1 text-[11.5px] leading-4 text-muted-foreground">{p.description}</p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-2.5">
                 {p.tags.slice(0, 2).map((t) => (
                   <Badge key={t} variant="primary">
                     {t}
                   </Badge>
                 ))}
                 {p.variables.length > 0 && <Badge variant="info">{`{{}} × ${p.variables.length}`}</Badge>}
-                <span className="ml-auto text-[11px] text-muted-foreground">用 {p.uses.toLocaleString()} 次</span>
+                <span className="tabular ml-auto text-[10.5px] text-muted-foreground">用 {p.uses.toLocaleString()} 次</span>
               </div>
             </button>
           ))}
@@ -194,13 +202,13 @@ export function PromptPlatformTab({ query }: { query: string }) {
             </div>
             {detailOf.systemPrompt && (
               <section>
-                <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">System Prompt</h3>
-                <Markdown text={detailOf.systemPrompt} className="rounded-lg border border-border bg-card px-3.5 py-3" />
+                <h3 className="mb-2 flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">System Prompt<span className="h-px flex-1 bg-border/70" /></h3>
+                <Markdown text={detailOf.systemPrompt} className="rounded-lg border border-border bg-card px-3.5 py-3 text-[13px] shadow-sm" />
               </section>
             )}
             <section>
-              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">User Prompt</h3>
-              <Markdown text={detailOf.userPrompt} className="rounded-lg border border-border bg-card px-3.5 py-3" />
+              <h3 className="mb-2 flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">User Prompt<span className="h-px flex-1 bg-border/70" /></h3>
+              <Markdown text={detailOf.userPrompt} className="rounded-lg border border-border bg-card px-3.5 py-3 text-[13px] shadow-sm" />
             </section>
             <p className="rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
               平台 Prompt 不会写入你的 Git 仓库；保存到本地后仅在本机「我的 Prompt」可见，也不会自动分发到 Agent。

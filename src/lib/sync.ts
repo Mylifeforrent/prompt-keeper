@@ -15,6 +15,7 @@ export const ASSET_META: Record<AssetKind, { label: string; icon: IconName; dir:
   skill: { label: '技能', icon: 'grid', dir: 'skills/' },
   mcp: { label: 'MCP', icon: 'server', dir: 'mcp/' },
   prompt: { label: 'Prompt', icon: 'message', dir: 'prompts/' },
+  contract: { label: '指令', icon: 'file', dir: 'instructions/' },
 }
 
 export const RISK_META: Record<SyncRisk, { label: string; variant: BadgeVariant; icon: IconName }> = {
@@ -59,22 +60,29 @@ export const REPO_STATE_META: Record<AssetRepoState, { label: string; variant: B
   'local-ahead': { label: '本地有未推送改动', variant: 'warning' },
   diverged: { label: '双向冲突', variant: 'danger' },
   blocked: { label: '推送被阻断', variant: 'danger' },
-  ignored: { label: '不参与同步', variant: 'outline' },
+  ignored: { label: '仅本机', variant: 'outline' },
 }
 
-/** 某资产在仓库同步中的状态；Prompt 默认 ignored */
+/** 某资产在仓库同步中的状态；enabled=false 表示仅本机或该类型未启用 */
 export function assetRepoState(
   changes: SyncChange[],
   kind: AssetKind,
   assetName: string,
   enabled = true,
+  assetId?: string,
 ): AssetRepoState {
   if (!enabled) return 'ignored'
-  const rows = changes.filter((c) => c.kind === kind && c.assetName === assetName && !c.resolved)
-  if (rows.some((r) => r.direction === 'conflict')) return 'diverged'
+  const rows = changes.filter((c) => {
+    if (c.kind !== kind || c.resolved) return false
+    if (assetId) return c.assetId ? c.assetId === assetId : c.assetName === assetName
+    return c.assetName === assetName
+  })
+  const incoming = rows.some((r) => r.direction === 'incoming')
+  const outgoing = rows.some((r) => r.direction === 'outgoing')
+  if (rows.some((r) => r.direction === 'conflict') || (incoming && outgoing)) return 'diverged'
   if (rows.some((r) => r.blocked)) return 'blocked'
-  if (rows.some((r) => r.direction === 'incoming')) return 'remote-ahead'
-  if (rows.some((r) => r.direction === 'outgoing')) return 'local-ahead'
+  if (incoming) return 'remote-ahead'
+  if (outgoing) return 'local-ahead'
   return 'in-sync'
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Sidebar, type Page } from './components/layout/Sidebar'
 import { Topbar } from './components/layout/Topbar'
 import { PromptsTabs } from './components/prompts/PromptsTabs'
+import { InstructionsWorkspace } from './components/instructions/InstructionsWorkspace'
 import { SkillsTabs } from './components/skills/SkillsTabs'
 import { McpTabs } from './components/mcp/McpTabs'
 import { SyncCenter } from './components/sync/SyncCenter'
@@ -25,7 +26,7 @@ export default function App() {
         e.preventDefault()
         searchRef.current?.focus()
       } else if (e.key === 'n' || e.key === 'N') {
-        if (page === 'prompts' || page === 'skills' || page === 'mcp') {
+        if (page === 'prompts' || page === 'instructions' || page === 'skills' || page === 'mcp') {
           setCreateSignal((s) => ({ n: s.n + 1, page }))
         }
       }
@@ -44,6 +45,7 @@ export default function App() {
         }}
         counts={{
           prompts: state.prompts.length,
+          instructions: state.contracts.length,
           skills: state.skills.length,
           mcp: state.mcps.length,
           sync: syncCounts(state.syncChanges, state.deployments, state.mcps).pending,
@@ -60,8 +62,11 @@ export default function App() {
             setQuery('')
           }}
         />
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div key={page} className="min-h-0 flex-1 overflow-hidden animate-fade-in">
           {page === 'prompts' && <PromptsTabs query={query} createSignal={createSignal} />}
+          {page === 'instructions' && (
+            <InstructionsWorkspace query={query} createSignal={createSignal} />
+          )}
           {page === 'skills' && <SkillsTabs query={query} />}
           {page === 'mcp' && <McpTabs query={query} createSignal={{ n: createSignal.n, page: createSignal.page }} />}
           {page === 'sync' && <SyncCenter />}

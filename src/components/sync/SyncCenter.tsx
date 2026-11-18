@@ -6,6 +6,7 @@ import { Icon } from '../../lib/icons'
 import { useToast } from '../ui/toast'
 import { AGENT_RUNTIMES } from '../../data/syncSeed'
 import { EVENT_META, syncCounts } from '../../lib/sync'
+import { promptEffectiveSync } from '../../lib/promptSync'
 import { cn, relativeTime } from '../../lib/utils'
 import { RepoConnectModal } from './RepoConnectModal'
 import { SyncChanges } from './SyncChanges'
@@ -21,7 +22,7 @@ export function SyncCenter() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-2.5">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5">
         <Tabs
           tabs={[
             { value: 'overview', label: '概览' },
@@ -32,12 +33,14 @@ export function SyncCenter() {
           value={tab}
           onChange={(v) => setTab(v as SyncTab)}
         />
-        <div className="ml-auto flex items-center gap-2 text-[11px] text-muted-foreground">
-          <Icon name="gitBranch" className="h-3.5 w-3.5" />
+        <div className="ml-auto flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+          <Icon name="gitBranch" className="h-3.5 w-3.5 shrink-0" />
           {state.repo.connected ? (
             <>
-              {state.repo.url} · {state.repo.branch}
-              <Badge variant="success">已连接</Badge>
+              <span className="truncate font-mono text-[10.5px]">
+                {state.repo.url} · {state.repo.branch}
+              </span>
+              <Badge variant="success" className="shrink-0">已连接</Badge>
             </>
           ) : (
             <Badge variant="warning">未连接仓库</Badge>
@@ -62,6 +65,27 @@ function SyncOverview({ onOpenTab }: { onOpenTab: (tab: SyncTab) => void }) {
   const repo = state.repo
   const counts = syncCounts(state.syncChanges, state.deployments, state.mcps)
   const detected = AGENT_RUNTIMES.filter((a) => state.detectedAgents.includes(a.id))
+  const promptChanges = state.syncChanges.filter((c) => c.kind === 'prompt' && !c.resolved)
+  const promptIncoming = promptChanges.filter((c) => c.direction === 'incoming').length
+  const promptOutgoing = promptChanges.filter((c) => c.direction === 'outgoing' && !c.blocked).length
+  const localPrompts = state.prompts.filter((p) => !promptEffectiveSync(state.repo, p)).length
+  const contractChanges = state.syncChanges.filter((c) => c.kind === 'contract' && !c.resolved)
+  const contractIncoming = contractChanges.filter((c) => c.direction === 'incoming').length
+  const contractOutgoing = contractChanges.filter((c) => c.direction === 'outgoing' && !c.blocked).length
+  const localContracts = state.contracts.filter(
+    (c) => c.syncPolicy === 'local' || !state.repo.policies.contracts,
+  ).length
+  const kindCounts = (kind: 'skill' | 'mcp' | 'contract') => {
+    const rows = state.syncChanges.filter((c) => c.kind === kind && !c.resolved)
+    return {
+      incoming: rows.filter((c) => c.direction === 'incoming').length,
+      outgoing: rows.filter((c) => c.direction === 'outgoing' && !c.blocked).length,
+      blocked: rows.filter((c) => c.blocked).length,
+    }
+  }
+  const skillCounts = kindCounts('skill')
+  const mcpCounts = kindCounts('mcp')
+  const contractCounts = kindCounts('contract')
 
   const handleFetch = () => {
     fetchRepo()
@@ -137,8 +161,8 @@ function SyncOverview({ onOpenTab }: { onOpenTab: (tab: SyncTab) => void }) {
           </div>
           <h2 className="mt-3 text-base font-semibold">把 Git 仓库接到本机资产库</h2>
           <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-muted-foreground">
-            仓库负责跨机器、跨团队共享技能与 MCP 模板；本应用负责审核、分发到各 Agent。连接后先拉到「变更」，
-            不会自动覆盖你的本地修改。
+            仓库负责跨机器、跨团队共享技能、MCP 模板、可选同步的 Prompt 与 Agent 指令；本应用负责审核、投影与分发到各 Agent。
+            连接后先拉到「变更」，不会自动覆盖你的本地修改。
           </p>
           <Button className="mt-4" onClick={() => setRepoOpen(true)}>
             <Icon name="gitBranch" />
@@ -148,31 +172,65 @@ function SyncOverview({ onOpenTab }: { onOpenTab: (tab: SyncTab) => void }) {
       )}
 
       {/* 资产策略 */}
-      <section className="grid grid-cols-3 gap-3">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <PolicyCard
           icon="grid"
           title="Skills"
           badge="双向同步"
           badgeVariant="primary"
-          desc="SKILL.md 与脚本随仓库进出；拉取后需审核，再分发到 Agent 默认目录。"
-          footer={`${counts.incoming} 待拉取 · ${counts.outgoing} 待推送`}
+          desc="按文件夹写入 skills/<folder>/<skill>/SKILL.md；SKILL.md 与脚本随仓库双向进出，拉取后审核再分发。"
+          footer={`${skillCounts.incoming} 待拉取 · ${skillCounts.outgoing} 待推送`}
         />
         <PolicyCard
           icon="server"
           title="MCP"
           badge="模板双向 · 密钥本机"
           badgeVariant="info"
-          desc="仓库只存 ${VAR} 占位；真实 Token 留在本机钥匙串，分发时注入。"
-          footer={`${counts.blocked} 项被安全策略阻断`}
+          desc="按文件夹写入 mcp/<folder>/<name>.json；仓库只存 ${VAR} 占位，真实 Token 留在本机钥匙串，分发时注入。"
+          footer={`${mcpCounts.blocked} 项被安全策略阻断`}
         />
         <PolicyCard
           icon="message"
           title="Prompts"
-          badge="不参与同步"
-          badgeVariant="outline"
-          desc="以复制粘贴为主，进仓库只会放大 diff 噪音。改用「平台发现」搜索与本地保存。"
-          footer="仅本机 · 可在平台发现中复用"
+          badge="按 Prompt 参与"
+          badgeVariant="primary"
+          desc="按文件夹写入 prompts/<folder>/<slug>.prompt.md：frontmatter 存元数据与变量定义，正文分 System / User；私密 Prompt 可逐条设为仅本机。"
+          footer={`${promptChanges.length} 条待处理 · ${localPrompts} 条仅本机`}
         />
+        <PolicyCard
+          icon="file"
+          title="Agent 指令"
+          badge="按契约参与"
+          badgeVariant="primary"
+          desc="按文件夹写入 instructions/<folder>/<slug>.contract.md；项目投影与「本机全局目录」分发分开确认，全局路径可逐项改写。"
+          footer={`${contractChanges.length} 条待处理 · ${contractCounts.blocked} 项阻断 · ${localContracts} 条仅本机`}
+        />
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-4">
+        <div className="flex items-center gap-2">
+          <Icon name="folder" className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold">仓库目录结构 = 平台文件夹</h3>
+          <Badge variant="outline">不使用平台也能直接浏览</Badge>
+        </div>
+        <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+          每条资产的文件夹路径直接映射为仓库目录，目录内还可以继续建子文件夹；文件本身保持单文件约定。
+        </p>
+        <pre className="mt-2 overflow-x-auto rounded-lg bg-muted/60 p-3 font-mono text-[11px] leading-5">
+{`prompts/编程/代码质量/review.prompt.md
+instructions/团队/前端/frontend.contract.md
+skills/开发流程/Git/commit-helper/SKILL.md
+mcp/开发/GitHub/github.json`}
+        </pre>
+        <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+          <span>Prompt：一条一个 .prompt.md</span>
+          <span>·</span>
+          <span>指令：一条一个 .contract.md</span>
+          <span>·</span>
+          <span>Skill：一个技能一个目录</span>
+          <span>·</span>
+          <span>MCP：一个 server 一个 .json</span>
+        </div>
       </section>
 
       {counts.blocked > 0 && (
@@ -184,10 +242,10 @@ function SyncOverview({ onOpenTab }: { onOpenTab: (tab: SyncTab) => void }) {
           <Icon name="lock" className="h-4 w-4 shrink-0 text-danger" />
           <div className="min-w-0">
             <div className="text-sm font-medium text-danger">
-              {counts.blocked} 个 MCP 配置包含明文密钥，推送已被阻断
+              {counts.blocked} 项资产包含明文凭据，推送已被阻断
             </div>
             <p className="text-[11px] text-muted-foreground">
-              前往「变更」把明文替换为 ${'{'}VAR{'}'} 占位；真实值只保留在本机钥匙串。
+              前往「变更」处理 Prompt / 指令正文或 MCP env / headers 中的明文；真实值不会进入仓库。
             </p>
           </div>
           <Icon name="chevronRight" className="ml-auto h-4 w-4 text-danger" />
@@ -200,14 +258,18 @@ function SyncOverview({ onOpenTab }: { onOpenTab: (tab: SyncTab) => void }) {
           label="待拉取"
           value={counts.incoming}
           tone="info"
-          hint="合入本地库前需确认"
+          hint={`含 ${promptIncoming} 条 Prompt · ${contractIncoming} 条指令 · 合入前需确认`}
           onClick={() => onOpenTab('changes')}
         />
         <StatCard
           label="待推送"
           value={counts.outgoing}
           tone="warning"
-          hint={counts.blocked ? `${counts.blocked} 项被阻断` : '本地改动待提交'}
+          hint={
+            counts.blocked
+              ? `${counts.blocked} 项被阻断 · 含 ${promptOutgoing} 条 Prompt、${contractOutgoing} 条指令`
+              : `本地改动待提交 · 含 ${promptOutgoing} 条 Prompt、${contractOutgoing} 条指令`
+          }
           onClick={() => onOpenTab('changes')}
         />
         <StatCard
@@ -306,7 +368,7 @@ function PolicyCard({
   desc,
   footer,
 }: {
-  icon: 'grid' | 'server' | 'message'
+  icon: 'grid' | 'server' | 'message' | 'file'
   title: string
   badge: string
   badgeVariant: 'primary' | 'info' | 'outline'
@@ -314,16 +376,18 @@ function PolicyCard({
   footer: string
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-border-strong">
       <div className="flex items-center gap-2">
-        <Icon name={icon} className="h-4 w-4 text-primary" />
-        <span className="text-sm font-semibold">{title}</span>
-        <Badge variant={badgeVariant} className="ml-auto">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+          <Icon name={icon} className="h-3.5 w-3.5" />
+        </span>
+        <span className="text-[13px] font-semibold">{title}</span>
+        <Badge variant={badgeVariant} className="ml-auto shrink-0 font-normal">
           {badge}
         </Badge>
       </div>
-      <p className="mt-2 min-h-10 text-[11px] leading-5 text-muted-foreground">{desc}</p>
-      <div className="mt-2 border-t border-border/60 pt-2 text-[11px] text-muted-foreground">{footer}</div>
+      <p className="mt-2 min-h-10 text-[10.5px] leading-5 text-muted-foreground">{desc}</p>
+      <div className="tabular mt-2 border-t border-border/60 pt-2 text-[10.5px] text-muted-foreground">{footer}</div>
     </div>
   )
 }

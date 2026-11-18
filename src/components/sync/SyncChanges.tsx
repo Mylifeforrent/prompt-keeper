@@ -8,6 +8,8 @@ import { Icon } from '../../lib/icons'
 import { cn } from '../../lib/utils'
 import { useToast } from '../ui/toast'
 import { ASSET_META, CHANGE_META, RISK_META, activeChanges } from '../../lib/sync'
+import { parsePromptFile } from '../../lib/promptSync'
+import { parseContractFile } from '../../lib/contracts'
 import { Markdown } from '../shared/Markdown'
 import { DiffView } from '../shared/DiffView'
 
@@ -34,7 +36,7 @@ export function SyncChanges() {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   const accept = (change: SyncChange) => {
-    if (change.risk !== 'none') {
+    if (change.kind === 'prompt' || change.kind === 'contract' || change.risk !== 'none') {
       setReviewOf(change)
       return
     }
@@ -43,10 +45,14 @@ export function SyncChanges() {
   }
 
   const batchAccept = () => {
-    const ids = selected.filter((id) => incoming.some((c) => c.id === id && c.risk === 'none'))
+    const ids = selected.filter((id) =>
+      incoming.some(
+        (c) => c.id === id && c.risk === 'none' && c.kind !== 'prompt' && c.kind !== 'contract',
+      ),
+    )
     if (ids.length === 0) return
     pullIncoming(ids)
-    toast.success(`已接受 ${ids.length} 项低风险变更并生成版本`)
+    toast.success(`已接受 ${ids.length} 项低风险变更并生成版本；Prompt 与指令需逐条预览`)
     setSelected([])
   }
 
@@ -71,8 +77,8 @@ export function SyncChanges() {
           onChange={(v) => setTab(v as ChangeTab)}
         />
         <span className="text-[11px] text-muted-foreground">
-          {tab === 'incoming' && '含脚本 / 新增技能的条目必须逐项审核后才能写入本地库'}
-          {tab === 'outgoing' && '推送前会再次扫描明文密钥；被阻断的条目不会进入提交'}
+          {tab === 'incoming' && 'Prompt 与 Agent 指令必须预览全文后逐条接受；含脚本 / 新增技能也必须审核'}
+          {tab === 'outgoing' && '推送前会再次扫描 Prompt / 指令正文与 MCP env / headers；被阻断的条目不会进入提交'}
           {tab === 'conflict' && '可以选择采用仓库、保留本地，或手动合并后写入'}
         </span>
         <div className="ml-auto flex items-center gap-2">
@@ -131,7 +137,13 @@ export function SyncChanges() {
           onClose={() => setReviewOf(null)}
           onAccepted={() => {
             pullIncoming([reviewOf.id])
-            toast.success(`已审核并接受 ${reviewOf.assetName}，脚本将随技能一起写入`)
+            toast.success(
+              reviewOf.kind === 'prompt'
+                ? `已接受 Prompt「${reviewOf.assetName}」，本地库已生成新版本`
+                : reviewOf.kind === 'contract'
+                  ? `已接受指令「${reviewOf.assetName}」，本地库已生成新版本；相关投影标记为待更新`
+                  : `已审核并接受 ${reviewOf.assetName}，脚本将随技能一起写入`,
+            )
             setReviewOf(null)
             setSelected([])
           }}
@@ -174,7 +186,13 @@ function ChangeRow({
   const asset = ASSET_META[change.kind]
   const changeMeta = CHANGE_META[change.change]
   const risk = RISK_META[change.risk]
-  const selectable = change.direction !== 'conflict' && !change.blocked && change.risk === 'none'
+  const selectable =
+    change.direction !== 'conflict' &&
+    !change.blocked &&
+    change.risk === 'none' &&
+    change.kind !== 'prompt' &&
+    change.kind !== 'contract'
+  const needsReview = change.risk !== 'none' || change.kind === 'prompt' || change.kind === 'contract'
 
   const versionLine =
     change.direction === 'conflict'
@@ -208,6 +226,8 @@ function ChangeRow({
             <Icon name="alert" className="h-4 w-4 text-danger" />
           ) : change.blocked ? (
             <Icon name="lock" className="h-4 w-4 text-danger" />
+          ) : change.kind === 'prompt' || change.kind === 'contract' ? (
+            <Icon name="eye" className="h-4 w-4 text-info" />
           ) : (
             <Icon name="shield" className="h-4 w-4 text-warning" />
           )}
@@ -239,8 +259,12 @@ function ChangeRow({
         </div>
         <div className="ml-2 shrink-0">
           {change.direction === 'incoming' && (
-            <Button size="sm" variant={change.risk === 'none' ? 'default' : 'outline'} onClick={change.risk === 'none' ? onAccept : onReview}>
-              {change.risk === 'none' ? '接受' : '审核并接受'}
+            <Button size="sm" variant={needsReview ? 'outline' : 'default'} onClick={needsReview ? onReview : onAccept}>
+              {change.kind === 'prompt' || change.kind === 'contract'
+                ? '预览并接受'
+                : needsReview
+                  ? '审核并接受'
+                  : '接受'}
               <Icon name="chevronRight" className="h-3.5 w-3.5" />
             </Button>
           )}
@@ -281,35 +305,59 @@ function ReviewIncomingModal({
 }) {
   const [trusted, setTrusted] = useState(false)
   const risk = RISK_META[change.risk]
+  const isPrompt = change.kind === 'prompt'
+  const isContract = change.kind === 'contract'
+  const isInstruction = isPrompt || isContract
+  const showDiff = isInstruction && !!change.localContent && !!change.remoteContent
 
   return (
     <Modal
       open
       onClose={onClose}
       width="max-w-2xl"
-      title={`审核并接受 — ${ASSET_META[change.kind].label} ${change.assetName}`}
-      subtitle="仓库内容会原样写入本机库；技能中的脚本可能被执行，请先读完"
+      title={`${isInstruction ? '预览并接受' : '审核并接受'} — ${ASSET_META[change.kind].label} ${change.assetName}`}
+      subtitle={
+        isPrompt
+          ? 'Prompt 会成为指令输入；请确认内容、来源与是否包含你的私密信息'
+          : isContract
+            ? 'Agent 指令会在每次会话自动进入上下文；请确认内容、来源与是否包含你的私密信息'
+            : '仓库内容会原样写入本机库；技能中的脚本可能被执行，请先读完'
+      }
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
             拒绝
           </Button>
           <Button disabled={!trusted} onClick={onAccepted}>
-            信任并接受
+            {isPrompt ? '接受 Prompt' : isContract ? '接受指令' : '信任并接受'}
           </Button>
         </>
       }
     >
       <div className="space-y-3">
-        <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2.5 text-xs text-warning">
-          <Icon name={risk.icon} className="mt-0.5 h-4 w-4 shrink-0" />
-          <div>
-            <b>{risk.label}</b>
-            <p className="mt-0.5 leading-5">
-              该条目包含可执行内容。接受后只会写入本机资产库，不会自动分发到 Agent；分发时还会再次确认目标路径与模式。
-            </p>
+        {isInstruction ? (
+          <div className="flex items-start gap-2 rounded-lg border border-info/30 bg-info-soft px-3 py-2.5 text-xs text-info">
+            <Icon name="eye" className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <b>{isPrompt ? 'Prompt 必须逐条预览' : 'Agent 指令必须逐条预览'}</b>
+              <p className="mt-0.5 leading-5">
+                {isPrompt
+                  ? 'Prompt 会影响后续 AI 的输出。即使没有脚本，也不会进入批量接受；接受后只写入本机库，不会自动分发到 Agent。'
+                  : '指令会被 Agent 自动读取，影响每次会话。即使没有脚本，也不会进入批量接受；接受后只写入本机库，不会自动投影到 Agent 目录。'}
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2.5 text-xs text-warning">
+            <Icon name={risk.icon} className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <b>{risk.label}</b>
+              <p className="mt-0.5 leading-5">
+                该条目包含可执行内容。接受后只会写入本机资产库，不会自动分发到 Agent；分发时还会再次确认目标路径与模式。
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{change.versionLabel ?? change.remoteVersion ?? '—'}</Badge>
@@ -329,7 +377,12 @@ function ReviewIncomingModal({
           </div>
         )}
 
-        {change.remoteContent ? (
+        {showDiff ? (
+          <div className="rounded-lg border border-border p-3">
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">本地版本 → 仓库版本</div>
+            <DiffView before={change.localContent ?? ''} after={change.remoteContent ?? ''} />
+          </div>
+        ) : change.remoteContent ? (
           <div className="max-h-72 overflow-y-auto rounded-lg border border-border p-3">
             <Markdown text={change.remoteContent} />
           </div>
@@ -342,7 +395,13 @@ function ReviewIncomingModal({
         <Checkbox
           checked={trusted}
           onChange={setTrusted}
-          label={<span className="text-xs">我已阅读上述内容，并确认来源可信</span>}
+          label={
+            <span className="text-xs">
+              {isInstruction
+                ? '我已预览全文，确认内容安全且不含我的私密信息'
+                : '我已阅读上述内容，并确认来源可信'}
+            </span>
+          }
         />
       </div>
     </Modal>
@@ -355,7 +414,9 @@ function PushModal({ ids, onClose, onDone }: { ids: string[]; onClose: () => voi
   const { state, pushOutgoing } = useStore()
   const toast = useToast()
   const rows = state.syncChanges.filter((c) => ids.includes(c.id) && c.direction === 'outgoing' && !c.blocked && !c.resolved)
-  const [message, setMessage] = useState('chore: sync skills and MCP templates from Prompt Keeper')
+  const [message, setMessage] = useState(
+    'chore: sync prompts, instructions, skills and MCP templates from Prompt Keeper',
+  )
   const [createPr, setCreatePr] = useState(state.repo.pushMode === 'branch-pr')
 
   return (
@@ -407,7 +468,7 @@ function PushModal({ ids, onClose, onDone }: { ids: string[]; onClose: () => voi
 
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">提交信息 *</label>
-          <Input value={message} onChange={(e) => setMessage(e.target.value)} />
+          <Input aria-label="提交信息" value={message} onChange={(e) => setMessage(e.target.value)} />
         </div>
 
         <div className="space-y-2">
@@ -438,7 +499,8 @@ function PushModal({ ids, onClose, onDone }: { ids: string[]; onClose: () => voi
 
         <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
           <Icon name="lock" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          推送前会再次扫描 env / headers；发现明文密钥会阻断整个提交。凭据只以 ${'{'}VAR{'}'} 形式进入仓库。
+          推送前会再次扫描 Prompt / 指令正文与 MCP env / headers；发现明文凭据会阻断整个提交。凭据只允许以
+          {` {{变量}} `}或 ${'{'}VAR{'}'} 形式进入仓库。
         </div>
       </div>
     </Modal>
@@ -450,13 +512,22 @@ function PushModal({ ids, onClose, onDone }: { ids: string[]; onClose: () => voi
 function SecretFixModal({ change, onClose }: { change: SyncChange; onClose: () => void }) {
   const { convertSecretToVar } = useStore()
   const toast = useToast()
+  const isPrompt = change.kind === 'prompt'
+  const isContract = change.kind === 'contract'
+  const isInstruction = isPrompt || isContract
 
   return (
     <Modal
       open
       onClose={onClose}
       width="max-w-lg"
-      title="明文密钥阻断推送"
+      title={
+        isPrompt
+          ? 'Prompt 正文含疑似明文凭据'
+          : isContract
+            ? '指令正文含疑似明文凭据'
+            : '明文密钥阻断推送'
+      }
       subtitle={`${ASSET_META[change.kind].label} · ${change.assetName}`}
       footer={
         <>
@@ -466,12 +537,16 @@ function SecretFixModal({ change, onClose }: { change: SyncChange; onClose: () =
           <Button
             onClick={() => {
               convertSecretToVar(change.id)
-              toast.success('已转换为 ${AMAP_API_KEY} 占位；真实值仍只在本机钥匙串')
+              toast.success(
+                isInstruction
+                  ? '已替换为 {{api_key}} 变量；复制或投影时再填值，真实值未落盘'
+                  : '已转换为 ${AMAP_API_KEY} 占位；真实值仍只在本机钥匙串',
+              )
               onClose()
             }}
           >
             <Icon name="lock" />
-            转换为变量引用
+            {isInstruction ? '替换为模板变量' : '转换为变量引用'}
           </Button>
         </>
       }
@@ -479,17 +554,37 @@ function SecretFixModal({ change, onClose }: { change: SyncChange; onClose: () =
       <div className="space-y-3 text-sm">
         <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2.5 text-xs leading-5 text-danger">
           <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
-          检测到 env 字段中的明文凭据。提交会把密钥永久写入 Git 历史，即使后续删除也能被检出。
+          {isPrompt
+            ? '检测到 Prompt 正文中的疑似 Token。提交会把凭据永久写入 Git 历史，任何能读仓库的人都能看到。'
+            : isContract
+              ? '检测到 Agent 指令正文中的疑似 Token。提交会把凭据永久写入 Git 历史，且该指令会在每次会话中被读取。'
+              : '检测到 env 字段中的明文凭据。提交会把密钥永久写入 Git 历史，即使后续删除也能被检出。'}
         </div>
         <pre className="overflow-x-auto rounded-lg border border-border bg-muted/60 p-3 font-mono text-xs leading-5">
-{`"env": {
+{isPrompt
+  ? `userPrompt:
+  "测试 Token：{{api_key}}"   ← 原始值将被变量替换`
+  : isContract
+    ? `## 前端代码规范
+- 请求头：Authorization: Bearer {{api_key}}   ← 原始值将被变量替换`
+    : `"env": {
   "AMAP_API_KEY": "***"   ← 将替换为 "\${AMAP_API_KEY}"
 }`}
         </pre>
         <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-          <li>仓库中的配置只保留变量名，任何机器拉取时都不会拿到真实值。</li>
-          <li>真实值继续存在本机钥匙串；分发到 Agent 时按目标工具注入。</li>
-          <li>转换后可正常推送，但本次提交仍会记录「曾发现明文」的审计事件。</li>
+          {isInstruction ? (
+            <>
+              <li>正文中的原始 Token 会替换为 {`{{api_key}}`} 模板变量，变量定义随文件同步。</li>
+              <li>真实值不写入 Prompt / 指令、版本快照或仓库；复制或投影时由你临时填写。</li>
+              <li>替换后可正常推送，本次提交仍会记录「曾发现明文」的审计事件。</li>
+            </>
+          ) : (
+            <>
+              <li>仓库中的配置只保留变量名，任何机器拉取时都不会拿到真实值。</li>
+              <li>真实值继续存在本机钥匙串；分发到 Agent 时按目标工具注入。</li>
+              <li>转换后可正常推送，但本次提交仍会记录「曾发现明文」的审计事件。</li>
+            </>
+          )}
         </ul>
       </div>
     </Modal>
@@ -503,6 +598,11 @@ function ConflictModal({ change, onClose }: { change: SyncChange; onClose: () =>
   const toast = useToast()
   const [strategy, setStrategy] = useState<'remote' | 'local' | 'manual'>('remote')
   const [merged, setMerged] = useState(change.localContent ?? '')
+  const isPrompt = change.kind === 'prompt'
+  const isContract = change.kind === 'contract'
+  const manualInvalid =
+    strategy === 'manual' &&
+    ((isPrompt && !parsePromptFile(merged)) || (isContract && !parseContractFile(merged)))
 
   return (
     <Modal
@@ -517,7 +617,7 @@ function ConflictModal({ change, onClose }: { change: SyncChange; onClose: () =>
             稍后处理
           </Button>
           <Button
-            disabled={strategy === 'manual' && !merged.trim()}
+            disabled={strategy === 'manual' && (!merged.trim() || manualInvalid)}
             onClick={() => {
               resolveConflict(change.id, strategy, merged)
               toast.success(
@@ -591,9 +691,18 @@ function ConflictModal({ change, onClose }: { change: SyncChange; onClose: () =>
           {strategy === 'manual' && (
             <>
               <div className="mb-1.5 text-xs font-medium text-muted-foreground">合并结果（可编辑）</div>
-              <Textarea rows={14} value={merged} onChange={(e) => setMerged(e.target.value)} className="font-mono text-xs leading-5" />
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                以本地版本为起点。应用后写入本地库并生成新版本，随后可在「待推送」把结果推回仓库。
+              <Textarea aria-label="手动合并结果" rows={14} value={merged} onChange={(e) => setMerged(e.target.value)} className="font-mono text-xs leading-5" />
+              <p
+                className={cn(
+                  'mt-1 text-[11px]',
+                  manualInvalid ? 'text-danger' : 'text-muted-foreground',
+                )}
+              >
+                {manualInvalid
+                  ? isContract
+                    ? '结构不完整：必须保留 frontmatter 与契约正文，且标题、正文不能为空。'
+                    : '结构不完整：必须保留 frontmatter 与「## System Prompt」/「## User Prompt」两段标题。'
+                  : '以本地版本为起点。应用后写入本地库并生成新版本，随后可在「待推送」把结果推回仓库。'}
               </p>
             </>
           )}

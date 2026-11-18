@@ -102,7 +102,7 @@ export function SyncDeploy() {
         </div>
         <Checkbox checked={onlyAttention} onChange={setOnlyAttention} label={<span className="text-xs">只看异常</span>} />
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Switch checked={showAll} onChange={setShowAll} />
+          <Switch checked={showAll} onChange={setShowAll} label="显示未检测到的 Agent" />
           显示未检测到的 Agent
         </div>
         <span className="ml-auto text-[11px] text-muted-foreground">
@@ -169,7 +169,7 @@ export function SyncDeploy() {
                   if (!supported) {
                     return (
                       <td key={agent.id} className="px-2 py-2">
-                        <span className="text-[10px] text-muted-foreground/60">不支持</span>
+                        <span className="text-[10px] text-muted-foreground">不支持</span>
                       </td>
                     )
                   }

@@ -1,5 +1,5 @@
 import { forwardRef } from 'react'
-import { Badge, Input } from '../ui/core'
+import { Badge, Input, Kbd } from '../ui/core'
 import { Icon } from '../../lib/icons'
 import type { ThemeMode } from '../../types'
 import { useStore } from '../../store/store'
@@ -8,72 +8,113 @@ import type { Page } from './Sidebar'
 
 const TITLES: Record<Page, string> = {
   prompts: 'Prompts',
+  instructions: 'Agent 指令',
   skills: 'Skills',
   mcp: 'MCP',
   sync: '同步中心',
   settings: '设置',
 }
 
+const SUBTITLES: Record<Page, string> = {
+  prompts: '本地资产库 · Git 可选同步',
+  instructions: '仓库契约 · 项目投影 · 全局分发',
+  skills: 'SKILL.md · 多平台分发',
+  mcp: '服务模板 · 密钥仅本机',
+  sync: '拉取 · 推送 · 冲突 · 分发',
+  settings: '外观 · 同步策略 · 数据',
+}
+
+const CURRENT_THEME_LABEL: Record<ThemeMode, string> = {
+  light: '亮色',
+  dark: '暗色',
+  system: '跟随系统',
+}
+
+const NEXT_THEME: Record<ThemeMode, { mode: ThemeMode; label: string; icon: 'sun' | 'moon' | 'refresh' }> = {
+  system: { mode: 'light', label: '切换到亮色主题', icon: 'refresh' },
+  light: { mode: 'dark', label: '切换到暗色主题', icon: 'sun' },
+  dark: { mode: 'system', label: '切换到跟随系统', icon: 'moon' },
+}
+
 export const Topbar = forwardRef<
   HTMLInputElement,
   { page: Page; query: string; onQueryChange: (q: string) => void; onNavigate: (p: Page) => void }
 >(function Topbar({ page, query, onQueryChange, onNavigate }, ref) {
-    const { state, setTheme } = useStore()
-    const pending = syncCounts(state.syncChanges, state.deployments, state.mcps).pending
+  const { state, setTheme } = useStore()
+  const pending = syncCounts(state.syncChanges, state.deployments, state.mcps).pending
+  const nextTheme = NEXT_THEME[state.settings.theme]
+  const themeIcon = nextTheme.icon
 
-    const cycleTheme = () => {
-      const order: ThemeMode[] = ['light', 'dark', 'system']
-      const next = order[(order.indexOf(state.settings.theme) + 1) % 3]
-      setTheme(next)
-    }
+  return (
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card/80 px-4 backdrop-blur-sm lg:gap-3 lg:px-5">
+      <div className="min-w-0 shrink-0">
+        <h1 className="truncate text-[15px] font-semibold leading-5 tracking-tight">{TITLES[page]}</h1>
+        <p className="hidden text-[11px] leading-4 text-muted-foreground xl:block">{SUBTITLES[page]}</p>
+      </div>
 
-    const themeIcon = state.settings.theme === 'dark' ? 'moon' : state.settings.theme === 'light' ? 'sun' : 'refresh'
+      <div className="group relative ml-auto w-full max-w-[300px] md:max-w-[340px] xl:max-w-[380px]">
+        <Icon
+          name="search"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        />
+        <Input
+          ref={ref}
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          aria-label="全局搜索"
+          placeholder="搜索当前工作区…"
+          className="h-9 bg-muted/50 pl-9 pr-11 hover:bg-card focus:bg-card"
+        />
+        <Kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 md:inline-flex">
+          /
+        </Kbd>
+      </div>
 
-    return (
-      <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-card px-5">
-        <h1 className="text-sm font-semibold">{TITLES[page]}</h1>
-        <div className="relative ml-auto w-72">
-          <Icon name="search" className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={ref}
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="全局搜索…  按 / 聚焦"
-            className="h-9 pl-8"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={cycleTheme}
-          title={`主题：${state.settings.theme}（点击切换）`}
-          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <Icon name={themeIcon} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('sync')}
-          title="打开同步中心"
-          className="hidden h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs text-muted-foreground transition-colors hover:bg-muted lg:flex"
-        >
-          <Icon name="gitBranch" className="h-3.5 w-3.5" />
-          <span className="max-w-36 truncate font-mono text-[11px]">
-            {state.repo.connected ? state.repo.url : '未连接仓库'}
-          </span>
-          {state.repo.connected ? (
-            pending > 0 ? (
-              <Badge variant="warning">{pending} 待处理</Badge>
-            ) : (
-              <Badge variant="success">
-                <Icon name="check" className="h-3 w-3" />
-                已同步
-              </Badge>
-            )
+      <button
+        type="button"
+        onClick={() => setTheme(nextTheme.mode)}
+        aria-label={nextTheme.label}
+        title={`主题：${CURRENT_THEME_LABEL[state.settings.theme]} · ${nextTheme.label}`}
+        className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <Icon name={themeIcon} className="h-[17px] w-[17px]" />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onNavigate('sync')}
+        title={state.repo.connected ? `仓库 ${state.repo.url} · 打开同步中心` : '未连接仓库 · 去连接'}
+        className="hidden h-9 max-w-[260px] shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-border bg-card/60 px-2.5 text-xs text-muted-foreground transition-colors hover:border-border-strong hover:bg-muted/60 hover:text-foreground xl:flex"
+      >
+        <span
+          className={
+            state.repo.connected
+              ? pending > 0
+                ? 'h-1.5 w-1.5 shrink-0 rounded-full bg-warning'
+                : 'h-1.5 w-1.5 shrink-0 rounded-full bg-success'
+              : 'h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50'
+          }
+        />
+        <Icon name="gitBranch" className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate font-mono text-[11px]">
+          {state.repo.connected ? state.repo.url : '未连接仓库'}
+        </span>
+        {state.repo.connected ? (
+          pending > 0 ? (
+            <Badge variant="warning" className="shrink-0">
+              {pending} 待处理
+            </Badge>
           ) : (
-            <Badge variant="warning">去连接</Badge>
-          )}
-        </button>
-      </header>
-    )
-  },
-)
+            <Badge variant="success" className="shrink-0">
+              已同步
+            </Badge>
+          )
+        ) : (
+          <Badge variant="outline" className="shrink-0">
+            连接
+          </Badge>
+        )}
+      </button>
+    </header>
+  )
+})
