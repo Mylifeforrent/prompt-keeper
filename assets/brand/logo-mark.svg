@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Prompt Keeper logo mark">
+  <defs>
+    <linearGradient id="markGradient" x1="18" y1="10" x2="112" y2="118" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6D68FF"/>
+      <stop offset="1" stop-color="#4338CA"/>
+    </linearGradient>
+    <filter id="markGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.40  0 0 0 0 1  0 0 0 0.55 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="30" fill="url(#markGradient)" filter="url(#markGlow)"/>
+  <rect x="8" y="8" width="112" height="112" rx="30" fill="none" stroke="#FFFFFF" stroke-opacity="0.18"/>
+  <path d="M64 30c2.1 0 3.8 1.4 4.7 3.9l6.3 17.9c1.2 3.4 2.1 4.3 5.5 5.5l17.9 6.3c2.5.9 3.9 2.6 3.9 4.7s-1.4 3.8-3.9 4.7l-17.9 6.3c-3.4 1.2-4.3 2.1-5.5 5.5l-6.3 17.9c-.9 2.5-2.6 3.9-4.7 3.9s-3.8-1.4-4.7-3.9l-6.3-17.9c-1.2-3.4-2.1-4.3-5.5-5.5l-17.9-6.3c-2.5-.9-3.9-2.6-3.9-4.7s1.4-3.8 3.9-4.7l17.9-6.3c3.4-1.2 4.3-2.1 5.5-5.5l6.3-17.9c.9-2.5 2.6-3.9 4.7-3.9Z" fill="#FFFFFF"/>
+  <circle cx="97" cy="33" r="6" fill="#9EF3D2"/>
+</svg>
