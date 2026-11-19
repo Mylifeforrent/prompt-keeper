@@ -14,7 +14,7 @@
 
 ## Document status
 
-This document defines the **boundary contract** between the Electron renderer and the Electron main process. It is implemented by `src/shared/contracts.ts`, `src/shared/bridge.ts`, `src/shared/channels.ts`, the preload bridge, and the main-process IPC registry.
+This document defines the **boundary contract** between the Electron renderer and the Electron main process. It is implemented by `src/shared/contracts/`, `src/shared/bridge.ts`, `src/shared/channels.ts`, the preload bridge, and the main-process IPC registry.
 
 The contract is intentionally narrower than an HTTP API:
 
@@ -2949,7 +2949,7 @@ The shared contract module must include automated checks. The repository current
 | API-09 | What exactly does `settings:reset` delete for each scope? | `[TBD-BE]` | Backend and product before SET-005 |
 | API-10 | Do equal Contract priorities need a user-visible tie-break control? | `[ASSUMPTION]` | Deterministic order is defined; product to confirm |
 | API-11 | Is `BootstrapSnapshot.activeOperations` sufficient after a renderer reload, or is an operation query channel needed? | `[TBD-BE]` | Backend before M2 |
-| API-12 | Does the exact package layout use `shared/contracts` or generated types from this document? | `[TBD-BE]` | Architecture before M1 |
+| API-12 | Does the exact package layout use `shared/contracts` or generated types from this document? | Resolved: type-only modules under `src/shared/contracts/`, re-exported from `index.ts`; no generated types | Architecture |
 | API-13 | Should repository clone and connect be promoted to an operation? The backend operation types do not include them. | `[TBD-BE]` | Backend before SYN-001 |
 
 ## 25. Traceability

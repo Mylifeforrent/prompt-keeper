@@ -43,12 +43,12 @@ import {
   toSkillFiles,
   type ManifestFile,
 } from '../../shared/domain/manifest'
-import { scanText } from '../../shared/domain/scanner'
+import { scanText } from '../../shared/domain/credentialScanner'
 import type { AppContext } from '../context'
 import { sha256Hex } from '../adapters/hash'
 import { listFilesRecursive } from '../adapters/fs'
 import type { AssetRecord, NewAssetFile } from './assetStore'
-import { assetBase, recordLocalChange, withdrawPendingChanges } from './assetHelpers'
+import { assetBase, recordLocalChange, withdrawPendingChanges } from './assetSyncState'
 import type { SkillService } from './types'
 
 const FILE_CONTENT_LIMIT = 1024 * 1024

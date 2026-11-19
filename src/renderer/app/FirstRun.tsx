@@ -1,5 +1,5 @@
 import type { AssetKind } from '../../shared/contracts'
-import { Button } from '../components/ui/core'
+import { Button } from '../components/ui/primitives'
 import { Icon, type IconName } from '../lib/icons'
 
 const ASSETS: Array<{ kind: AssetKind; title: string; description: string; icon: IconName }> = [

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { cn } from './utils'
+import { cn } from './cn'
 
 const paths: Record<string, ReactNode> = {
   plus: <path d="M12 5v14M5 12h14" />,

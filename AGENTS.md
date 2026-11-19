@@ -50,7 +50,7 @@ Runtime rules:
 
 - `src/main` is the only writer of SQLite, blobs, the materialized library, Git clones, Agent directories, and project roots.
 - The renderer sends asset IDs, target IDs, selections, and content payloads. It never sends arbitrary write paths and never receives stored secret values.
-- `src/shared/contracts.ts`, `src/shared/bridge.ts`, and `src/shared/channels.ts` mirror [`docs/api-contract.md`](./docs/api-contract.md). The document wins when they disagree; update both together.
+- `src/shared/contracts/` (domain modules re-exported from `index.ts`), `src/shared/bridge.ts`, and `src/shared/channels.ts` mirror [`docs/api-contract.md`](./docs/api-contract.md). The document wins when they disagree; update both together.
 - `src/shared/domain/*` is pure and side-effect free. It owns folder/path rules, serializers, variable rendering, target compilation, managed blocks, diff primitives, and credential scanning. Preview and write MUST use the same functions.
 - `src/main/services/*` owns business rules and persistence. `src/main/adapters/*` owns OS, Git, blob, and secret integration.
 - Renderer feature components call `src/renderer/lib/ipc.ts`; they do not access `window.promptKeeper` directly.
@@ -173,7 +173,8 @@ Do not commit or report success if `npm run build` fails.
 
 - `README.md` is the entry point. Update it when behavior, setup commands, architecture, or repository layout changes.
 - `docs/interaction-design.md` is the source of truth for UX and domain behavior. Update it when an interaction or sync rule changes; do not let code and design silently diverge.
-- `docs/api-contract.md` is the binding renderer-main boundary contract. Update it together with `src/shared/contracts.ts`, `bridge.ts`, and `channels.ts`.
+- `docs/api-contract.md` is the binding renderer-main boundary contract. Update it together with `src/shared/contracts/`, `bridge.ts`, and `channels.ts`.
+- `docs/README.md` is the documentation index and reading order. Update it when documents are added, renamed, or repurposed.
 - `docs/backend-design.md` owns storage, service behavior, Git sequences, projection algorithms, and security controls.
 - `docs/frontend-design.md` owns renderer architecture, query keys, and feature behavior.
 - `docs/business-model.md` is a business draft. Keep the annotation markers `[FACT]`, `[ASSUMPTION]`, `[TBD-BIZ]`, `[TBD-INFRA]`, and `[CONFLICT]`, and do not present assumptions as facts.

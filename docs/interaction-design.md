@@ -6,7 +6,7 @@
 | Version | v0.5 (folders are repo directories: directory structure alignment across the four asset types + Agent global directory dispatch + Skill / MCP two-way sync completed) |
 | Date | 2026-11-18 |
 | Feature source | github.com/legeling/PromptHub @ main (v0.6.2); extracted by a scripted scan of renderer components, packages/core, shared/types, spec/knowledge, and i18n entries |
-| Prototype code | This repo's `src/` (React + TypeScript + Vite + Tailwind; shadcn/ui-style component source included) |
+| Implementation | This repository's Electron app under `src/`; the frozen visual reference is `design/prototype/` |
 
 ---
 
@@ -855,6 +855,8 @@ Disconnecting removes only the sync relationship and does not delete local asset
 ---
 
 ## 8. Prototype scope and implementation notes
+
+> **Historical note:** this section records the original browser prototype stage. It is retained as design context. The shipped implementation is the Electron application described in [`architecture.md`](./architecture.md); the frozen visual reference is [`design/prototype/`](../design/prototype/README.md).
 
 ### 8.1 Tech stack
 

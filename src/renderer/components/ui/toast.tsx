@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { cn, uid } from '../../lib/utils'
+import { cn } from '../../lib/cn'
+import { uid } from '../../lib/ids'
 import { Icon, type IconName } from '../../lib/icons'
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'

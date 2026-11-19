@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
-import { cn } from '../../lib/utils'
-import { Button } from './core'
+import { cn } from '../../lib/cn'
+import { Button } from './primitives'
 import { Icon } from '../../lib/icons'
 
 export function Modal({

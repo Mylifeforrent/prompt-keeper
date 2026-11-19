@@ -1,4 +1,4 @@
-import { cn } from '../../lib/utils'
+import { cn } from '../../lib/cn'
 import { Icon, type IconName } from '../../lib/icons'
 
 export type Page = 'prompts' | 'instructions' | 'skills' | 'mcp' | 'sync' | 'settings'

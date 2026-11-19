@@ -1,11 +1,11 @@
 import { forwardRef, useEffect, useRef, useState } from 'react'
-import { Badge, Input, Kbd } from '../ui/core'
+import { Badge, Input, Kbd } from '../ui/primitives'
 import { Icon, type IconName } from '../../lib/icons'
 import { ipc } from '../../lib/ipc'
 import type { AssetKind, RepoStatus, SearchResultItem, ThemeMode } from '../../../shared/contracts'
-import type { Page } from '../../app/types'
-import { pageForKind } from '../../app/types'
-import { cn } from '../../lib/utils'
+import type { Page } from '../../app/navigation'
+import { pageForKind } from '../../app/navigation'
+import { cn } from '../../lib/cn'
 
 const TITLES: Record<Page, string> = {
   prompts: 'Prompts',

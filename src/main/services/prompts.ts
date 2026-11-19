@@ -45,7 +45,7 @@ import {
   recordLocalChange,
   syncStateFor,
   withdrawPendingChanges,
-} from './assetHelpers'
+} from './assetSyncState'
 import type { PromptService } from './types'
 
 const KIND = 'prompt' as const

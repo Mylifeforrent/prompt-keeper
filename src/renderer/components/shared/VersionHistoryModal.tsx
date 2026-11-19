@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { RevisionSummary } from '../../../shared/contracts'
-import { Badge, Button, Spinner } from '../ui/core'
+import { Badge, Button, Spinner } from '../ui/primitives'
 import { ConfirmDialog, Modal } from '../ui/modal'
 import { Icon } from '../../lib/icons'
-import { cn, formatDate } from '../../lib/utils'
+import { cn } from '../../lib/cn'
+import { formatDate } from '../../lib/format'
 import { DiffView } from './DiffView'
 
 export interface VersionFile {

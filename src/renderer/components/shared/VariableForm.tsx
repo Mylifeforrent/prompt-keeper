@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import type { PromptCopyResult, PromptVariable } from '../../../shared/contracts'
-import { Button, Input, Select, Spinner, Textarea } from '../ui/core'
+import { Button, Input, Select, Spinner, Textarea } from '../ui/primitives'
 import { Modal } from '../ui/modal'
 import { Icon } from '../../lib/icons'
 import { errorMessage, ipc } from '../../lib/ipc'

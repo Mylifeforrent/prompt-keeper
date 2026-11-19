@@ -6,7 +6,7 @@
 | Version | v0.1 (draft) |
 | Date | 2026-11-18 |
 | Status | Pending business review; not a financial forecast, not a PRD |
-| Basis | [`docs/interaction-design.md`](./interaction-design.md) v0.5, [`README.md`](../README.md), [`high-fidelity/README.md`](../high-fidelity/README.md), the `src/` prototype, `package.json` v0.5.0 |
+| Basis | [`docs/interaction-design.md`](./interaction-design.md) v0.5, [`README.md`](../README.md), [`design/prototype/README.md`](../design/prototype/README.md), the implemented `src/` application, `package.json` v0.5.0 |
 | Audience | Founder / product lead, design partners, prospective partners and investors (selected sections) |
 | Annotation rules | `[FACT]` established by the prototype or an existing document; `[ASSUMPTION]` hypothesis to validate; `[TBD-BIZ]` pending business decision; `[CONFLICT]` documentation conflict |
 
@@ -56,7 +56,7 @@
 | --- | --- | --- |
 | `docs/interaction-design.md` v0.5 | Product positioning, four asset types, sync and dispatch rules, acceptance checklist | High: formal in-project design document |
 | `README.md` | Feature overview, repository layout, prototype coverage | High |
-| `high-fidelity/` | High-fidelity visual and interaction implementation, responsive behavior, acceptance records | High: clickable prototype |
+| `design/prototype/` | Frozen visual and interaction prototype, responsive behavior, acceptance records | High: clickable prototype |
 | `src/` | Domain objects, state machines, seed data | High: runnable code |
 | `package.json` v0.5.0, `LICENSE` | Version and license facts | High |
 | External market data | This document cites no specific figures; it only provides a measurement framework | `[TBD-BIZ]` |
@@ -944,7 +944,7 @@ Legend: ● Strong; ◐ Partial; ○ Weak/missing. Qualitative judgment that req
 | Acceptance checklist | `docs/interaction-design.md` §8.3 |
 | Backlog | `docs/interaction-design.md` §9 |
 | Repository directory structure | `README.md` "Repository directory structure" |
-| High-fidelity acceptance | `high-fidelity/README.md` |
+| High-fidelity acceptance | `design/prototype/README.md` |
 | Version and license | `package.json`, `LICENSE` |
 
 ---

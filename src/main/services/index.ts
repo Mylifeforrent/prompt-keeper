@@ -1,7 +1,7 @@
 import type { AppContext } from '../context'
 import type { Services } from './types'
 import { createPromptService } from './prompts'
-import { createContractService } from './contracts'
+import { createContractService } from './instructionContracts'
 import { createSkillService } from './skills'
 import { createMcpService } from './mcp'
 import { createProjectionService } from './projections'

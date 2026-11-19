@@ -1,9 +1,9 @@
 import { useEffect, useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { FolderNode } from '../../../shared/contracts'
-import { cn } from '../../lib/utils'
+import { cn } from '../../lib/cn'
 import { Icon } from '../../lib/icons'
-import { Input } from '../ui/core'
+import { Input } from '../ui/primitives'
 
 /**
  * Nested folder tree rendered from `prompts.folders` (or `AssetListResult.folders`).

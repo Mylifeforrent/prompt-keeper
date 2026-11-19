@@ -236,64 +236,67 @@ Long-running operations must be cancellable or safely abandoned; the operation j
 
 ## 5. Module decomposition
 
-### 5.1 Target repository layout
+### 5.1 Repository layout
+
+The layout below is the current repository structure. Planned modules that are not implemented yet are tracked in [`implementation-status.md`](./implementation-status.md), not listed here.
 
 ```text
 src/
   main/
-    bootstrap/
-    ipc/
-    services/
-      assetService.ts
-      promptService.ts
-      contractService.ts
-      skillService.ts
-      mcpService.ts
-      repoService.ts
-      syncService.ts
-      dispatchService.ts
-      projectionService.ts
-      secretService.ts
-      searchService.ts
-      auditService.ts
-      backupService.ts
-      updateService.ts
-      aiService.ts
-    repositories/
-    adapters/
-      git/
-      agents/
-      filesystem/
-      mcpConfig/
-      catalogs/
-      ai/
-    jobs/
-    logging/
-    platform/
+    adapters/       blobStore, fs, git, hash, mcpConfig, secrets
+    db/             database.ts
+    ipc/            register.ts
+    services/       app, assetStore, assetSyncState, auditService, ai, dispatch,
+                    index, instructionContracts, mcp, projections, prompts,
+                    search, settings, skills, sync, types, updates
+    context.ts
+    events.ts
+    index.ts
+    logger.ts
+    operations.ts
+    paths.ts
   preload/
     index.ts
-    api.ts
   renderer/
-    app/
+    app/            FirstRun, OperationPanel, navigation
     components/
+      layout/
+      shared/
+      ui/           primitives, modal, tabs, toast
     features/
-    hooks/
+      instructions/
+      mcp/
+      prompts/
+      settings/
+      skills/
+      sync/
     lib/
-    styles/
+      clipboard.ts
+      cn.ts
+      format.ts
+      icons.tsx
+      ids.ts
+      ipc.ts
+      queryKeys.ts
+      viewModels/   assetStatus, contract, mcp, prompt, skill, sync
   shared/
+    bridge.ts
+    channels.ts
+    contracts/      boundary DTOs split by domain, re-exported from index.ts
     domain/
-      folders.ts
-      promptFile.ts
-      contractFile.ts
-      mcpFile.ts
-      targets.ts
       compiler.ts
+      contractFile.ts
+      credentialScanner.ts
       diff.ts
+      errors.ts
+      folders.ts
+      ids.ts
+      manifest.ts
+      mcpFile.ts
+      promptFile.ts
+      targets.ts
       variables.ts
-      scanner.ts
-    schemas/
-    ipc/
-    types/
+    global.d.ts
 ```
 
 ### 5.2 Dependency rules
@@ -301,17 +304,15 @@ src/
 | Layer | May import | Must not import |
 | --- | --- | --- |
 | `shared/domain` | TypeScript standard library only | React, Electron, Node builtins, database, filesystem |
-| `shared/schemas` | Zod and shared types | Electron, database, renderer components |
-| `shared/ipc` | Shared schemas and types | Electron runtime values except type-only imports |
+| `shared/contracts` | Type-only modules and shared domain types | Electron runtime values, database, renderer components |
 | `main` | Shared, Electron, Node, database, adapters | Renderer modules |
 | `preload` | Shared IPC types and a minimal Electron API | Main services, database, renderer modules |
 | `renderer` | Shared types/domain, React, renderer modules | Main, preload implementation, Node builtins |
 
 Enforcement:
 
-- Separate TypeScript projects or path restrictions in `tsconfig`.
-- Lint rules that ban cross-layer imports.
-- A CI check that `shared/` has no Electron or Node builtin imports.
+- TypeScript path aliases and code review are the current guardrails.
+- Separate TypeScript projects, lint rules, and a CI check for shared-layer imports are planned and not yet configured.
 
 ### 5.3 Shared domain module
 
@@ -340,23 +341,26 @@ Why safe:
 
 ### 5.4 Main services
 
-| Service | Responsibility |
+| Module | Responsibility |
 | --- | --- |
-| `assetService` | Asset CRUD, tags, folders, revisions, materialization |
-| `promptService` | Prompt-specific validation, variable parsing, copy rendering |
-| `contractService` | Contract CRUD, resolution preview, target compilation |
-| `skillService` | Skill files, import, review, versions |
-| `mcpService` | MCP configuration, secrets, health checks, versions |
-| `repoService` | Repository connection, layout, policies, local clone |
-| `syncService` | Fetch, pull, push, status, conflicts, sync operations |
-| `dispatchService` | Agent detection, Skill install, MCP apply, drift, rollback |
-| `projectionService` | Project and global projection, drift, rollback |
-| `secretService` | safeStorage encryption, decryption, redaction, rotation |
-| `searchService` | FTS index maintenance and queries |
-| `auditService` | Append-only audit events and export |
-| `backupService` | Database and blob backups, restore, integrity checks |
-| `updateService` | Signed update checks and installation |
-| `aiService` | Provider configuration, streaming requests, cancellation |
+| `services/assetStore.ts` | Asset CRUD, tags, folders, revisions, materialization |
+| `services/assetSyncState.ts` | Effective sync state, repository policy lookups, local change recording |
+| `services/prompts.ts` | Prompt validation, variable parsing, copy rendering |
+| `services/instructionContracts.ts` | Contract CRUD, resolution preview, target compilation |
+| `services/skills.ts` | Skill files, import, review, versions |
+| `services/mcp.ts` | MCP configuration, secrets, health checks, versions |
+| `services/sync.ts` | Repository connection, fetch, pull, push, status, conflicts |
+| `services/dispatch.ts` | Agent detection, Skill install, MCP apply, drift, rollback |
+| `services/projections.ts` | Project and global projection, drift, rollback |
+| `services/search.ts` | FTS index maintenance and queries |
+| `services/auditService.ts` | Append-only audit events and export |
+| `services/settings.ts` | Settings, backup, restore, reset, diagnostics |
+| `services/updates.ts` | Update check, download, and install (currently disabled) |
+| `services/ai.ts` | Provider configuration, streaming requests, cancellation |
+| `services/app.ts` | Bootstrap, theme, data locations, projects |
+| `adapters/secrets.ts` | safeStorage encryption, decryption, and redaction |
+| `adapters/blobStore.ts` | Content-addressed blob storage |
+| `adapters/git.ts` | Git CLI integration |
 
 ### 5.5 Renderer features
 
@@ -368,15 +372,15 @@ renderer/features/
   mcp/
   sync/
   settings/
-  search/
-  onboarding/
 renderer/components/
-  ui/          local primitives
+  ui/          primitives, modal, tabs, toast
   layout/      shell, sidebar, topbar
-  shared/      dialogs, diff, markdown, folder tree, code editor
+  shared/      dialogs, diff, markdown, folder tree, version history
+renderer/app/  first-run panel, operation panel, navigation types
+renderer/lib/  IPC client, query keys, formatting, view models
 ```
 
-The frontend design document owns the internal structure of each feature.
+Global search lives in the top bar rather than a separate feature folder. The frozen visual reference is `design/prototype/`; it is not shipped. The frontend design document owns the internal structure of each feature.
 
 ## 6. Data architecture
 

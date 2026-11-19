@@ -13,7 +13,7 @@ import type {
 import { AppError, isAppError, validationError } from '../../shared/domain/errors'
 import { newId, nowIso } from '../../shared/domain/ids'
 import { renderTemplate } from '../../shared/domain/variables'
-import { redact } from '../logging/logger'
+import { redact } from '../logger'
 import { setting, setSetting, type AppContext } from '../context'
 import type { AiService } from './types'
 

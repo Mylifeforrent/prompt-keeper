@@ -44,7 +44,7 @@ import {
   toSkillFiles,
   type ManifestFile,
 } from '../../shared/domain/manifest'
-import { scanFiles } from '../../shared/domain/scanner'
+import { scanFiles } from '../../shared/domain/credentialScanner'
 import { AGENT_DEFS, type AgentDef } from '../../shared/domain/targets'
 import {
   ensureDir,

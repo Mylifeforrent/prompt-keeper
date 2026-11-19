@@ -23,7 +23,7 @@ import { ensureDir, pathExists } from '../adapters/fs'
 import { setting, setSetting, type AppContext } from '../context'
 import type { AppService } from './types'
 import { UPDATES_SUPPORTED } from './updates'
-import { repoStatusRow } from './assetHelpers'
+import { repoStatusRow } from './assetSyncState'
 
 export const THEME_SETTING_KEY = 'ui.theme'
 export const DENSITY_SETTING_KEY = 'ui.density'

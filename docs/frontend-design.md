@@ -82,151 +82,101 @@ The renderer does **not** own:
 
 ## 3. Folder structure
 
+The tree below is the current renderer layout.
+
 ```text
 src/renderer/
   main.tsx
   App.tsx
+  index.html
+  index.css
   app/
-    AppShell.tsx
-    WorkspaceHost.tsx
-    ErrorBoundary.tsx
-    NavigationContext.tsx
-    ThemeProvider.tsx
-    QueryProvider.tsx
-    EventBridge.tsx
-    ToastProvider.tsx
-    DialogProvider.tsx
+    FirstRun.tsx
+    OperationPanel.tsx
+    navigation.ts
   components/
     layout/
       Sidebar.tsx
       Topbar.tsx
-      GlobalSearch.tsx
-      RepoStatusBadge.tsx
-    ui/
-      Button.tsx
-      Input.tsx
-      Select.tsx
-      Dialog.tsx
-      Drawer.tsx
-      Tabs.tsx
-      Toast.tsx
-      Badge.tsx
-      Tooltip.tsx
-      Switch.tsx
-      Checkbox.tsx
-      RadioGroup.tsx
-      Skeleton.tsx
-      EmptyState.tsx
-      Progress.tsx
     shared/
-      FolderTree.tsx
-      FolderInput.tsx
-      RepoPathLabel.tsx
-      Markdown.tsx
-      CodeEditor.tsx
       DiffView.tsx
-      MergeView.tsx
+      FolderTree.tsx
+      Markdown.tsx
       VariableForm.tsx
-      StatusBadge.tsx
-      TargetCard.tsx
-      DriftBanner.tsx
-      ConfirmDialog.tsx
-      ReviewCheckbox.tsx
-      DataTable.tsx
-      CommandPalette.tsx
+      VersionHistoryModal.tsx
+    ui/
+      modal.tsx
+      primitives.tsx
+      tabs.tsx
+      toast.tsx
   features/
     prompts/
+      PromptsTabs.tsx
       PromptsWorkspace.tsx
       PromptList.tsx
       PromptDetail.tsx
-      PromptEditorDialog.tsx
-      PromptCopyDialog.tsx
-      PromptSyncDialog.tsx
+      PromptEditModal.tsx
+      PromptSyncModal.tsx
+      PromptPlatformTab.tsx
       AiTestDrawer.tsx
-      PlatformDiscovery.tsx
-      queries.ts
-      state.tsx
     instructions/
       InstructionsWorkspace.tsx
       ContractList.tsx
       ContractDetail.tsx
-      ContractEditorDialog.tsx
-      ResolutionPreview.tsx
-      ProjectionTable.tsx
+      ContractEditModal.tsx
+      ContractResolutionPreview.tsx
+      ContractProjections.tsx
+      ContractSyncModal.tsx
       GlobalDispatch.tsx
-      GlobalTargetCard.tsx
-      queries.ts
-      state.tsx
     skills/
+      SkillsTabs.tsx
       SkillsWorkspace.tsx
-      SkillGrid.tsx
       SkillDetail.tsx
-      SkillEditorDialog.tsx
-      InstallReviewWizard.tsx
-      SkillStore.tsx
-      queries.ts
+      SkillEditModal.tsx
+      SkillStoreTab.tsx
     mcp/
-      McpWorkspace.tsx
-      McpList.tsx
-      McpDetail.tsx
-      McpEditorDialog.tsx
-      ApplyToAgentsDialog.tsx
+      McpTabs.tsx
+      McpLibrary.tsx
       AgentMcpTab.tsx
-      McpStore.tsx
-      queries.ts
+      McpEditModal.tsx
     sync/
-      SyncWorkspace.tsx
-      SyncOverview.tsx
+      SyncCenter.tsx
       SyncChanges.tsx
-      ChangeReviewDialog.tsx
-      ConflictDialog.tsx
-      PushDialog.tsx
-      DispatchMatrix.tsx
-      DispatchDetailDialog.tsx
+      SyncDeploy.tsx
       SyncHistory.tsx
-      queries.ts
+      SyncPushDialog.tsx
+      RepoConnectModal.tsx
+      ChangeDetailModal.tsx
+      ConflictResolveModal.tsx
+      AssetSyncBadge.tsx
     settings/
       SettingsWorkspace.tsx
-      AppearanceSection.tsx
-      RepositorySection.tsx
-      GlobalTargetsSection.tsx
-      DataSection.tsx
-      PrivacySection.tsx
-      UpdateSection.tsx
-      AboutSection.tsx
-      queries.ts
-    search/
-      SearchResults.tsx
-      useGlobalSearch.ts
-    onboarding/
-      OnboardingFlow.tsx
-  hooks/
-    useIpcQuery.ts
-    useIpcMutation.ts
-    useDebouncedValue.ts
-    useKeyboardShortcuts.ts
-    useFocusTrap.ts
-    useCopyToClipboard.ts
-    useResizeObserver.ts
   lib/
+    clipboard.ts
+    cn.ts
+    format.ts
+    icons.tsx
+    ids.ts
     ipc.ts
     queryKeys.ts
-    errors.ts
-    format.ts
-    cn.ts
-    icons.tsx
-  styles/
-    tokens.css
-    globals.css
+    viewModels/
+      assetStatus.ts
+      contract.ts
+      mcp.ts
+      prompt.ts
+      skill.ts
+      sync.ts
 ```
 
 Rules:
 
-- Feature folders do not import from other feature folders. Shared behavior moves to `components/shared` or `hooks`.
+- Feature folders do not import from other feature folders. Shared behavior moves to `components/shared` or `lib`.
 - Only `lib/ipc.ts` calls `window.promptKeeper`.
-- Query keys live in one module to prevent collisions.
+- Query keys live in `lib/queryKeys.ts`.
 - UI primitives have no domain knowledge.
+- Presentation dictionaries and view mappers live in `lib/viewModels`.
 - Shared domain logic comes from `src/shared/domain`, not from a renderer copy.
+- Hooks and styles folders are added only when a module needs them; providers live in `main.tsx` and `App.tsx`, and global styles live in `index.css`.
 
 ## 4. App shell
 
@@ -475,7 +425,7 @@ Client validation improves responsiveness but never substitutes for main-process
 
 ### 7.1 Tokens
 
-The high-fidelity prototype defines the visual language. The target keeps the same semantic tokens:
+The frozen design prototype defines the visual language. The target keeps the same semantic tokens:
 
 ```css
 :root {

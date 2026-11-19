@@ -1,7 +1,7 @@
 import type { OperationCompletedEvent, OperationProgressEvent, OperationRef } from '../../shared/contracts'
-import { Button } from '../components/ui/core'
+import { Button } from '../components/ui/primitives'
 import { Icon } from '../lib/icons'
-import { cn } from '../lib/utils'
+import { cn } from '../lib/cn'
 
 const TYPE_LABEL: Record<string, string> = {
   sync_fetch: 'Fetching repository',

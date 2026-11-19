@@ -212,6 +212,7 @@ Repository MCP files contain only `${VAR}` placeholders. Real values are encrypt
 
 | Document | Purpose |
 | --- | --- |
+| [`docs/README.md`](./docs/README.md) | Documentation index, authority order, and reading paths |
 | [`docs/prd.md`](./docs/prd.md) | Product requirements, scope, priority, and release criteria |
 | [`docs/architecture.md`](./docs/architecture.md) | Electron process model, storage, sync, dispatch, projection, and security |
 | [`docs/tech-stack.md`](./docs/tech-stack.md) | Technology choices and rejected alternatives |
@@ -225,12 +226,16 @@ Repository MCP files contain only `${VAR}` placeholders. Real values are encrypt
 ## Repository layout
 
 ```text
-src/main/                     Electron main process
-src/preload/index.ts          Typed bridge
-src/renderer/                 React application
-src/shared/contracts.ts       IPC DTOs
+src/main/                     Electron main process: services, adapters, SQLite, operations
+src/preload/index.ts          Typed IPC bridge
+src/renderer/app/             App shell pieces and navigation types
+src/renderer/components/      Reusable layout, shared components, and UI primitives
+src/renderer/features/        Domain workspaces: prompts, instructions, skills, mcp, sync, settings
+src/renderer/lib/             IPC client, query keys, formatting, view models
+src/shared/contracts/         IPC DTOs
 src/shared/channels.ts        Channel catalog
 src/shared/domain/            Pure domain modules
+design/prototype/             Frozen design prototype (not shipped)
 tests/unit/                   Domain tests
 tests/integration/            SQLite, blob, and asset tests
 tests/e2e/                    Playwright Electron tests

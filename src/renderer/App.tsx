@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Sidebar } from './components/layout/Sidebar'
 import { Topbar } from './components/layout/Topbar'
-import { PromptsTabs } from './components/prompts/PromptsTabs'
-import { InstructionsWorkspace } from './components/instructions/InstructionsWorkspace'
-import { SkillsTabs } from './components/skills/SkillsTabs'
-import { McpTabs } from './components/mcp/McpTabs'
-import { SyncCenter } from './components/sync/SyncCenter'
-import { SettingsView } from './components/settings/SettingsView'
+import { PromptsTabs } from './features/prompts/PromptsTabs'
+import { InstructionsWorkspace } from './features/instructions/InstructionsWorkspace'
+import { SkillsTabs } from './features/skills/SkillsTabs'
+import { McpTabs } from './features/mcp/McpTabs'
+import { SyncCenter } from './features/sync/SyncCenter'
+import { SettingsWorkspace } from './features/settings/SettingsWorkspace'
 import { useToast } from './components/ui/toast'
-import { Button } from './components/ui/core'
+import { Button } from './components/ui/primitives'
 import { Icon } from './lib/icons'
 import { errorMessage, events, ipc } from './lib/ipc'
 import { queryKeys } from './lib/queryKeys'
@@ -23,8 +23,8 @@ import type {
 } from '../shared/contracts'
 import { FirstRun } from './app/FirstRun'
 import { OperationPanel } from './app/OperationPanel'
-import type { CreateSignal, OpenAssetRequest, Page } from './app/types'
-import { kindForPage } from './app/types'
+import type { CreateSignal, OpenAssetRequest, Page } from './app/navigation'
+import { kindForPage } from './app/navigation'
 
 const PAGE_KEY = 'pk_active_page'
 const FIRST_RUN_KEY = 'pk_first_run_dismissed'
@@ -303,7 +303,7 @@ export default function App() {
           {page === 'skills' && <SkillsTabs {...workspaceProps} />}
           {page === 'mcp' && <McpTabs {...workspaceProps} />}
           {page === 'sync' && <SyncCenter />}
-          {page === 'settings' && <SettingsView />}
+          {page === 'settings' && <SettingsWorkspace />}
         </div>
       </main>
 

@@ -27,7 +27,7 @@ This document defines the **technology stack used by the desktop application in 
 | Packaging | electron-builder | Mature NSIS and DMG targets, signing, notarization, ASAR control, and update metadata |
 | Auto-update | electron-updater | Signature-aware update flow integrated with electron-builder artifacts |
 | UI | React 19 + TypeScript | Existing renderer stack; strong ecosystem and testability |
-| Styling | Tailwind CSS v4 + CSS variables + local primitives | Matches the existing design system and high-fidelity prototype; no runtime component library |
+| Styling | Tailwind CSS v4 + CSS variables + local primitives | Matches the existing design system and the frozen design prototype; no runtime component library |
 | Editor | CodeMirror 6 | Lightweight compared with Monaco; Markdown and merge support; good performance |
 | Markdown | react-markdown + remark-gfm + rehype-sanitize | Safe rendering of repository content without raw HTML |
 | Diff and merge | `diff` (jsdiff) + `@codemirror/merge` | Simple line diffs for lists; interactive three-way merge for conflicts |

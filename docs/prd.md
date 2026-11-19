@@ -9,7 +9,7 @@
 | Product form | Local-first desktop application for Windows and macOS |
 | Desktop framework decision | Electron (confirmed by product direction) |
 | Primary audience | Product, design, frontend, backend, QA, security, release engineering |
-| Sources | [`docs/interaction-design.md`](./interaction-design.md) v0.5, [`docs/business-model.md`](./business-model.md) v0.1, [`README.md`](../README.md), `src/` prototype, `high-fidelity/` |
+| Sources | [`docs/interaction-design.md`](./interaction-design.md) v0.5, [`docs/business-model.md`](./business-model.md) v0.1, [`README.md`](../README.md), `design/prototype/` |
 | Supersedes | Nothing. This document converts the existing design and business material into a prioritized product requirements baseline for the desktop product. |
 
 ## Document status and relationship to the current prototype

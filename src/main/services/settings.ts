@@ -30,7 +30,7 @@ import {
   writeText,
 } from '../adapters/fs'
 import { sha256File, sha256Hex } from '../adapters/hash'
-import { redact } from '../logging/logger'
+import { redact } from '../logger'
 import { expandUserPath, isAbsoluteUserPath } from '../paths'
 import { setting, setSetting, type AppContext } from '../context'
 import {
@@ -44,7 +44,7 @@ import {
   readThemePreference,
 } from './app'
 import { listAiProviders } from './ai'
-import { repoPolicies, repoRow } from './assetHelpers'
+import { repoPolicies, repoRow } from './assetSyncState'
 import { readUpdatePreferences } from './updates'
 import type { OperationContext } from '../operations'
 import type { SettingsService } from './types'

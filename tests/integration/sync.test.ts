@@ -10,7 +10,7 @@ import type { SecretStore, SecretOwnerType } from '../../src/main/adapters/secre
 import type { AppContext } from '../../src/main/context'
 import { openDatabase, type Db } from '../../src/main/db/database'
 import { EventBus } from '../../src/main/events'
-import { Logger } from '../../src/main/logging/logger'
+import { Logger } from '../../src/main/logger'
 import { OperationManager } from '../../src/main/operations'
 import { resolveAppPaths, type AppPaths } from '../../src/main/paths'
 import { AssetStore } from '../../src/main/services/assetStore'

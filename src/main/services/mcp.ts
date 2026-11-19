@@ -65,7 +65,7 @@ import {
 import type { OperationContext } from '../operations'
 import { expandUserPath } from '../paths'
 import type { AssetRecord } from './assetStore'
-import { assetBase, recordLocalChange, withdrawPendingChanges } from './assetHelpers'
+import { assetBase, recordLocalChange, withdrawPendingChanges } from './assetSyncState'
 import type { McpService } from './types'
 
 const SECRET_REDACTED = '[REDACTED]'
