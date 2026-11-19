@@ -14,9 +14,7 @@
 
 ## Document status
 
-This document describes the **target Electron renderer**. The current repository is still a browser prototype with a single React context store and localStorage persistence. The prototype's components, design tokens, and interaction patterns are the starting point, but its state architecture will be replaced during migration.
-
-The prototype rules in [`AGENTS.md`](../AGENTS.md) remain in force until the migration is approved. This document does not authorize changing the prototype now.
+This document describes the **Electron renderer implemented in this repository**. The renderer lives in `src/renderer`, uses the typed IPC client in `src/renderer/lib/ipc.ts`, TanStack Query for main-process state, and feature-local hooks for UI state. The former React context store and localStorage persistence have been removed. Simplifications and deferred items are tracked in [`docs/implementation-status.md`](./implementation-status.md).
 
 ## 1. Scope and responsibilities
 

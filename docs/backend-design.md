@@ -14,7 +14,7 @@
 
 ## Document status
 
-This document describes the **target main-process backend** of the Electron desktop application. The current repository is still a browser prototype with no backend, database, or real filesystem writes. Nothing here changes the prototype's current scope until the migration is approved.
+This document describes the **main-process backend implemented in this repository**. The service layer, SQLite schema, blob store, Git adapter, dispatch engine, and projection engine exist under `src/main`. Simplifications and deferred items are tracked in [`docs/implementation-status.md`](./implementation-status.md).
 
 The term **backend** in this document means the Electron main process and its local services. There is no HTTP server, no remote database, and no hosted application backend in the target architecture.
 

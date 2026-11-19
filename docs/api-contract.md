@@ -14,7 +14,7 @@
 
 ## Document status
 
-This document defines the **boundary contract** between the Electron renderer and the Electron main process for the target desktop product. The repository still contains a browser prototype with no backend, no database, and no real IPC. Nothing in this document changes the prototype scope until the desktop migration is explicitly approved.
+This document defines the **boundary contract** between the Electron renderer and the Electron main process. It is implemented by `src/shared/contracts.ts`, `src/shared/bridge.ts`, `src/shared/channels.ts`, the preload bridge, and the main-process IPC registry.
 
 The contract is intentionally narrower than an HTTP API:
 
@@ -359,6 +359,9 @@ interface RevisionSummary {
   note: string | null
   manifestHash: string
   createdAt: IsoTimestamp
+  // Additive extension: optional text content for version comparison.
+  // Binary files use content: null. This avoids a second revision-content channel.
+  files?: Array<{ path: string; content: string | null }>
 }
 
 interface AssetBase {

@@ -10,6 +10,8 @@
 | Audience | Founder / product lead, design partners, prospective partners and investors (selected sections) |
 | Annotation rules | `[FACT]` established by the prototype or an existing document; `[ASSUMPTION]` hypothesis to validate; `[TBD-BIZ]` pending business decision; `[CONFLICT]` documentation conflict |
 
+> **Implementation note (2026-11-19):** the desktop MVP described in this draft has now been implemented in this repository. References below to "the prototype" describe the original browser validation stage and are retained as business context, not as a claim about the current runtime.
+
 > Note: this document splits "business model" into two layers — the **operating model** (how the product creates and delivers value; Chapter 5) and the **commercial model** (how revenue and growth are captured; Chapters 6–8). All prices, conversion rates, costs, and timelines are hypotheses to validate and do not constitute commitments.
 
 ---

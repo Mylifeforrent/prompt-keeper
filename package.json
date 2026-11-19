@@ -4,21 +4,57 @@
   "version": "0.5.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "dev": "electron-vite dev",
+    "build": "tsc --noEmit && electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/run-tests.mjs",
+    "test:watch": "node scripts/run-tests.mjs --watch",
+    "test:e2e": "playwright test",
+    "package": "npm run build && electron-builder",
+    "package:mac": "npm run build && node scripts/reset-native-build-marker.mjs && electron-builder --mac zip --arm64 --x64 && npm run rebuild",
+    "package:win": "npm run build && node scripts/reset-native-build-marker.mjs && electron-builder --win portable --x64 && npm run rebuild",
+    "package:portable": "npm run package:mac && npm run package:win",
+    "test:unit": "node scripts/run-tests.mjs tests/unit",
+    "test:integration": "node scripts/run-tests.mjs tests/integration",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-builder install-app-deps || true"
   },
   "dependencies": {
+    "@tanstack/react-query": "5.90.5",
+    "better-sqlite3": "12.11.1",
+    "diff": "8.0.4",
+    "jsonc-parser": "3.3.1",
+    "picomatch": "4.0.7",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "smol-toml": "1.9.1",
+    "yaml": "2.9.1"
   },
   "devDependencies": {
+    "@electron/rebuild": "4.0.2",
+    "@playwright/test": "1.56.1",
     "@tailwindcss/vite": "^4.1.4",
+    "@types/better-sqlite3": "7.6.13",
+    "@types/diff": "8.0.0",
+    "@types/node": "24.10.1",
+    "@types/picomatch": "4.0.2",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.5.0",
+    "electron": "38.4.0",
+    "electron-builder": "26.0.12",
+    "electron-vite": "4.0.0",
     "tailwindcss": "^4.1.4",
     "typescript": "~5.8.3",
-    "vite": "^6.3.5"
-  }
+    "vite": "^6.3.5",
+    "vitest": "3.2.4"
+  },
+  "main": "out/main/index.cjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "description": "Local-first desktop control plane for AI coding assets",
+  "author": "Prompt Keeper contributors",
+  "license": "MIT"
 }

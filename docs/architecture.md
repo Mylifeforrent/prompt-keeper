@@ -14,9 +14,9 @@
 
 ## Document status
 
-This document describes the **target desktop architecture**. The current repository is still the browser-only prototype described in [`AGENTS.md`](../AGENTS.md) section 2 and [`README.md`](../README.md). No statement here should be read as a claim that the prototype already has a database, a main process, real Git, or real filesystem writes.
+This document describes the **desktop architecture implemented in this repository**. The main process, preload bridge, shared domain modules, SQLite store, Git adapter, dispatch engine, and projection engine exist under `src/main`, `src/preload`, `src/shared`, and `src/renderer`. Implementation simplifications are tracked in [`docs/implementation-status.md`](./implementation-status.md).
 
-The architecture is designed so the existing renderer, domain logic, seed data, target registry, and interaction patterns can be migrated incrementally rather than rewritten blindly.
+The architecture was designed so the renderer, domain logic, target registry, and interaction patterns could be migrated incrementally. That migration is now applied: the browser prototype store and simulation paths have been removed.
 
 ## 1. Architecture summary
 
@@ -1165,7 +1165,7 @@ interface AgentTargetPath {
 }
 ```
 
-This is necessary because the prototype's `~/Library/Application Support/...` paths are macOS-specific. Windows defaults must be defined explicitly before dispatch is enabled on Windows.
+This is necessary because an earlier design's `~/Library/Application Support/...` paths are macOS-specific. Windows defaults must be defined explicitly before dispatch is enabled on Windows.
 
 ### 12.2 Windows
 

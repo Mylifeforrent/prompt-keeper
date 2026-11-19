@@ -14,9 +14,7 @@
 
 ## Document status
 
-This document defines the **target technology stack for the desktop product**. The current repository remains a browser prototype using React, TypeScript, Vite, Tailwind, and localStorage. The prototype rules in [`AGENTS.md`](../AGENTS.md) continue to apply until the desktop migration is explicitly approved.
-
-The stack below is chosen for the desktop product, not retrofitted into the prototype by implication.
+This document defines the **technology stack used by the desktop application in this repository**. Electron, electron-vite, React, TypeScript, Tailwind, TanStack Query, better-sqlite3, the system Git CLI, and `safeStorage` are in use. Deviations from this document are listed in [`docs/implementation-status.md`](./implementation-status.md).
 
 ## 1. Decision summary
 

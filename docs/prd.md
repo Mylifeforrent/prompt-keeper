@@ -14,7 +14,7 @@
 
 ## Document status and relationship to the current prototype
 
-The repository currently contains a **browser-only interactive prototype**. It has no backend, no database, no real Git, and no real filesystem writes. That scope is correct for the prototype and remains governed by [`AGENTS.md`](../AGENTS.md) section 2.
+The repository now contains the **Electron desktop MVP** described by this PRD. The former browser prototype has been migrated: the renderer lives in `src/renderer`, the main-process backend in `src/main`, the typed preload bridge in `src/preload`, and the shared contract and pure domain logic in `src/shared`. [`AGENTS.md`](../AGENTS.md) section 2 describes the current architecture. Remaining simplifications and deferred items are tracked in [`docs/implementation-status.md`](./implementation-status.md).
 
 This PRD describes the **target desktop product**:
 
@@ -23,7 +23,7 @@ This PRD describes the **target desktop product**:
 - The local Electron main process acts as the local service layer for storage, Git, filesystem writes, and secret protection.
 - The current React prototype is the interaction reference and the starting point for the renderer, not the production architecture.
 
-There is therefore no contradiction with `AGENTS.md` section 2: that section describes the prototype in this repository today, while this PRD describes the product that will replace it after an explicit migration is approved. Until that migration starts, the repository must continue to satisfy the prototype rules.
+The desktop migration has been applied, so the renderer, backend, and IPC rules in this PRD are now the rules of the repository. `docs/implementation-status.md` records any behavior that is simplified or not yet at the target level.
 
 Where this PRD and [`docs/interaction-design.md`](./interaction-design.md) differ:
 
