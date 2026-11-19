@@ -14,6 +14,24 @@ npm run build      # type check + production build
 
 Requires Node 18+. The prototype has no backend: data lives in browser localStorage (key `pk_state_v1`, schema v4), and the Settings page can reset to demo data in one click.
 
+## Documentation
+
+The repository keeps two layers of documentation:
+
+- The **current prototype** is described by this README and [`docs/interaction-design.md`](./docs/interaction-design.md).
+- The **target desktop product** is described by the documents below. It is a Windows/macOS Electron application, not a web app. The prototype remains the interaction reference until the desktop migration is explicitly started.
+
+| Document | Purpose |
+| --- | --- |
+| [`docs/prd.md`](./docs/prd.md) | Product requirements, scope, priority, platform requirements, and release criteria for the desktop product |
+| [`docs/architecture.md`](./docs/architecture.md) | System architecture: Electron process model, storage, sync, dispatch, projection, security, packaging |
+| [`docs/tech-stack.md`](./docs/tech-stack.md) | Technology choices, rationale, rejected alternatives, and dependency policy |
+| [`docs/frontend-design.md`](./docs/frontend-design.md) | Renderer architecture, state model, design system, and feature-level technical design |
+| [`docs/backend-design.md`](./docs/backend-design.md) | Electron main-process services, SQLite schema, Git engine, dispatch, projection, and security controls |
+| [`docs/api-contract.md`](./docs/api-contract.md) | Binding renderer-main IPC contract: channels, DTOs, errors, events, concurrency, and security invariants |
+| [`docs/interaction-design.md`](./docs/interaction-design.md) | Source of truth for UX and domain behavior |
+| [`docs/business-model.md`](./docs/business-model.md) | Business model draft and commercial hypotheses |
+
 ## Core design
 
 ```text
@@ -112,12 +130,19 @@ tags: ["Frontend","Standards"]
 | Sync | Four-step Connect repository wizard, Overview (repo card / strategies for the four asset types / **directory structure example** / blocking alerts / stats / Agent status), Changes (full-text preview for Prompts / instructions, incoming review, outgoing, conflict resolution, credential replacement), dispatch matrix (Skill × MCP × Agent, with drift / roll back / remove), sync History |
 | Common | Global search (`/` to focus), new-asset shortcut (`N`), light/dark/system theme, toast feedback, second confirmation for destructive actions, empty states that explain the cause |
 
-Differences from the real product (no Electron / SQLite / real Git / real writes to Agent directories; AI responses are simulated) are covered in design doc §8.2.
+Differences from the real product (no Electron / SQLite / real Git / real writes to Agent directories; AI responses are simulated) are covered in design doc §8.2. The target Windows/macOS desktop product, including Electron, SQLite, real Git, and signed installers, is specified in the desktop documentation listed above.
 
 ## Directory structure
 
 ```text
 docs/interaction-design.md      Interaction design doc (sync domain decisions / IA / interaction specs / acceptance checklist)
+docs/prd.md                     Product requirements for the Windows/macOS desktop product
+docs/architecture.md            Desktop architecture design (Electron process model, storage, sync, security)
+docs/tech-stack.md              Technology stack and decision record
+docs/frontend-design.md         Renderer technical design
+docs/backend-design.md          Electron main-process technical design
+docs/api-contract.md            Renderer-main IPC contract (channels / DTOs / errors / events)
+docs/business-model.md          Business model draft
 src/data/seed.ts                Prompt / Skill / MCP / store / platform lists (including folder seeds)
 src/data/syncSeed.ts            Repo, three-way changes, Prompt sync files, conflicts, dispatch matrix, history, platform Prompt seeds
 src/data/contractSeed.ts        Agent Instructions contracts, project projection status, instruction sync change seeds
