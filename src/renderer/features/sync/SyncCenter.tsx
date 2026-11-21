@@ -12,6 +12,7 @@ import { errorMessage, ipc } from '../../lib/ipc'
 import { queryKeys } from '../../lib/queryKeys'
 import {
   AUDIT_META,
+  AUTH_MODE_LABEL,
   CLONE_MODE_LABEL,
   PUSH_MODE_LABEL,
   REPO_PROVIDER_LABEL,
@@ -188,8 +189,8 @@ function SyncOverview({
           <h2 className="mt-3 text-base font-semibold">Your library is local-first</h2>
           <p className="mx-auto mt-1 max-w-xl text-xs leading-5 text-muted-foreground">
             Prompts, instructions, Skills, and MCP servers live in a local database on this machine and keep working
-            without a network. Connecting a Git repository is optional: it adds team sharing with reviewable
-            three-way sync, and it never overwrites local edits automatically.
+            without a network. Connecting a Git repository is optional: point at a local worktree or clone from a
+            remote URL, reuse your existing Git credentials, and review three-way sync before anything is merged.
           </p>
           <div className="mx-auto mt-4 grid max-w-2xl gap-2 text-left sm:grid-cols-3">
             {[
@@ -275,11 +276,10 @@ function SyncOverview({
               </div>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 Last fetch {relativeTime(repo.lastFetchedAt)} · Last merge {relativeTime(repo.lastSyncedAt)} ·{' '}
-                {CLONE_MODE_LABEL[repo.cloneMode]} · {repo.auth.mode === 'token'
-                  ? `Access token ${repo.auth.hasToken ? 'stored' : 'not set'}`
-                  : repo.auth.mode === 'ssh'
-                    ? 'SSH key'
-                    : 'System Git credentials'}
+                {CLONE_MODE_LABEL[repo.cloneMode]} · {AUTH_MODE_LABEL[repo.auth.mode]}
+                {repo.auth.mode === 'token'
+                  ? ` (${repo.auth.hasToken ? 'stored' : 'not set'})`
+                  : ''}
               </p>
               <p className="mt-0.5 break-all font-mono text-[11px] text-muted-foreground">{repo.localPath}</p>
             </div>

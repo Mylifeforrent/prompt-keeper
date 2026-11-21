@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
@@ -264,5 +264,106 @@ describe('git synchronization', () => {
     expect(resolved.resolved).toBe(true)
     const after = await prompts.get(remotePrompt.id)
     expect(after.userPrompt).toContain('Remote conflict body.')
+  })
+
+  it('connects a local repository without a URL, branch, or token', async () => {
+    const sync = createSyncService(ctx)
+
+    const preview = await sync.repoConnect({
+      cloneMode: 'bound',
+      localPath: clone,
+      policies: { prompts: true, contracts: true, skills: true, mcp: true },
+      autoFetch: false,
+      confirm: false,
+    })
+    expect(preview.phase).toBe('preview')
+    if (preview.phase !== 'preview') throw new Error('Expected a preview.')
+    expect(preview.repo.url).toBe(remote)
+    expect(preview.repo.branch).toBe('main')
+    expect(preview.repo.localPath).toBe(clone)
+
+    const applied = await sync.repoConnect({
+      cloneMode: 'bound',
+      localPath: clone,
+      policies: { prompts: true, contracts: true, skills: true, mcp: true },
+      autoFetch: false,
+      confirm: true,
+      previewToken: preview.previewToken,
+    })
+    expect(applied.phase).toBe('applied')
+    if (applied.phase !== 'applied') throw new Error('Expected an applied connection.')
+    expect(applied.repo.url).toBe(remote)
+    expect(applied.repo.branch).toBe('main')
+    expect(applied.repo.auth).toEqual({ mode: 'credential', hasToken: false })
+  })
+
+  it('rejects a local repository without an origin remote', async () => {
+    const sync = createSyncService(ctx)
+    const local = join(root, 'no-origin')
+    mkdirSync(local, { recursive: true })
+    execFileSync('git', ['init', local], { encoding: 'utf8' })
+
+    await expect(
+      sync.repoConnect({
+        cloneMode: 'bound',
+        localPath: local,
+        confirm: false,
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION' })
+  })
+
+  it('connects a skill repository whose content exceeds the previous scan budget', async () => {
+    const sync = createSyncService(ctx)
+    const skillDir = join(seed, 'skills', 'large-skill')
+    const assetsDir = join(skillDir, 'assets')
+    mkdirSync(assetsDir, { recursive: true })
+    writeFileSync(
+      join(skillDir, 'SKILL.md'),
+      ['---', 'name: Large Skill', 'description: A skill with large binary assets', '---', '', 'Use the assets.'].join(
+        '\n',
+      ),
+    )
+    const chunk = Buffer.alloc(14 * 1024 * 1024, 0x41)
+    for (let index = 0; index < 5; index += 1) {
+      writeFileSync(join(assetsDir, `blob-${index}.bin`), chunk)
+    }
+    git(seed, 'add', '-A')
+    git(seed, 'commit', '-m', 'Add a large skill')
+    git(seed, 'push', 'origin', 'main')
+    git(clone, 'pull', '--rebase', 'origin', 'main')
+
+    const preview = await sync.repoConnect({
+      cloneMode: 'bound',
+      localPath: clone,
+      policies: { prompts: true, contracts: true, skills: true, mcp: true },
+      autoFetch: false,
+      confirm: false,
+    })
+    expect(preview.phase).toBe('preview')
+    if (preview.phase !== 'preview') throw new Error('Expected a preview.')
+    expect(preview.counts.skill).toBe(1)
+
+    const applied = await sync.repoConnect({
+      cloneMode: 'bound',
+      localPath: clone,
+      policies: { prompts: true, contracts: true, skills: true, mcp: true },
+      autoFetch: false,
+      confirm: true,
+      previewToken: preview.previewToken,
+    })
+    expect(applied.phase).toBe('applied')
+
+    const row = ctx.db
+      .prepare("SELECT id FROM assets WHERE kind = 'skill' AND deleted_at IS NULL")
+      .get() as { id: string } | undefined
+    expect(row).toBeTruthy()
+    if (!row) throw new Error('The skill was not imported.')
+    const skillsRow = ctx.db.prepare('SELECT version_label FROM skills WHERE asset_id = ?').get(row.id) as
+      | { version_label: string }
+      | undefined
+    expect(skillsRow).toBeTruthy()
+    const materialized = join(paths.library, 'skill', row.id, 'assets', 'blob-4.bin')
+    expect(existsSync(materialized)).toBe(true)
+    expect(statSync(materialized).size).toBe(chunk.length)
   })
 })

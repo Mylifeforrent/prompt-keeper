@@ -1071,25 +1071,39 @@ Rules:
 - Use `--no-pager`.
 - Use `--no-tags` for fetch unless tags are needed.
 
+### 9.2.1 Streaming repository reads
+
+Repository scans must not scale memory with repository size.
+
+- `ls-tree -r -l -z` supplies the mode, object ID, and blob size for every candidate file.
+- Blob content is read sequentially through one `git cat-file --batch` process. Each blob is hashed and discarded as it streams; binaries are never buffered whole.
+- Text is retained only up to `MAX_SCAN_TEXT_BYTES` (16 MiB) per file for credential scanning and manifest parsing. A larger text file is hashed in full, its prefix is scanned, and the scan result reports that the file was truncated.
+- There is no repository-wide byte budget. The file-count limit (20,000 files under the layout roots) bounds tree metadata and operation time, not content size.
+- Connect apply streams every blob into the content-addressed blob store and then inserts revisions from the staged manifest. File content is not held in memory between the scan and the transaction.
+- Fetch and change computation retain no remote text. Diff text is read on demand for assets whose digest diverges from the base, capped by the diff budget.
+- Change detail and manual merge read bounded prefixes (512 KiB for detail) or staged blobs; they never load a whole large asset to render a preview.
+
 ### 9.3 Repository connect
 
 ```text
 validate URL / owner-repo / local path
   -> check Git version
+  -> for a bound clone, read origin and the checked-out branch when omitted
   -> clone or bind
   -> check status
   -> inspect layout roots
-  -> scan files and parse frontmatter
+  -> stream the tree, hash files, and parse frontmatter
   -> report counts, malformed files, scripts, credentials
   -> user confirmation
-  -> persist repo, layout, policies, initial base
+  -> stage blobs and persist repo, layout, policies, initial base
 ```
 
 Validation rules:
 
-- URL must be HTTPS or SSH and must not contain credentials.
+- A managed clone requires a URL. When provided, the URL must be HTTPS or SSH and must not contain credentials.
 - Local path must be absolute, writable, and not inside the app bundle.
-- Bound clone must be a Git worktree.
+- Bound clone must be a Git worktree with an `origin` remote.
+- A bound clone may omit `url`, `branch`, and `auth`. The backend reads the origin URL and checked-out branch from the worktree and defaults `auth` to the system Git configuration, so it never asks for or stores a token for a local repository.
 - Layout roots must be relative paths without `..`.
 - Duplicate asset IDs across files are blocking.
 - Malformed files are reported, not rewritten.
@@ -1102,9 +1116,9 @@ Validation rules:
 3. git fetch --prune --no-tags <remote>
 4. Resolve the remote branch commit.
 5. If the remote commit equals the last fetched commit, finish.
-6. List the remote tree under managed roots.
-7. For changed paths, read content and parse assets by stable ID.
-8. Compute incoming, outgoing, and conflicts against local and base.
+6. List the remote tree with sizes under managed roots.
+7. Stream each blob through the hasher and retain only bounded text for credential scanning.
+8. Compute incoming, outgoing, and conflicts against local and base; load remote text on demand for changed assets.
 9. Upsert sync_changes with fingerprints.
 10. Update last_fetched_at.
 11. Finish the operation and emit progress/completion.

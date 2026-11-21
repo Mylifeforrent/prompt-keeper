@@ -1805,12 +1805,15 @@ interface RepoStatus {
 }
 
 interface RepoConnectInput {
-  url: string
+  /** Required for a managed clone. A bound clone may omit it to use its origin remote. */
+  url?: string
   provider?: RepoProvider
+  /** Defaults to the checked-out branch of a bound clone, otherwise `main`. */
   branch?: string
   localPath?: string
   cloneMode: 'managed' | 'bound'
-  auth: RepoAuthInput
+  /** Defaults to `{ mode: 'credential' }`. A bound clone never needs a token. */
+  auth?: RepoAuthInput
   policies?: RepoPolicies
   layout?: RepoLayout
   autoFetch?: boolean
@@ -2012,15 +2015,16 @@ interface CancelResult {
 - `sync:repoConnect` is two-phase:
   - `confirm: false` returns `RepoConnectPreview` and performs no writes.
   - `confirm: true` requires the matching `previewToken`, persists the repository, layout, policies, and initial base, and returns `RepoConnectApplied`.
-- A URL must be HTTPS or SSH and must not contain credentials.
+- When provided, a URL must be HTTPS or SSH and must not contain credentials.
 - A local path must be absolute, writable, and not inside the application bundle.
-- A bound clone must be a Git worktree.
+- A bound clone must be a Git worktree with an `origin` remote. It may omit `url`, `branch`, and `auth`: the backend reads the origin URL and checked-out branch from the worktree and defaults `auth` to `{ mode: 'credential' }`, which reuses the system Git configuration without a token.
+- A managed clone requires `url`. A bound clone without an `origin` remote returns `VALIDATION`.
 - Layout roots must be relative paths without `..`.
 - Duplicate asset IDs across files are blocking. Malformed files are reported, not rewritten.
 - If the preview reports scripts, the apply phase requires `acknowledgeScripts: true`. The acknowledgement records that the user understands scripts and MCP commands may run on this machine.
 - A managed clone is created and owned by the app. A bound clone is user-provided and is never deleted by disconnect unless the user explicitly chooses `deleteManagedClone` and the clone is app-managed.
 - `sync:repoDisconnect` removes the relationship only. It does not delete assets, revisions, or a user-provided clone.
-- On connect, `{ mode: 'token' }` requires a token. On `sync:repoUpdate`, omit `token` to keep the stored token, or set `clearToken: true` to clear it.
+- On connect, `auth` defaults to `{ mode: 'credential' }`. `{ mode: 'token' }` requires a token. On `sync:repoUpdate`, omit `token` to keep the stored token, or set `clearToken: true` to clear it.
 - Changing layout roots invalidates existing base paths. The backend recomputes changes and may return an empty change set until the next fetch.
 - Turning a repository policy off while pending changes exist requires `confirmPolicyWithdrawal: true`; otherwise the backend returns `CONFLICT`.
 

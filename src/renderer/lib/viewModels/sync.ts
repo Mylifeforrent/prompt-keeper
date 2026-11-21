@@ -141,9 +141,9 @@ export const PUSH_MODE_LABEL: Record<'direct' | 'branch', string> = {
 }
 
 export const AUTH_MODE_LABEL: Record<'credential' | 'ssh' | 'token', string> = {
-  credential: 'System Git credentials',
+  credential: 'System Git configuration (no token)',
   ssh: 'SSH key',
-  token: 'Access token stored by the app',
+  token: 'Access token',
 }
 
 export function policyKeyForKind(kind: AssetKind): PolicyKey {

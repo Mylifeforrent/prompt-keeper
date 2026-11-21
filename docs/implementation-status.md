@@ -69,7 +69,8 @@ This document is descriptive. It does not change the binding requirements in the
 
 ### Git synchronization
 
-- Two-phase repository connection for managed clones and bound clones, including layout detection, malformed-file reporting, duplicate-ID detection, script findings, and credential findings.
+- Two-phase repository connection for managed clones and bound clones, including layout detection, malformed-file reporting, duplicate-ID detection, script findings, and credential findings. A bound local worktree connects by path alone: URL and branch are read from `origin` and HEAD, and system Git configuration is used without a token.
+- Streaming repository scans keep memory bounded: tree sizes come from `ls-tree -l`, blobs stream through one `cat-file --batch` reader, text scanning is capped per file, connect imports from staged blobs plus a manifest, and change diffs load remote text on demand. Repository-wide content size is no longer capped at 64 MiB, and individual binaries may exceed the old 16 MiB read limit.
 - Read-only fetch that never merges or writes assets.
 - Per-stable-ID three-way classification: in sync, local ahead, remote ahead, conflict, added, deleted, renamed.
 - Incoming review with redacted three-way content and review invalidation on fingerprint change.

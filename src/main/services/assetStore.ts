@@ -209,12 +209,59 @@ export class AssetStore {
       mediaKind: file.mediaKind,
       isExecutable: file.isExecutable,
     }))
-    const manifestHash = sha256Hex(canonicalManifestJson(manifestFiles))
 
     for (const file of normalizedFiles) {
       this.blobs.writeSync(file.content)
     }
 
+    return this.insertRevision(assetId, manifestFiles, note)
+  }
+
+  /**
+   * Inserts a revision from a manifest whose blobs are already staged. Sync
+   * uses this to import large repositories without holding file content in
+   * memory; every blob is verified to exist before the transaction starts.
+   */
+  addRevisionFromManifest(
+    assetId: string,
+    manifest: ManifestFile[],
+    note: string | null = null,
+  ): RevisionRecord {
+    this.getAsset(assetId)
+    if (!manifest.length) throw new AppError('VALIDATION', 'An asset revision needs at least one file.')
+    const manifestFiles: ManifestFile[] = manifest.map((file) => {
+      const path = file.path.replace(/\\/g, '/').replace(/^\/+/, '')
+      if (!path || path.includes('..')) {
+        throw new AppError('VALIDATION', 'A revision file path is invalid.')
+      }
+      if (!/^[a-f0-9]{64}$/.test(file.blobHash)) {
+        throw new AppError('CORRUPT', `The manifest entry ${path} has an invalid blob hash.`)
+      }
+      if (!Number.isInteger(file.size) || file.size < 0) {
+        throw new AppError('CORRUPT', `The manifest entry ${path} has an invalid size.`)
+      }
+      if (!this.blobs.existsSync(file.blobHash)) {
+        throw new AppError('CORRUPT', `The staged content for ${path} is missing.`)
+      }
+      return {
+        path,
+        blobHash: file.blobHash,
+        size: file.size,
+        mediaKind: file.mediaKind,
+        isExecutable: !!file.isExecutable,
+      }
+    })
+
+    return this.insertRevision(assetId, manifestFiles, note)
+  }
+
+  private insertRevision(
+    assetId: string,
+    manifestFiles: ManifestFile[],
+    note: string | null,
+  ): RevisionRecord {
+    const current = this.currentRevisionOrNull(assetId)
+    const manifestHash = sha256Hex(canonicalManifestJson(manifestFiles))
     const revisionId = newId('rev')
     const version = (current?.version ?? 0) + 1
     const at = nowIso()

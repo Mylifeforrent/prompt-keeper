@@ -123,7 +123,7 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
   const [url, setUrl] = useState('')
   const [provider, setProvider] = useState<'auto' | RepoProvider>('auto')
   const [branch, setBranch] = useState('main')
-  const [cloneMode, setCloneMode] = useState<'managed' | 'bound'>('managed')
+  const [cloneMode, setCloneMode] = useState<'managed' | 'bound'>('bound')
   const [localPath, setLocalPath] = useState('')
   const [authMode, setAuthMode] = useState<'credential' | 'ssh' | 'token'>('credential')
   const [sshKeyPath, setSshKeyPath] = useState('')
@@ -143,7 +143,7 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
     setUrl('')
     setProvider('auto')
     setBranch('main')
-    setCloneMode('managed')
+    setCloneMode('bound')
     setLocalPath('')
     setAuthMode('credential')
     setSshKeyPath('')
@@ -174,13 +174,17 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
   }
 
   function buildInput(confirm: boolean): RepoConnectInput {
+    const local = cloneMode === 'bound'
     return {
-      url: url.trim(),
-      ...(provider === 'auto' ? {} : { provider }),
-      branch: branch.trim() || 'main',
-      ...(cloneMode === 'bound' ? { localPath: localPath.trim() } : {}),
       cloneMode,
-      auth: buildAuth(),
+      ...(local
+        ? { localPath: localPath.trim() }
+        : {
+            url: url.trim(),
+            ...(provider === 'auto' ? {} : { provider }),
+            branch: branch.trim() || 'main',
+            auth: buildAuth(),
+          }),
       policies,
       layout,
       autoFetch,
@@ -199,25 +203,28 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
     setError(null)
     setDetails([])
     if (stepToCheck === 1) {
-      if (!url.trim()) {
-        setError('Repository URL is required.')
-        return false
-      }
-      if (hasEmbeddedCredentials(url.trim())) {
-        setError('The repository URL must not contain credentials. Use the authentication field instead.')
-        return false
-      }
-      if (!branch.trim()) {
-        setError('Branch is required.')
-        return false
-      }
-      if (cloneMode === 'bound' && !localPath.trim()) {
-        setError('A bound clone requires an absolute local path.')
-        return false
-      }
-      if (authMode === 'token' && !token.trim()) {
-        setError('An access token is required for token authentication.')
-        return false
+      if (cloneMode === 'bound') {
+        if (!localPath.trim()) {
+          setError('A local repository path is required.')
+          return false
+        }
+      } else {
+        if (!url.trim()) {
+          setError('Repository URL is required.')
+          return false
+        }
+        if (hasEmbeddedCredentials(url.trim())) {
+          setError('The repository URL must not contain credentials. Use the authentication field instead.')
+          return false
+        }
+        if (!branch.trim()) {
+          setError('Branch is required.')
+          return false
+        }
+        if (authMode === 'token' && !token.trim()) {
+          setError('An access token is required for token authentication.')
+          return false
+        }
       }
     }
     if (stepToCheck === 2) {
@@ -368,114 +375,21 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-url">
-              Repository URL *
-            </label>
-            <Input
-              id="repo-url"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder="https://github.com/owner/repo.git or git@github.com:owner/repo.git"
-            />
-            <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-              HTTPS or SSH. Never put a token or password in the URL.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-provider">
-                Provider
-              </label>
-              <Select
-                id="repo-provider"
-                value={provider}
-                onChange={(event) => setProvider(event.target.value as 'auto' | RepoProvider)}
-              >
-                <option value="auto">Detect automatically</option>
-                <option value="github">GitHub</option>
-                <option value="gitlab">GitLab</option>
-                <option value="generic">Generic Git</option>
-              </Select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-branch">
-                Branch
-              </label>
-              <Input
-                id="repo-branch"
-                value={branch}
-                onChange={(event) => setBranch(event.target.value)}
-                placeholder="main"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-auth">
-                Authentication
-              </label>
-              <Select
-                id="repo-auth"
-                value={authMode}
-                onChange={(event) => setAuthMode(event.target.value as 'credential' | 'ssh' | 'token')}
-              >
-                <option value="credential">System Git credentials</option>
-                <option value="ssh">SSH key</option>
-                <option value="token">Access token</option>
-              </Select>
-            </div>
-          </div>
-
-          {authMode === 'ssh' && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-ssh-key">
-                SSH key path (optional)
-              </label>
-              <Input
-                id="repo-ssh-key"
-                value={sshKeyPath}
-                onChange={(event) => setSshKeyPath(event.target.value)}
-                placeholder="~/.ssh/id_ed25519"
-                className="font-mono text-xs"
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Leave blank to use the SSH agent or the default key.
-              </p>
-            </div>
-          )}
-
-          {authMode === 'token' && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-token">
-                Access token *
-              </label>
-              <Input
-                id="repo-token"
-                type="password"
-                autoComplete="off"
-                value={token}
-                onChange={(event) => setToken(event.target.value)}
-                placeholder="Write-only; stored with OS safe storage"
-              />
-              <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-                The token is write-only. It is never displayed again and never written to the repository or logs.
-              </p>
-            </div>
-          )}
-
-          <div>
-            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Local clone</div>
+            <div className="mb-1.5 text-xs font-medium text-muted-foreground">Repository source</div>
             <div className="grid gap-2 sm:grid-cols-2">
               {(
                 [
                   {
-                    value: 'managed',
-                    title: 'Managed by the app (recommended)',
-                    description: 'Clones into the Prompt Keeper data directory. Disconnect can optionally delete it.',
+                    value: 'bound',
+                    title: 'Use a local repository (recommended)',
+                    description:
+                      'Point at a Git worktree you already cloned. Prompt Keeper reads its origin and checked-out branch and reuses your Git configuration, so no token is needed.',
                   },
                   {
-                    value: 'bound',
-                    title: 'Bind an existing clone',
-                    description: 'Reuses a Git worktree you already cloned. It is never deleted by the app.',
+                    value: 'managed',
+                    title: 'Clone from a remote',
+                    description:
+                      'Clones into the Prompt Keeper data directory. Choose the repository URL and authentication method.',
                   },
                 ] as const
               ).map((option) => (
@@ -499,25 +413,135 @@ export function RepoConnectModal({ open, onClose }: { open: boolean; onClose: ()
           </div>
 
           {cloneMode === 'bound' ? (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-local-path">
-                Local clone path *
-              </label>
-              <Input
-                id="repo-local-path"
-                value={localPath}
-                onChange={(event) => setLocalPath(event.target.value)}
-                className="font-mono text-xs"
-                placeholder="/Users/you/code/ai-assets"
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Must be an existing Git worktree. The app never deletes a bound clone.
-              </p>
+            <div className="space-y-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-local-path">
+                  Local repository path *
+                </label>
+                <Input
+                  id="repo-local-path"
+                  value={localPath}
+                  onChange={(event) => setLocalPath(event.target.value)}
+                  className="font-mono text-xs"
+                  placeholder="/Users/you/code/ai-assets"
+                />
+                <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                  Must be the root of an existing Git worktree with an "origin" remote. The app never deletes it.
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-[11px] leading-5 text-muted-foreground">
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Icon name="shield" className="h-3.5 w-3.5 text-primary" />
+                  No token required
+                </div>
+                <p className="mt-1">
+                  Prompt Keeper runs the system Git command with your existing credential helper or SSH agent. It reads
+                  the origin URL and checked-out branch from the repository and never asks for or stores an access
+                  token.
+                </p>
+              </div>
             </div>
           ) : (
-            <p className="rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
-              Prompt Keeper chooses the clone path inside its data directory and keeps it in sync with the app.
-            </p>
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-url">
+                  Repository URL *
+                </label>
+                <Input
+                  id="repo-url"
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                  placeholder="https://github.com/owner/repo.git or git@github.com:owner/repo.git"
+                />
+                <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                  HTTPS or SSH. Never put a token or password in the URL.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-provider">
+                    Provider
+                  </label>
+                  <Select
+                    id="repo-provider"
+                    value={provider}
+                    onChange={(event) => setProvider(event.target.value as 'auto' | RepoProvider)}
+                  >
+                    <option value="auto">Detect automatically</option>
+                    <option value="github">GitHub</option>
+                    <option value="gitlab">GitLab</option>
+                    <option value="generic">Generic Git</option>
+                  </Select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-branch">
+                    Branch
+                  </label>
+                  <Input
+                    id="repo-branch"
+                    value={branch}
+                    onChange={(event) => setBranch(event.target.value)}
+                    placeholder="main"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-auth">
+                    Authentication
+                  </label>
+                  <Select
+                    id="repo-auth"
+                    value={authMode}
+                    onChange={(event) => setAuthMode(event.target.value as 'credential' | 'ssh' | 'token')}
+                  >
+                    <option value="credential">System Git configuration</option>
+                    <option value="ssh">SSH key</option>
+                    <option value="token">Access token</option>
+                  </Select>
+                </div>
+              </div>
+
+              {authMode === 'ssh' && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-ssh-key">
+                    SSH key path (optional)
+                  </label>
+                  <Input
+                    id="repo-ssh-key"
+                    value={sshKeyPath}
+                    onChange={(event) => setSshKeyPath(event.target.value)}
+                    placeholder="~/.ssh/id_ed25519"
+                    className="font-mono text-xs"
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Leave blank to use the SSH agent or the default key.
+                  </p>
+                </div>
+              )}
+
+              {authMode === 'token' && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="repo-token">
+                    Access token *
+                  </label>
+                  <Input
+                    id="repo-token"
+                    type="password"
+                    autoComplete="off"
+                    value={token}
+                    onChange={(event) => setToken(event.target.value)}
+                    placeholder="Write-only; stored with OS safe storage"
+                  />
+                  <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                    The token is write-only. It is never displayed again and never written to the repository or logs.
+                  </p>
+                </div>
+              )}
+
+              <p className="rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
+                Prompt Keeper chooses the clone path inside its data directory and keeps it in sync with the app.
+              </p>
+            </>
           )}
         </div>
       )}
@@ -1076,10 +1100,16 @@ export function RepoEditModal({
               value={authMode}
               onChange={(event) => setAuthMode(event.target.value as 'credential' | 'ssh' | 'token')}
             >
-              <option value="credential">System Git credentials</option>
+              <option value="credential">System Git configuration (no token)</option>
               <option value="ssh">SSH key</option>
               <option value="token">Access token</option>
             </Select>
+            {authMode === 'credential' && (
+              <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+                Fetch and push reuse the credential helper or SSH agent already configured on this machine. A bound
+                local repository needs no token.
+              </p>
+            )}
             {authMode === 'ssh' && (
               <div className="mt-2">
                 <Input
@@ -1127,8 +1157,9 @@ export function RepoEditModal({
 
           <div className="rounded-lg bg-muted/60 px-3 py-2.5 text-[11px] leading-5 text-muted-foreground">
             Current authentication: {AUTH_MODE_LABEL[repo.auth.mode]}
-            {repo.auth.mode === 'token' ? ` · ${repo.auth.hasToken ? 'token stored' : 'no token stored'}` : ''}. The
-            token value is never returned to the interface.
+            {repo.auth.mode === 'token'
+              ? ` · ${repo.auth.hasToken ? 'token stored' : 'no token stored'}. The token value is never returned to the interface.`
+              : '.'}
           </div>
         </div>
       </Modal>

@@ -571,8 +571,9 @@ Optimistic concurrency:
 ### 7.2 Repository connection
 
 ```text
-User enters URL, branch, auth mode, clone mode, local path
-  -> main validates URL and path
+User chooses a local worktree path or a remote URL with branch, auth mode, and clone mode
+  -> main validates the path, or the URL and path
+  -> for a local worktree, main reads origin and the checked-out branch when omitted
   -> main checks Git availability and version
   -> clone or bind existing clone
   -> inspect directory layout
@@ -584,7 +585,8 @@ User enters URL, branch, auth mode, clone mode, local path
 
 Rules:
 
-- Authentication uses system Git credentials or the SSH agent. The app does not store Git passwords.
+- Authentication uses the system Git configuration (credential helper or SSH agent). The app does not store Git passwords, and a bound local repository needs no token.
+- A local worktree must have an `origin` remote; the app reads its URL and the checked-out branch.
 - A bound existing clone is never modified without checking `git status --porcelain`.
 - If the clone is dirty outside app-managed paths, the connection is read-only until the user resolves it.
 - Unfiled assets are recorded, not dropped.

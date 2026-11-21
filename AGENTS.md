@@ -28,8 +28,10 @@ Verification (run before every commit; expected output is empty):
 
 ```bash
 git ls-files -z --cached --others --exclude-standard \
-  | xargs -0 perl -CSD -ne 'if (/\p{Han}/) { print "$ARGV\n"; close ARGV }'
+  | xargs -0 perl -MEncode -ne 'if (-B $ARGV) { next } my $s = Encode::decode("UTF-8", $_, Encode::FB_DEFAULT); if ($s =~ /\p{Han}/) { print "$ARGV\n"; close ARGV }'
 ```
+
+Binary files are skipped and malformed UTF-8 is replaced rather than aborting the scan, so tracked images do not break the check.
 
 Chat replies to the user are not repository artifacts and MAY use the user's language, but everything written to disk MUST follow this policy.
 

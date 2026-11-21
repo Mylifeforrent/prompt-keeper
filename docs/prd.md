@@ -653,8 +653,8 @@ Every fetch, pull, push, conflict, dispatch, projection, block, review, and roll
 Acceptance: history can be filtered by category and exported; it records asset, version, target, path, result, and time.
 
 **SYN-014 (P0) Branch and authentication.**
-The app supports a configurable branch and reuses system Git credentials or an SSH agent.
-Acceptance: the app does not store Git passwords; authentication failures are explained with the failing command context.
+The app supports a configurable branch and reuses the system Git configuration (credential helper or SSH agent). An existing local repository connects by path alone: the app reads its `origin` remote and checked-out branch, and never asks for a token.
+Acceptance: the app does not store Git passwords; a local repository can be connected and synced without entering a token; authentication failures are explained with the failing command context.
 
 **SYN-015 (P0) Repository layout validation.**
 The app validates directory layout, file naming, frontmatter, and duplicate IDs before push.

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { constants } from 'node:fs'
 import { access, realpath, stat } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
@@ -72,6 +73,7 @@ import { sha256Hex } from '../adapters/hash'
 import {
   createGitClient,
   type GitAuth,
+  type GitBlobReader,
   type GitClient,
   type GitTreeEntry,
 } from '../adapters/git'
@@ -100,9 +102,9 @@ const DEFAULT_POLICIES: RepoPolicies = {
   skills: true,
   mcp: true,
 }
-const MAX_SCAN_FILES = 3_000
-const MAX_SCAN_BYTES = 64 * 1024 * 1024
-const MAX_SINGLE_FILE_BYTES = 16 * 1024 * 1024
+const MAX_SCAN_FILES = 20_000
+const MAX_SCAN_TEXT_BYTES = 16 * 1024 * 1024
+const MAX_SCAN_HEAD_BYTES = 256
 const MAX_DIFF_TEXT_CHARS = 2_000_000
 const MAX_DETAIL_TEXT_BYTES = 512 * 1024
 const MAX_FINDINGS = 500
@@ -713,73 +715,49 @@ function manifestDigest(files: ManifestFile[]): string {
   return sha256Hex(canonicalManifestJson(files))
 }
 
-function textBudget(files: Array<{ path: string; content: string }>): string {
-  let budget = MAX_DIFF_TEXT_CHARS
-  const parts: string[] = []
-  for (const file of files) {
-    if (budget <= 0) break
-    const text = file.content.slice(0, budget)
-    parts.push(text)
-    budget -= text.length
-  }
-  return parts.join('\n')
+interface RemoteAssetFields {
+  id: string | null
+  title: string
+  description: string
+  folder: string
+  slug: string
+  tags: string[]
+  syncPolicy: SyncPolicy
+  promptModel: ReturnType<typeof parsePromptFile>['model']
+  contractModel: ReturnType<typeof parseContractFile>['model']
+  mcpModel: ReturnType<typeof parseMcpFile>['model']
+  skillModel: SkillMeta | null
 }
 
-function scanTextFiles(
-  kind: AssetKind,
-  files: Array<{ path: string; content: string }>,
-): ScanFinding[] {
-  if (!files.length) return []
-  return scanFiles(files, kind === 'mcp' ? '${VAR}' : '{{variable}}')
+interface ScannedFile {
+  repoPath: string
+  assetPath: string
+  blobHash: string
+  size: number
+  mediaKind: 'text' | 'binary'
+  isExecutable: boolean
+  /** Start of a text file, used for shebang-based script detection. */
+  head: string
 }
 
-function buildRemoteAsset(input: {
+function deriveRemoteAssetFields(input: {
   kind: AssetKind
-  root: string
   mainPath: string
   dirPath: string | null
-  files: RepoFileInput[]
+  mainText: string
   slugHint: string
   folderHint: string
-}): { asset: RemoteAsset | null; error?: string } {
-  const { kind, mainPath, files } = input
-  if (!files.length) return { asset: null, error: 'The asset has no files.' }
-  const main = files.find((file) => file.repoPath === mainPath)
-  if (!main) return { asset: null, error: 'The main repository file is missing.' }
-
-  const manifest: ManifestFile[] = files.map((file) => ({
-    path: file.assetPath,
-    blobHash: sha256Hex(file.content),
-    size: file.content.length,
-    mediaKind: file.mediaKind,
-    isExecutable: file.isExecutable,
-  }))
-  const digest = manifestDigest(manifest)
-  const textFiles = files
-    .filter((file) => file.mediaKind === 'text')
-    .map((file) => ({ path: file.assetPath, content: file.content.toString('utf8') }))
-  const findings = scanTextFiles(kind, textFiles)
-  const highFindings = findings.some((finding) => finding.confidence === 'high')
-  const risk: SyncRisk[] = []
-  if (kind === 'skill') {
-    if (files.some((file) => file.isExecutable || isScriptFile(file.assetPath, file.content.toString('utf8')))) {
-      risk.push('scripts')
-    }
-  }
-  if (highFindings) risk.push('secrets')
-
-  const mainText = main.content.toString('utf8')
+}): { fields: RemoteAssetFields | null; error?: string } {
+  const { kind, mainPath, mainText } = input
   const slug = safeSlug(input.slugHint)
-
   if (kind === 'prompt') {
     const parsed = parsePromptFile(mainText, mainPath)
-    if (!parsed.model) return { asset: null, error: parsed.error ?? 'Invalid prompt file.' }
+    if (!parsed.model) return { fields: null, error: parsed.error ?? 'Invalid prompt file.' }
     const folder = normalizeFolder(parsed.model.folder)
     const folderError = validateFolder(folder)
-    if (folderError) return { asset: null, error: `Invalid prompt folder: ${folderError}` }
+    if (folderError) return { fields: null, error: `Invalid prompt folder: ${folderError}` }
     return {
-      asset: {
-        kind,
+      fields: {
         id: parsed.model.id || null,
         title: parsed.model.title,
         description: parsed.model.description,
@@ -787,14 +765,6 @@ function buildRemoteAsset(input: {
         slug,
         tags: parsed.model.tags,
         syncPolicy: parsed.model.syncPolicy,
-        mainPath,
-        dirPath: null,
-        files,
-        manifest,
-        digest,
-        textFiles,
-        risk,
-        blocked: highFindings,
         promptModel: parsed.model,
         contractModel: null,
         mcpModel: null,
@@ -804,13 +774,12 @@ function buildRemoteAsset(input: {
   }
   if (kind === 'contract') {
     const parsed = parseContractFile(mainText, mainPath)
-    if (!parsed.model) return { asset: null, error: parsed.error ?? 'Invalid contract file.' }
+    if (!parsed.model) return { fields: null, error: parsed.error ?? 'Invalid contract file.' }
     const folder = normalizeFolder(parsed.model.folder)
     const folderError = validateFolder(folder)
-    if (folderError) return { asset: null, error: `Invalid contract folder: ${folderError}` }
+    if (folderError) return { fields: null, error: `Invalid contract folder: ${folderError}` }
     return {
-      asset: {
-        kind,
+      fields: {
         id: parsed.model.id || null,
         title: parsed.model.title,
         description: parsed.model.description,
@@ -818,14 +787,6 @@ function buildRemoteAsset(input: {
         slug,
         tags: parsed.model.tags,
         syncPolicy: parsed.model.syncPolicy,
-        mainPath,
-        dirPath: null,
-        files,
-        manifest,
-        digest,
-        textFiles,
-        risk,
-        blocked: highFindings,
         promptModel: null,
         contractModel: parsed.model,
         mcpModel: null,
@@ -835,14 +796,12 @@ function buildRemoteAsset(input: {
   }
   if (kind === 'mcp') {
     const parsed = parseMcpFile(mainText, mainPath)
-    if (!parsed.model) return { asset: null, error: parsed.error ?? 'Invalid MCP file.' }
+    if (!parsed.model) return { fields: null, error: parsed.error ?? 'Invalid MCP file.' }
     const folder = normalizeFolder(parsed.model.folder)
     const folderError = validateFolder(folder)
-    if (folderError) return { asset: null, error: `Invalid MCP folder: ${folderError}` }
-    if (parsed.model.transport === 'http' || parsed.model.url) risk.push('network')
+    if (folderError) return { fields: null, error: `Invalid MCP folder: ${folderError}` }
     return {
-      asset: {
-        kind,
+      fields: {
         id: parsed.model.id || null,
         title: parsed.model.title,
         description: parsed.model.description,
@@ -850,14 +809,6 @@ function buildRemoteAsset(input: {
         slug,
         tags: parsed.model.tags,
         syncPolicy: 'inherit',
-        mainPath,
-        dirPath: null,
-        files,
-        manifest,
-        digest,
-        textFiles,
-        risk: uniqueStrings(risk) as SyncRisk[],
-        blocked: highFindings,
         promptModel: null,
         contractModel: null,
         mcpModel: parsed.model,
@@ -866,17 +817,14 @@ function buildRemoteAsset(input: {
     }
   }
 
-  const skillMain = files.find((file) => file.assetPath === 'SKILL.md')
-  if (!skillMain) return { asset: null, error: 'The skill directory has no SKILL.md at its root.' }
   const dirName = input.dirPath ? basename(input.dirPath) : input.slugHint
-  const parsedSkill = parseSkillFile(skillMain.content.toString('utf8'), mainPath, dirName)
-  if (!parsedSkill.meta) return { asset: null, error: parsedSkill.error ?? 'Invalid SKILL.md.' }
+  const parsedSkill = parseSkillFile(mainText, mainPath, dirName)
+  if (!parsedSkill.meta) return { fields: null, error: parsedSkill.error ?? 'Invalid SKILL.md.' }
   const folder = normalizeFolder(parsedSkill.meta.folder || input.folderHint)
   const folderError = validateFolder(folder)
-  if (folderError) return { asset: null, error: `Invalid skill folder: ${folderError}` }
+  if (folderError) return { fields: null, error: `Invalid skill folder: ${folderError}` }
   return {
-    asset: {
-      kind,
+    fields: {
       id: parsedSkill.meta.id || null,
       title: parsedSkill.meta.title,
       description: parsedSkill.meta.description,
@@ -884,14 +832,6 @@ function buildRemoteAsset(input: {
       slug,
       tags: parsedSkill.meta.tags,
       syncPolicy: 'inherit',
-      mainPath,
-      dirPath: input.dirPath,
-      files,
-      manifest,
-      digest,
-      textFiles,
-      risk,
-      blocked: highFindings,
       promptModel: null,
       contractModel: null,
       mcpModel: null,
@@ -900,79 +840,318 @@ function buildRemoteAsset(input: {
   }
 }
 
-interface RepoFileInput {
-  repoPath: string
-  assetPath: string
-  content: Buffer
-  mediaKind: 'text' | 'binary'
-  isExecutable: boolean
+function assembleRemoteAsset(input: {
+  kind: AssetKind
+  mainPath: string
+  dirPath: string | null
+  files: RemoteFile[]
+  manifest: ManifestFile[]
+  digest: string
+  textFiles: Array<{ path: string; content: string }>
+  risk: SyncRisk[]
+  blocked: boolean
+  fields: RemoteAssetFields
+}): RemoteAsset {
+  return {
+    kind: input.kind,
+    id: input.fields.id,
+    title: input.fields.title,
+    description: input.fields.description,
+    folder: input.fields.folder,
+    slug: input.fields.slug,
+    tags: input.fields.tags,
+    syncPolicy: input.fields.syncPolicy,
+    mainPath: input.mainPath,
+    dirPath: input.dirPath,
+    files: input.files,
+    manifest: input.manifest,
+    digest: input.digest,
+    textFiles: input.textFiles,
+    risk: input.risk,
+    blocked: input.blocked,
+    promptModel: input.fields.promptModel,
+    contractModel: input.fields.contractModel,
+    mcpModel: input.fields.mcpModel,
+    skillModel: input.fields.skillModel,
+  }
 }
 
-async function readRemoteFiles(
+function buildScannedRemoteAsset(input: {
+  kind: AssetKind
+  mainPath: string
+  dirPath: string | null
+  files: ScannedFile[]
+  mainText: string | null
+  findings: ScanFinding[]
+  slugHint: string
+  folderHint: string
+}): { asset: RemoteAsset | null; error?: string } {
+  if (!input.files.length) return { asset: null, error: 'The asset has no files.' }
+  if (input.mainText === null) {
+    return { asset: null, error: 'The main repository file could not be read in full.' }
+  }
+  if (!input.files.some((file) => file.repoPath === input.mainPath)) {
+    return { asset: null, error: 'The main repository file is missing.' }
+  }
+
+  const manifest: ManifestFile[] = input.files.map((file) => ({
+    path: file.assetPath,
+    blobHash: file.blobHash,
+    size: file.size,
+    mediaKind: file.mediaKind,
+    isExecutable: file.isExecutable,
+  }))
+  const digest = manifestDigest(manifest)
+  const highFindings = input.findings.some((finding) => finding.confidence === 'high')
+  const risk: SyncRisk[] = []
+  if (
+    input.kind === 'skill' &&
+    input.files.some((file) => file.isExecutable || isScriptFile(file.assetPath, file.head))
+  ) {
+    risk.push('scripts')
+  }
+  if (highFindings) risk.push('secrets')
+
+  const derived = deriveRemoteAssetFields({
+    kind: input.kind,
+    mainPath: input.mainPath,
+    dirPath: input.dirPath,
+    mainText: input.mainText,
+    slugHint: input.slugHint,
+    folderHint: input.folderHint,
+  })
+  if (!derived.fields) return { asset: null, error: derived.error ?? 'The asset could not be parsed.' }
+  if (
+    input.kind === 'mcp' &&
+    (derived.fields.mcpModel?.transport === 'http' || derived.fields.mcpModel?.url)
+  ) {
+    risk.push('network')
+  }
+  // Structured models carry full prompt and instruction bodies. Import parses
+  // the main blob on demand, so scans keep only metadata for the whole repo.
+  const fields: RemoteAssetFields = {
+    ...derived.fields,
+    promptModel: null,
+    contractModel: null,
+    mcpModel: null,
+    skillModel: null,
+  }
+
+  return {
+    asset: assembleRemoteAsset({
+      kind: input.kind,
+      mainPath: input.mainPath,
+      dirPath: input.dirPath,
+      files: [],
+      manifest,
+      digest,
+      textFiles: [],
+      risk: uniqueStrings(risk) as SyncRisk[],
+      blocked: highFindings,
+      fields,
+    }),
+  }
+}
+
+async function readBlobPrefix(
+  reader: GitBlobReader,
+  oid: string,
+  maxBytes: number,
+): Promise<Buffer | null> {
+  const chunks: Buffer[] = []
+  let kept = 0
+  const result = await reader.read(oid, (chunk) => {
+    if (kept >= maxBytes) return
+    const take = Math.min(chunk.length, maxBytes - kept)
+    if (take <= 0) return
+    chunks.push(Buffer.from(chunk.subarray(0, take)))
+    kept += take
+  })
+  if (result.missing) return null
+  return Buffer.concat(chunks)
+}
+
+async function listAssetEntries(
   client: GitClient,
   repoPath: string,
   commit: string,
   kind: AssetKind,
   remotePath: string,
   signal?: OperationContext['signal'],
-): Promise<{ files: RepoFileInput[]; dirPath: string | null }> {
+): Promise<GitTreeEntry[]> {
   if (kind === 'skill') {
     const dirPath = dirname(remotePath)
     const entries = await client.lsTree(repoPath, commit, [dirPath], { signal })
-    const blobs = entries.filter((entry) => entry.type === 'blob' && entry.path.startsWith(`${dirPath}/`))
-    if (blobs.length > MAX_SCAN_FILES) {
-      throw new AppError('VALIDATION', 'The skill contains too many files to read.')
-    }
-    const files: RepoFileInput[] = []
-    let total = 0
-    for (const entry of blobs) {
-      if (signal?.cancelled) throw new AppError('INTERNAL', 'The operation was cancelled.')
-      const content = await client.show(repoPath, commit, entry.path, {
-        signal,
-        maxOutputBytes: MAX_SINGLE_FILE_BYTES,
-      })
-      if (!content) continue
-      total += content.length
-      if (total > MAX_SCAN_BYTES) {
-        throw new AppError('VALIDATION', 'The skill is too large to read.')
-      }
-      const assetPath = entry.path.slice(dirPath.length + 1)
-      files.push({
-        repoPath: entry.path,
-        assetPath,
-        content,
-        mediaKind: isTextFile(assetPath) ? 'text' : 'binary',
-        isExecutable: (Number.parseInt(entry.mode, 8) & 0o111) !== 0,
-      })
-    }
-    return { files, dirPath }
+    return entries.filter((entry) => entry.type === 'blob' && entry.path.startsWith(`${dirPath}/`))
   }
-  const content = await client.show(repoPath, commit, remotePath, {
-    signal,
-    maxOutputBytes: MAX_SINGLE_FILE_BYTES,
-  })
-  if (!content) return { files: [], dirPath: null }
-  return {
-    files: [
-      {
-        repoPath: remotePath,
-        assetPath: basename(remotePath),
-        content,
-        mediaKind: isTextFile(remotePath) ? 'text' : 'binary',
-        isExecutable: false,
-      },
-    ],
-    dirPath: null,
+  const entries = await client.lsTree(repoPath, commit, [remotePath], { signal })
+  return entries.filter((entry) => entry.type === 'blob' && entry.path === remotePath)
+}
+
+interface ScannedAssetRead {
+  files: ScannedFile[]
+  mainText: string | null
+  findings: ScanFinding[]
+  skipped: Array<{ path: string; reason: string }>
+  truncated: string[]
+}
+
+/**
+ * Streams one asset's files through the blob reader. Text is retained only up
+ * to the scan cap; binary content is hashed and, when staging is enabled,
+ * written straight into the content-addressed blob store.
+ */
+async function readScannedAsset(
+  reader: GitBlobReader,
+  blobs: AppContext['blobs'] | null,
+  entries: GitTreeEntry[],
+  dirPath: string | null,
+  mainPath: string,
+  kind: AssetKind,
+  options: { signal?: OperationContext['signal']; stage: boolean },
+): Promise<ScannedAssetRead> {
+  const replacement = kind === 'mcp' ? '${VAR}' : '{{variable}}'
+  const files: ScannedFile[] = []
+  const findings: ScanFinding[] = []
+  const skipped: Array<{ path: string; reason: string }> = []
+  const truncated: string[] = []
+  let mainText: string | null = null
+
+  for (const entry of entries) {
+    if (options.signal?.cancelled) throw new AppError('INTERNAL', 'The operation was cancelled.')
+    const assetPath = dirPath ? entry.path.slice(dirPath.length + 1) : basename(entry.path)
+    const mediaKind: 'text' | 'binary' = isTextFile(assetPath) ? 'text' : 'binary'
+    const isExecutable = (Number.parseInt(entry.mode, 8) & 0o111) !== 0
+    const writer = options.stage && blobs ? blobs.beginWrite() : null
+    const hasher = writer ? null : createHash('sha256')
+    const textChunks: Buffer[] = []
+    const headChunks: Buffer[] = []
+    let textBytes = 0
+    let headBytes = 0
+    let textTruncated = false
+    let bytes = 0
+
+    let result: Awaited<ReturnType<GitBlobReader['read']>>
+    try {
+      result = await reader.read(entry.hash, (chunk) => {
+        bytes += chunk.length
+        if (writer) writer.write(chunk)
+        else hasher!.update(chunk)
+        if (mediaKind === 'binary') return
+        if (textBytes < MAX_SCAN_TEXT_BYTES) {
+          const take = Math.min(chunk.length, MAX_SCAN_TEXT_BYTES - textBytes)
+          if (take < chunk.length) textTruncated = true
+          if (take > 0) {
+            textChunks.push(Buffer.from(chunk.subarray(0, take)))
+            textBytes += take
+          }
+        } else {
+          textTruncated = true
+        }
+        if (headBytes < MAX_SCAN_HEAD_BYTES) {
+          const take = Math.min(chunk.length, MAX_SCAN_HEAD_BYTES - headBytes)
+          if (take > 0) {
+            headChunks.push(Buffer.from(chunk.subarray(0, take)))
+            headBytes += take
+          }
+        }
+      })
+    } catch (error) {
+      writer?.abort()
+      throw error
+    }
+    if (result.missing) {
+      writer?.abort()
+      skipped.push({ path: entry.path, reason: 'The file could not be read.' })
+      continue
+    }
+    if (result.size !== bytes) {
+      writer?.abort()
+      skipped.push({ path: entry.path, reason: 'The file changed while it was being read.' })
+      continue
+    }
+
+    let blobHash: string
+    if (writer) {
+      const written = writer.finish()
+      if (written.size !== bytes) {
+        skipped.push({ path: entry.path, reason: 'The file could not be staged.' })
+        continue
+      }
+      blobHash = written.hash
+    } else {
+      blobHash = hasher!.digest('hex')
+    }
+
+    const text = mediaKind === 'text' ? Buffer.concat(textChunks).toString('utf8') : ''
+    if (mediaKind === 'text') {
+      if (textTruncated) truncated.push(entry.path)
+      findings.push(...scanText(text, { path: entry.path, replacement }))
+    }
+    files.push({
+      repoPath: entry.path,
+      assetPath,
+      blobHash,
+      size: bytes,
+      mediaKind,
+      isExecutable,
+      head: Buffer.concat(headChunks).toString('utf8'),
+    })
+    if (entry.path === mainPath) mainText = textTruncated ? null : text
+  }
+
+  return { files, mainText, findings, skipped, truncated }
+}
+
+/**
+ * Reads the text used for change diffs on demand. Only assets that actually
+ * diverge reach this path, so an unchanged large repository costs no retained
+ * text memory during reconciliation.
+ */
+async function readRemoteText(
+  client: GitClient,
+  repoPath: string,
+  commit: string,
+  kind: AssetKind,
+  mainPath: string,
+  signal?: OperationContext['signal'],
+): Promise<string> {
+  const entries = await listAssetEntries(client, repoPath, commit, kind, mainPath, signal)
+  if (!entries.length) return ''
+  const reader = await client.openBlobReader(repoPath, { signal })
+  try {
+    let budget = MAX_DIFF_TEXT_CHARS
+    const parts: string[] = []
+    for (const entry of entries) {
+      if (budget <= 0) break
+      if (!isTextFile(entry.path)) continue
+      const content = await readBlobPrefix(
+        reader,
+        entry.hash,
+        Math.min(MAX_SCAN_TEXT_BYTES, Math.max(1, budget * 4)),
+      )
+      if (!content) continue
+      const text = content.toString('utf8').slice(0, budget)
+      parts.push(text)
+      budget -= text.length
+    }
+    return parts.join('\n')
+  } finally {
+    await reader.close()
   }
 }
 
 async function scanRepository(
   client: GitClient,
+  blobs: AppContext['blobs'] | null,
   repoPath: string,
   commit: string,
   layout: RepoLayout,
-  signal?: OperationContext['signal'],
+  options: { signal?: OperationContext['signal']; stageBlobs?: boolean } = {},
 ): Promise<RepositoryScan> {
+  const signal = options.signal
+  const stage = options.stageBlobs === true
+  if (stage && !blobs) throw new AppError('INTERNAL', 'Staging repository content requires the blob store.')
   const roots: Array<{ kind: AssetKind; root: string }> = [
     { kind: 'prompt', root: layout.prompts },
     { kind: 'contract', root: layout.contracts },
@@ -985,8 +1164,8 @@ async function scanRepository(
     roots.map((entry) => entry.root),
     { signal },
   )
-  const blobs = tree.filter((entry) => entry.type === 'blob')
-  if (blobs.length > MAX_SCAN_FILES) {
+  const blobsInTree = tree.filter((entry) => entry.type === 'blob')
+  if (blobsInTree.length > MAX_SCAN_FILES) {
     throw new AppError(
       'VALIDATION',
       `The repository contains more than ${MAX_SCAN_FILES} files under the configured directories. Narrow the layout roots and retry.`,
@@ -998,149 +1177,147 @@ async function scanRepository(
   const warnings: string[] = []
   const scripts: Array<{ path: string; kind: string }> = []
   const findings: ScanFinding[] = []
-  const cache = new Map<string, Buffer>()
-  let totalBytes = 0
+  const reader = await client.openBlobReader(repoPath, { signal })
 
-  const read = async (entry: GitTreeEntry): Promise<Buffer | null> => {
-    const cached = cache.get(entry.path)
-    if (cached) return cached
-    if (signal?.cancelled) throw new AppError('INTERNAL', 'The operation was cancelled.')
-    const content = await client.show(repoPath, commit, entry.path, {
-      signal,
-      maxOutputBytes: MAX_SINGLE_FILE_BYTES,
-    })
-    if (!content) return null
-    totalBytes += content.length
-    if (totalBytes > MAX_SCAN_BYTES) {
-      throw new AppError('VALIDATION', 'The repository content is too large to scan.')
-    }
-    cache.set(entry.path, content)
-    return content
-  }
-
-  const filesFor = async (entries: GitTreeEntry[], dirPath: string | null): Promise<RepoFileInput[]> => {
-    const files: RepoFileInput[] = []
-    for (const entry of entries) {
-      const content = await read(entry)
-      if (!content) {
-        malformed.push({ path: entry.path, reason: 'The file could not be read.' })
-        continue
-      }
-      const assetPath = dirPath ? entry.path.slice(dirPath.length + 1) : basename(entry.path)
-      files.push({
-        repoPath: entry.path,
-        assetPath,
-        content,
-        mediaKind: isTextFile(assetPath) ? 'text' : 'binary',
-        isExecutable: (Number.parseInt(entry.mode, 8) & 0o111) !== 0,
+  try {
+    const build = async (
+      kind: AssetKind,
+      entries: GitTreeEntry[],
+      dirPath: string | null,
+      mainPath: string,
+      slugHint: string,
+      folderHint: string,
+    ): Promise<void> => {
+      if (!entries.length) return
+      const content = await readScannedAsset(reader, blobs, entries, dirPath, mainPath, kind, {
+        signal,
+        stage,
       })
-    }
-    return files
-  }
-
-  for (const kind of ['prompt', 'contract', 'mcp'] as const) {
-    const root = layout[KIND_ROOT_KEY[kind]]
-    const suffix = kind === 'prompt' ? '.prompt.md' : kind === 'contract' ? '.contract.md' : '.json'
-    const entries = blobs.filter(
-      (entry) => entry.path.startsWith(`${root}/`) && entry.path.endsWith(suffix),
-    )
-    for (const entry of entries) {
-      const files = await filesFor([entry], null)
-      if (!files.length) continue
-      const slugHint = fileStem(entry.path, [suffix])
-      const built = buildRemoteAsset({
+      for (const item of content.skipped) malformed.push(item)
+      for (const path of content.truncated) {
+        if (warnings.length < 20) {
+          warnings.push(
+            `The file ${path} is larger than the ${MAX_SCAN_TEXT_BYTES / (1024 * 1024)} MiB scan limit; only its prefix was scanned for credentials.`,
+          )
+        }
+      }
+      const built = buildScannedRemoteAsset({
         kind,
-        root,
-        mainPath: entry.path,
-        dirPath: null,
-        files,
+        mainPath,
+        dirPath,
+        files: content.files,
+        mainText: content.mainText,
+        findings: content.findings,
         slugHint,
-        folderHint: folderFromRepoPath(root, entry.path),
+        folderHint,
       })
       if (!built.asset) {
-        malformed.push({ path: entry.path, reason: built.error ?? 'The asset could not be parsed.' })
-        continue
+        malformed.push({
+          path: dirPath ?? mainPath,
+          reason: built.error ?? 'The asset could not be parsed.',
+        })
+        return
       }
       assets.push(built.asset)
-    }
-  }
-
-  const skillRoot = layout.skills
-  const skillEntries = blobs.filter((entry) => entry.path.startsWith(`${skillRoot}/`))
-  const skillDirs = new Set<string>()
-  for (const entry of skillEntries) {
-    if (basename(entry.path) === 'SKILL.md') skillDirs.add(dirname(entry.path))
-  }
-  for (const dirPath of skillDirs) {
-    const entries = skillEntries.filter((entry) => entry.path.startsWith(`${dirPath}/`))
-    const files = await filesFor(entries, dirPath)
-    const built = buildRemoteAsset({
-      kind: 'skill',
-      root: skillRoot,
-      mainPath: `${dirPath}/SKILL.md`,
-      dirPath,
-      files,
-      slugHint: basename(dirPath),
-      folderHint: skillFolderFromDirPath(skillRoot, dirPath),
-    })
-    if (!built.asset) {
-      malformed.push({ path: dirPath, reason: built.error ?? 'The skill could not be parsed.' })
-      continue
-    }
-    assets.push(built.asset)
-    for (const file of built.asset.files) {
-      if (file.isExecutable || isScriptFile(file.assetPath, file.content.toString('utf8'))) {
-        const extension = file.assetPath.includes('.')
-          ? file.assetPath.slice(file.assetPath.lastIndexOf('.') + 1)
-          : 'executable'
-        scripts.push({ path: file.repoPath, kind: extension || 'executable' })
+      const room = MAX_FINDINGS - findings.length
+      if (room > 0) findings.push(...content.findings.slice(0, room))
+      if (kind === 'skill') {
+        for (const file of content.files) {
+          if (file.isExecutable || isScriptFile(file.assetPath, file.head)) {
+            const extension = file.assetPath.includes('.')
+              ? file.assetPath.slice(file.assetPath.lastIndexOf('.') + 1)
+              : 'executable'
+            scripts.push({ path: file.repoPath, kind: extension || 'executable' })
+          }
+        }
       }
     }
-  }
-  const matchedDirs = [...skillDirs]
-  for (const entry of skillEntries) {
-    if (matchedDirs.some((dir) => entry.path.startsWith(`${dir}/`))) continue
-    if (warnings.length < 20) {
-      warnings.push(`The file ${entry.path} is outside a skill directory and was ignored.`)
+
+    for (const kind of ['prompt', 'contract', 'mcp'] as const) {
+      const root = layout[KIND_ROOT_KEY[kind]]
+      const suffix = kind === 'prompt' ? '.prompt.md' : kind === 'contract' ? '.contract.md' : '.json'
+      const entries = blobsInTree.filter(
+        (entry) => entry.path.startsWith(`${root}/`) && entry.path.endsWith(suffix),
+      )
+      for (const entry of entries) {
+        await build(
+          kind,
+          [entry],
+          null,
+          entry.path,
+          fileStem(entry.path, [suffix]),
+          folderFromRepoPath(root, entry.path),
+        )
+      }
     }
-  }
 
-  const byId = new Map<string, string[]>()
-  for (const asset of assets) {
-    if (!asset.id) continue
-    const paths = byId.get(asset.id) ?? []
-    paths.push(asset.mainPath)
-    byId.set(asset.id, paths)
-  }
-  const duplicateIds = [...byId.entries()]
-    .filter(([, paths]) => paths.length > 1)
-    .map(([id, paths]) => ({ id, paths }))
-
-  for (const asset of assets) {
-    findings.push(...scanTextFiles(asset.kind, asset.textFiles))
-    if (findings.length > MAX_FINDINGS) break
-  }
-
-  for (const entry of roots) {
-    if (!blobs.some((blob) => blob.path.startsWith(`${entry.root}/`))) {
-      warnings.push(`No files were found under the ${entry.root}/ directory.`)
+    const skillRoot = layout.skills
+    const skillEntries = blobsInTree.filter((entry) => entry.path.startsWith(`${skillRoot}/`))
+    const skillDirs = new Set<string>()
+    for (const entry of skillEntries) {
+      if (basename(entry.path) === 'SKILL.md') skillDirs.add(dirname(entry.path))
     }
-  }
-  if (malformed.length) warnings.push(`${malformed.length} file(s) could not be parsed and will not be imported.`)
-  if (duplicateIds.length) warnings.push('Some assets share the same stable ID. Resolve the duplicates before connecting.')
-  if (findings.some((finding) => finding.confidence === 'high')) {
-    warnings.push('The repository contains likely credentials. Pulled content is blocked until it is replaced with variables.')
-  }
-  if (scripts.length) warnings.push('This repository contains scripts. Scripts and MCP commands may run on this machine.')
+    for (const dirPath of skillDirs) {
+      const entries = skillEntries.filter((entry) => entry.path.startsWith(`${dirPath}/`))
+      await build(
+        'skill',
+        entries,
+        dirPath,
+        `${dirPath}/SKILL.md`,
+        basename(dirPath),
+        skillFolderFromDirPath(skillRoot, dirPath),
+      )
+    }
+    const matchedDirs = [...skillDirs]
+    for (const entry of skillEntries) {
+      if (matchedDirs.some((dir) => entry.path.startsWith(`${dir}/`))) continue
+      if (warnings.length < 20) {
+        warnings.push(`The file ${entry.path} is outside a skill directory and was ignored.`)
+      }
+    }
 
-  return {
-    head: commit,
-    assets,
-    malformed,
-    duplicateIds,
-    scripts,
-    findings: findings.slice(0, MAX_FINDINGS),
-    warnings: warnings.slice(0, 40),
+    const byId = new Map<string, string[]>()
+    for (const asset of assets) {
+      if (!asset.id) continue
+      const paths = byId.get(asset.id) ?? []
+      paths.push(asset.mainPath)
+      byId.set(asset.id, paths)
+    }
+    const duplicateIds = [...byId.entries()]
+      .filter(([, paths]) => paths.length > 1)
+      .map(([id, paths]) => ({ id, paths }))
+
+    for (const entry of roots) {
+      if (!blobsInTree.some((blob) => blob.path.startsWith(`${entry.root}/`))) {
+        warnings.push(`No files were found under the ${entry.root}/ directory.`)
+      }
+    }
+    if (malformed.length) {
+      warnings.push(`${malformed.length} file(s) could not be parsed and will not be imported.`)
+    }
+    if (duplicateIds.length) {
+      warnings.push('Some assets share the same stable ID. Resolve the duplicates before connecting.')
+    }
+    if (findings.some((finding) => finding.confidence === 'high')) {
+      warnings.push(
+        'The repository contains likely credentials. Pulled content is blocked until it is replaced with variables.',
+      )
+    }
+    if (scripts.length) {
+      warnings.push('This repository contains scripts. Scripts and MCP commands may run on this machine.')
+    }
+
+    return {
+      head: commit,
+      assets,
+      malformed,
+      duplicateIds,
+      scripts,
+      findings: findings.slice(0, MAX_FINDINGS),
+      warnings: warnings.slice(0, 40),
+    }
+  } finally {
+    await reader.close()
   }
 }
 
@@ -1157,36 +1334,45 @@ function revisionFiles(ctx: AppContext, revisionId: string): ManifestFile[] {
 }
 
 function revisionText(ctx: AppContext, revisionId: string): string {
-  const files: Array<{ path: string; content: string }> = []
+  let budget = MAX_DIFF_TEXT_CHARS
+  const parts: string[] = []
   for (const file of revisionFiles(ctx, revisionId)) {
+    if (budget <= 0) break
     if (file.mediaKind !== 'text') continue
     try {
-      files.push({ path: file.path, content: ctx.blobs.readSync(file.blobHash).toString('utf8') })
+      const raw = ctx.blobs.readPrefixSync(
+        file.blobHash,
+        Math.min(MAX_SCAN_TEXT_BYTES, Math.max(1, budget * 4)),
+      )
+      const text = raw.toString('utf8').slice(0, budget)
+      parts.push(text)
+      budget -= text.length
     } catch {
       // A missing blob surfaces as an empty diff, not as a sync crash here.
     }
   }
-  return textBudget(files)
+  return parts.join('\n')
 }
 
 function assetRisk(ctx: AppContext, asset: AssetRecord, revisionId: string): SyncRisk[] {
   const risk: SyncRisk[] = []
-  const files: Array<{ path: string; content: string }> = []
+  const replacement = asset.kind === 'mcp' ? '${VAR}' : '{{variable}}'
+  let secretFound = false
   for (const file of revisionFiles(ctx, revisionId)) {
     if (file.mediaKind !== 'text') continue
     try {
-      files.push({ path: file.path, content: ctx.blobs.readSync(file.blobHash).toString('utf8') })
+      const text = ctx.blobs
+        .readPrefixSync(file.blobHash, MAX_SCAN_TEXT_BYTES)
+        .toString('utf8')
+      if (scanText(text, { path: file.path, replacement }).some((finding) => finding.confidence === 'high')) {
+        secretFound = true
+        break
+      }
     } catch {
       continue
     }
   }
-  if (
-    scanFiles(files, asset.kind === 'mcp' ? '${VAR}' : '{{variable}}').some(
-      (finding) => finding.confidence === 'high',
-    )
-  ) {
-    risk.push('secrets')
-  }
+  if (secretFound) risk.push('secrets')
   if (
     asset.kind === 'skill' &&
     revisionFiles(ctx, revisionId).some((file) => isScriptFile(file.path))
@@ -1424,6 +1610,41 @@ function upsertBase(
     )
 }
 
+function ensureRemoteModels(ctx: AppContext, remote: RemoteAsset): void {
+  const needs =
+    (remote.kind === 'prompt' && !remote.promptModel) ||
+    (remote.kind === 'contract' && !remote.contractModel) ||
+    (remote.kind === 'mcp' && !remote.mcpModel) ||
+    (remote.kind === 'skill' && !remote.skillModel)
+  if (!needs) return
+  const mainName = remote.kind === 'skill' ? 'SKILL.md' : basename(remote.mainPath)
+  const main = remote.manifest.find((file) => file.path === mainName)
+  if (!main) throw new AppError('CORRUPT', 'The remote asset manifest has no main file.')
+  const text = ctx.blobs.readSync(main.blobHash).toString('utf8')
+  if (remote.kind === 'prompt') {
+    const parsed = parsePromptFile(text, remote.mainPath)
+    if (!parsed.model) throw new AppError('VALIDATION', parsed.error ?? 'Invalid prompt file.')
+    remote.promptModel = parsed.model
+    return
+  }
+  if (remote.kind === 'contract') {
+    const parsed = parseContractFile(text, remote.mainPath)
+    if (!parsed.model) throw new AppError('VALIDATION', parsed.error ?? 'Invalid contract file.')
+    remote.contractModel = parsed.model
+    return
+  }
+  if (remote.kind === 'mcp') {
+    const parsed = parseMcpFile(text, remote.mainPath)
+    if (!parsed.model) throw new AppError('VALIDATION', parsed.error ?? 'Invalid MCP file.')
+    remote.mcpModel = parsed.model
+    return
+  }
+  const dirName = remote.dirPath ? basename(remote.dirPath) : remote.slug
+  const parsed = parseSkillFile(text, remote.mainPath, dirName)
+  if (!parsed.meta) throw new AppError('VALIDATION', parsed.error ?? 'Invalid SKILL.md.')
+  remote.skillModel = parsed.meta
+}
+
 function importRemoteAsset(
   ctx: AppContext,
   repo: RepoRow,
@@ -1438,7 +1659,14 @@ function importRemoteAsset(
     mediaKind: file.mediaKind,
     isExecutable: file.isExecutable,
   }))
-  if (!files.length) throw new AppError('VALIDATION', `The ${KIND_LABEL[remote.kind]} has no files.`)
+  if (!files.length && !remote.manifest.length) {
+    throw new AppError('VALIDATION', `The ${KIND_LABEL[remote.kind]} has no files.`)
+  }
+  if (!files.length) ensureRemoteModels(ctx, remote)
+  const addRevision = (assetId: string): RevisionRecord =>
+    files.length
+      ? ctx.assets.addRevision(assetId, files, note)
+      : ctx.assets.addRevisionFromManifest(assetId, remote.manifest, note)
 
   const existingById = remote.id
     ? (ctx.db.prepare('SELECT * FROM assets WHERE id = ?').get(remote.id) as AssetRow | undefined)
@@ -1477,7 +1705,7 @@ function importRemoteAsset(
       tags: remote.tags,
       syncPolicy,
     })
-    const revision = ctx.assets.addRevision(asset.id, files, note)
+    const revision = addRevision(asset.id)
     upsertStructured(ctx, asset.id, remote)
     upsertBase(ctx, {
       repoId: repo.id,
@@ -1500,7 +1728,7 @@ function importRemoteAsset(
     description: remote.description,
     tags: remote.tags,
   })
-  const revision = ctx.assets.addRevision(asset.id, files, note)
+  const revision = addRevision(asset.id)
   upsertStructured(ctx, asset.id, remote)
   upsertBase(ctx, {
     repoId: repo.id,
@@ -1594,18 +1822,36 @@ function summaryFor(
   return `Local changes to ${label.toLowerCase()} "${name}" have not been pushed.`
 }
 
-function reconcileChanges(
+async function reconcileChanges(
   ctx: AppContext,
+  client: GitClient,
   repo: RepoRow,
   layout: RepoLayout,
   policies: RepoPolicies,
   scan: RepositoryScan,
   commit: string,
-): { incoming: number; outgoing: number; conflicts: number } {
+  signal?: OperationContext['signal'],
+): Promise<{ incoming: number; outgoing: number; conflicts: number }> {
   const duplicateIds = new Set(scan.duplicateIds.map((entry) => entry.id))
   const remoteAssets = scan.assets.filter(
     (asset) => policyEnabled(policies, asset.kind) && !(asset.id && duplicateIds.has(asset.id)),
   )
+  const remoteTexts = new Map<string, string>()
+  const remoteTextFor = async (remote: RemoteAsset): Promise<string> => {
+    const key = `${remote.kind}:${remote.mainPath}`
+    const cached = remoteTexts.get(key)
+    if (cached !== undefined) return cached
+    const text = await readRemoteText(
+      client,
+      repo.local_path,
+      commit,
+      remote.kind,
+      remote.mainPath,
+      signal,
+    )
+    remoteTexts.set(key, text)
+    return text
+  }
 
   const baseRows = ctx.db
     .prepare('SELECT * FROM repo_assets WHERE repo_id = ?')
@@ -1650,12 +1896,12 @@ function reconcileChanges(
     if (!desired.has(change.fingerprint)) desired.set(change.fingerprint, change)
   }
 
-  const consider = (
+  const consider = async (
     identity: string,
     asset: AssetRow | null,
     base: RepoAssetRow | null,
     remote: RemoteAsset | null,
-  ): void => {
+  ): Promise<void> => {
     if (!asset && !base && !remote) return
     const kind: AssetKind = asset?.kind ?? remote?.kind ?? (base ? (baseKind(ctx, base) ?? 'prompt') : 'prompt')
     if (!policyEnabled(policies, kind)) return
@@ -1674,7 +1920,7 @@ function reconcileChanges(
     const name = asset?.title ?? remote?.title ?? identity
     const localRisk = participates && asset && revision ? assetRisk(ctx, asset, revision.id) : []
     const remoteRisk = remote?.risk ?? []
-    const remoteText = remote ? textBudget(remote.textFiles) : ''
+    const getRemoteText = (): Promise<string> => (remote ? remoteTextFor(remote) : Promise.resolve(''))
     const localText = revision ? revisionText(ctx, revision.id) : ''
     const baseText = base?.base_revision_id ? revisionText(ctx, base.base_revision_id) : ''
 
@@ -1721,7 +1967,7 @@ function reconcileChanges(
     if (!hasBase) {
       if (participates && remote) {
         if (localDigest === remote.digest) return
-        const stats = diffStats(localText, remoteText)
+        const stats = diffStats(localText, await getRemoteText())
         emit(
           'conflict',
           'modified',
@@ -1739,7 +1985,7 @@ function reconcileChanges(
         return
       }
       if (remote) {
-        const stats = diffStats('', remoteText)
+        const stats = diffStats('', await getRemoteText())
         emit('incoming', 'added', remotePath ?? '', stats.additions, stats.deletions, remoteRisk, remote.blocked)
       }
       return
@@ -1760,12 +2006,12 @@ function reconcileChanges(
         if (!localChanged && remoteChanged) {
           const renamed = !!basePath && remotePath !== basePath
           const change: SyncChangeKind = renamed ? 'renamed' : 'modified'
-          const stats = diffStats(baseText, remoteText)
+          const stats = diffStats(baseText, await getRemoteText())
           emit('incoming', change, remotePath ?? '', stats.additions, stats.deletions, remoteRisk, remote.blocked)
           return
         }
         if (localDigest === remote.digest) return
-        const stats = diffStats(localText, remoteText)
+        const stats = diffStats(localText, await getRemoteText())
         emit(
           'conflict',
           'modified',
@@ -1794,6 +2040,7 @@ function reconcileChanges(
     if (asset && active) return
     if (remote) {
       const change: SyncChangeKind = remote.digest === baseDigest ? 'added' : 'modified'
+      const remoteText = await getRemoteText()
       const stats = diffStats(baseText, remoteText)
       emit(
         'incoming',
@@ -1814,7 +2061,7 @@ function reconcileChanges(
     if (!policyEnabled(policies, kind)) continue
     const remote = remoteForIdentity.get(base.asset_id) ?? null
     seen.add(base.asset_id)
-    consider(base.asset_id, asset, base, remote)
+    await consider(base.asset_id, asset, base, remote)
   }
   for (const asset of allAssets) {
     if (asset.deleted_at) continue
@@ -1822,12 +2069,12 @@ function reconcileChanges(
     if (baseByAsset.has(asset.id)) continue
     const remote = remoteForIdentity.get(asset.id) ?? null
     seen.add(asset.id)
-    consider(asset.id, asset, null, remote)
+    await consider(asset.id, asset, null, remote)
   }
   for (const remote of remoteOnly) {
     const identity = remote.id ?? `path:${remote.kind}:${remote.mainPath}`
     if (seen.has(identity)) continue
-    consider(identity, null, null, remote)
+    await consider(identity, null, null, remote)
   }
 
   const tx = ctx.db.transaction(() => {
@@ -2007,7 +2254,10 @@ function localSides(ctx: AppContext, revisionId: string | null): FileSide[] {
     try {
       sides.push({
         assetPath: file.path,
-        content: ctx.blobs.readSync(file.blobHash),
+        content:
+          file.mediaKind === 'binary'
+            ? Buffer.alloc(0)
+            : ctx.blobs.readPrefixSync(file.blobHash, MAX_DETAIL_TEXT_BYTES + 1),
         mediaKind: file.mediaKind,
       })
     } catch {
@@ -2026,12 +2276,27 @@ async function remoteSides(
   signal?: OperationContext['signal'],
 ): Promise<FileSide[]> {
   if (!commit || !remotePath) return []
-  const files = await readRemoteFiles(client, repoPath, commit, kind, remotePath, signal)
-  return files.files.map((file) => ({
-    assetPath: file.assetPath,
-    content: file.content,
-    mediaKind: file.mediaKind,
-  }))
+  const entries = await listAssetEntries(client, repoPath, commit, kind, remotePath, signal)
+  if (!entries.length) return []
+  const dirPath = kind === 'skill' ? dirname(remotePath) : null
+  const reader = await client.openBlobReader(repoPath, { signal })
+  try {
+    const sides: FileSide[] = []
+    for (const entry of entries) {
+      const assetPath = dirPath ? entry.path.slice(dirPath.length + 1) : basename(entry.path)
+      const mediaKind: 'text' | 'binary' = isTextFile(assetPath) ? 'text' : 'binary'
+      if (mediaKind === 'binary') {
+        sides.push({ assetPath, content: Buffer.alloc(0), mediaKind })
+        continue
+      }
+      const content = await readBlobPrefix(reader, entry.hash, MAX_DETAIL_TEXT_BYTES + 1)
+      if (!content) continue
+      sides.push({ assetPath, content, mediaKind })
+    }
+    return sides
+  } finally {
+    await reader.close()
+  }
 }
 
 function detailFiles(
@@ -2241,10 +2506,23 @@ export function createSyncService(ctx: AppContext): SyncService {
     }
   }
 
-  function planConnect(input: RepoConnectInput): ConnectPlan {
-    const info = parseRepoUrl(input.url, input.provider)
-    const branch = (input.branch ?? DEFAULT_BRANCH).trim() || DEFAULT_BRANCH
-    if (!isValidBranchName(branch)) throw new AppError('VALIDATION', 'The repository branch name is not valid.')
+  async function validateLocalWorktree(localPath: string): Promise<void> {
+    let info: Awaited<ReturnType<typeof stat>> | null = null
+    try {
+      info = await stat(localPath)
+      await access(localPath, constants.R_OK | constants.W_OK)
+    } catch {
+      throw new AppError('VALIDATION', 'The local clone path must exist, be a directory, and be writable.')
+    }
+    if (!info.isDirectory()) {
+      throw new AppError('VALIDATION', 'The local clone path must be a directory.')
+    }
+    if (!(await client.isGitWorktree(localPath))) {
+      throw new AppError('VALIDATION', 'The local path must be a Git worktree.')
+    }
+  }
+
+  async function planConnect(input: RepoConnectInput): Promise<ConnectPlan> {
     const policies = sanitizePolicies(input.policies)
     const layout = sanitizeLayout(input.layout)
     const autoFetch = input.autoFetch === true
@@ -2255,26 +2533,77 @@ export function createSyncService(ctx: AppContext): SyncService {
     if (input.cloneMode !== 'managed' && input.cloneMode !== 'bound') {
       throw new AppError('VALIDATION', 'Choose a managed clone or a bound clone.')
     }
-    const repoId = managedRepoId(info.url, branch)
-    let localPath: string
+
     if (input.cloneMode === 'managed') {
-      localPath = join(ctx.paths.repos, repoId)
-    } else {
-      const raw = (input.localPath ?? '').trim()
-      if (!raw) throw new AppError('VALIDATION', 'A local path is required for a bound clone.')
-      if (!isAbsolute(raw)) throw new AppError('VALIDATION', 'The local clone path must be absolute.')
-      localPath = resolve(raw)
-      if (isInsideAppBundle(localPath)) {
-        throw new AppError('VALIDATION', 'The local clone path must be outside the application bundle.')
+      const rawUrl = (input.url ?? '').trim()
+      if (!rawUrl) {
+        throw new AppError('VALIDATION', 'A repository URL is required for an app-managed clone.')
+      }
+      const info = parseRepoUrl(rawUrl, input.provider)
+      const branch = (input.branch ?? DEFAULT_BRANCH).trim() || DEFAULT_BRANCH
+      if (!isValidBranchName(branch)) throw new AppError('VALIDATION', 'The repository branch name is not valid.')
+      const repoId = managedRepoId(info.url, branch)
+      return {
+        repoId,
+        info,
+        branch,
+        cloneMode: 'managed',
+        localPath: join(ctx.paths.repos, repoId),
+        auth: input.auth ?? { mode: 'credential' },
+        policies,
+        layout,
+        autoFetch,
+        fetchIntervalMin,
       }
     }
+
+    const rawLocal = (input.localPath ?? '').trim()
+    if (!rawLocal) throw new AppError('VALIDATION', 'A local path is required for a bound clone.')
+    if (!isAbsolute(rawLocal)) throw new AppError('VALIDATION', 'The local clone path must be absolute.')
+    const localPath = resolve(rawLocal)
+    if (isInsideAppBundle(localPath)) {
+      throw new AppError('VALIDATION', 'The local clone path must be outside the application bundle.')
+    }
+    await validateLocalWorktree(localPath)
+
+    const branch = (input.branch ?? '').trim() || (await client.currentBranch(localPath))
+    if (!branch) {
+      throw new AppError(
+        'VALIDATION',
+        'The local repository has a detached HEAD. Check out a branch and connect again.',
+      )
+    }
+    if (!isValidBranchName(branch)) throw new AppError('VALIDATION', 'The repository branch name is not valid.')
+
+    let url = (input.url ?? '').trim()
+    let urlFromOrigin = false
+    if (!url) {
+      const origin = await client.remoteUrl(localPath, REMOTE_NAME)
+      if (!origin) {
+        throw new AppError(
+          'VALIDATION',
+          'The local repository has no "origin" remote. Add one or provide the repository URL.',
+        )
+      }
+      url = origin
+      urlFromOrigin = true
+    }
+    let info: RepoUrlInfo
+    try {
+      info = parseRepoUrl(url, input.provider)
+    } catch (error) {
+      if (!urlFromOrigin) throw error
+      const reason = error instanceof AppError ? error.message : 'The repository URL is not valid.'
+      throw new AppError('VALIDATION', `The origin remote of the local repository is not usable. ${reason}`)
+    }
+
     return {
-      repoId,
+      repoId: managedRepoId(info.url, branch),
       info,
       branch,
-      cloneMode: input.cloneMode,
+      cloneMode: 'bound',
       localPath,
-      auth: input.auth,
+      auth: input.auth ?? { mode: 'credential' },
       policies,
       layout,
       autoFetch,
@@ -2283,19 +2612,7 @@ export function createSyncService(ctx: AppContext): SyncService {
   }
 
   async function validateBoundClone(plan: ConnectPlan): Promise<{ head: string | null; warnings: string[] }> {
-    let info: Awaited<ReturnType<typeof stat>> | null = null
-    try {
-      info = await stat(plan.localPath)
-      await access(plan.localPath, constants.R_OK | constants.W_OK)
-    } catch {
-      throw new AppError('VALIDATION', 'The local clone path must exist, be a directory, and be writable.')
-    }
-    if (!info.isDirectory()) {
-      throw new AppError('VALIDATION', 'The local clone path must be a directory.')
-    }
-    if (!(await client.isGitWorktree(plan.localPath))) {
-      throw new AppError('VALIDATION', 'The local path must be the root of a Git worktree.')
-    }
+    await validateLocalWorktree(plan.localPath)
     const top = await client.topLevelPath(plan.localPath)
     if (top) {
       const [a, b] = await Promise.all([
@@ -2367,7 +2684,7 @@ export function createSyncService(ctx: AppContext): SyncService {
         })
         head = await client.currentHead(tempDir)
         if (!head) throw new AppError('GIT_CONFLICT', 'The repository has no commits on the selected branch.')
-        scan = await scanRepository(client, tempDir, head, plan.layout)
+        scan = await scanRepository(client, ctx.blobs, tempDir, head, plan.layout)
       } finally {
         await removeIfExists(tempDir)
       }
@@ -2382,7 +2699,7 @@ export function createSyncService(ctx: AppContext): SyncService {
           `${dirty.length} uncommitted path(s) exist in the repository directories. Push will refuse until the clone is clean.`,
         )
       }
-      scan = await scanRepository(client, plan.localPath, head, plan.layout)
+      scan = await scanRepository(client, ctx.blobs, plan.localPath, head, plan.layout)
     }
 
     if (plan.auth.mode === 'ssh' && plan.auth.keyPath) await validateSshKey(plan.auth.keyPath)
@@ -2456,12 +2773,16 @@ export function createSyncService(ctx: AppContext): SyncService {
         })
         head = await client.currentHead(plan.localPath)
         if (!head) throw new AppError('GIT_CONFLICT', 'The repository has no commits on the selected branch.')
-        scan = await scanRepository(client, plan.localPath, head, plan.layout)
+        scan = await scanRepository(client, ctx.blobs, plan.localPath, head, plan.layout, {
+          stageBlobs: true,
+        })
       } else {
         const bound = await validateBoundClone(plan)
         head = bound.head
         if (!head) throw new AppError('GIT_CONFLICT', 'The bound clone has no commit to scan.')
-        scan = await scanRepository(client, plan.localPath, head, plan.layout)
+        scan = await scanRepository(client, ctx.blobs, plan.localPath, head, plan.layout, {
+          stageBlobs: true,
+        })
       }
 
       const expectedToken = previewTokenFor({
@@ -2617,9 +2938,20 @@ export function createSyncService(ctx: AppContext): SyncService {
         )
       }
       op.progress('scan', 0, 0, 'Reading the repository layout')
-      const scan = await scanRepository(client, repo.local_path, commit, layoutOf(repo), op.signal)
+      const scan = await scanRepository(client, ctx.blobs, repo.local_path, commit, layoutOf(repo), {
+        signal: op.signal,
+      })
       op.progress('changes', 1, 1, 'Computing changes')
-      const counts = reconcileChanges(ctx, repo, layoutOf(repo), policiesOf(repo), scan, commit)
+      const counts = await reconcileChanges(
+        ctx,
+        client,
+        repo,
+        layoutOf(repo),
+        policiesOf(repo),
+        scan,
+        commit,
+        op.signal,
+      )
       const at = nowIso()
       ctx.db
         .prepare('UPDATE repos SET last_fetched_at = ?, updated_at = ? WHERE id = ?')
@@ -2934,25 +3266,6 @@ export function createSyncService(ctx: AppContext): SyncService {
       .run(nowIso(), changeId)
   }
 
-  function buildRemoteFromFiles(
-    kind: AssetKind,
-    remotePath: string,
-    files: RepoFileInput[],
-    dirPath: string | null,
-    fallbackFolder: string,
-    slugHint: string,
-  ): { asset: RemoteAsset | null; error?: string } {
-    return buildRemoteAsset({
-      kind,
-      root: '',
-      mainPath: remotePath,
-      dirPath,
-      files,
-      slugHint,
-      folderHint: fallbackFolder,
-    })
-  }
-
   async function remoteAssetFromChange(
     repo: RepoRow,
     row: SyncChangeListRow,
@@ -2961,7 +3274,7 @@ export function createSyncService(ctx: AppContext): SyncService {
     if (!row.remote_commit) {
       throw new AppError('CORRUPT', 'The sync change has no remote commit. Fetch the repository again.')
     }
-    const files = await readRemoteFiles(
+    const entries = await listAssetEntries(
       client,
       repo.local_path,
       row.remote_commit,
@@ -2969,14 +3282,15 @@ export function createSyncService(ctx: AppContext): SyncService {
       row.remote_path,
       signal,
     )
-    if (!files.files.length) {
+    if (!entries.length) {
       throw new AppError('CONFLICT', 'The remote file no longer exists at the recorded commit.')
     }
     const root = layoutOf(repo)[KIND_ROOT_KEY[row.asset_kind]]
-    const folder =
-      row.asset_kind === 'skill'
-        ? skillFolderFromDirPath(root, dirname(row.remote_path))
-        : folderFromRepoPath(root, row.remote_path)
+    const dirPath = row.asset_kind === 'skill' ? dirname(row.remote_path) : null
+    const mainPath = dirPath ? `${dirPath}/SKILL.md` : row.remote_path
+    const folder = dirPath
+      ? skillFolderFromDirPath(root, dirPath)
+      : folderFromRepoPath(root, row.remote_path)
     const suffix =
       row.asset_kind === 'prompt'
         ? '.prompt.md'
@@ -2985,23 +3299,38 @@ export function createSyncService(ctx: AppContext): SyncService {
           : row.asset_kind === 'mcp'
             ? '.json'
             : ''
-    const slugHint =
-      row.asset_kind === 'skill'
-        ? basename(dirname(row.remote_path))
-        : fileStem(row.remote_path, suffix ? [suffix] : [])
-    const built = buildRemoteAsset({
-      kind: row.asset_kind,
-      root,
-      mainPath: row.remote_path,
-      dirPath: files.dirPath,
-      files: files.files,
-      slugHint,
-      folderHint: folder,
-    })
-    if (!built.asset) {
-      throw new AppError('VALIDATION', built.error ?? 'The remote content could not be parsed.')
+    const slugHint = dirPath
+      ? basename(dirPath)
+      : fileStem(row.remote_path, suffix ? [suffix] : [])
+    const reader = await client.openBlobReader(repo.local_path, { signal })
+    try {
+      const content = await readScannedAsset(reader, ctx.blobs, entries, dirPath, mainPath, row.asset_kind, {
+        signal,
+        stage: true,
+      })
+      if (content.skipped.length) {
+        throw new AppError(
+          'CONFLICT',
+          `The remote content at ${content.skipped[0].path} changed or could not be read. Fetch the repository again.`,
+        )
+      }
+      const built = buildScannedRemoteAsset({
+        kind: row.asset_kind,
+        mainPath,
+        dirPath,
+        files: content.files,
+        mainText: content.mainText,
+        findings: content.findings,
+        slugHint,
+        folderHint: folder,
+      })
+      if (!built.asset) {
+        throw new AppError('VALIDATION', built.error ?? 'The remote content could not be parsed.')
+      }
+      return built.asset
+    } finally {
+      await reader.close()
     }
-    return built.asset
   }
 
   async function runPull(repo: RepoRow, input: SyncPullInput, op: OperationContext): Promise<PullResult> {
@@ -3119,8 +3448,10 @@ export function createSyncService(ctx: AppContext): SyncService {
     try {
       const commit = await client.remoteHead(repo.local_path, REMOTE_NAME, repo.branch)
       if (commit) {
-        const scan = await scanRepository(client, repo.local_path, commit, layout, op.signal)
-        reconcileChanges(ctx, repo, layout, policies, scan, commit)
+        const scan = await scanRepository(client, ctx.blobs, repo.local_path, commit, layout, {
+          signal: op.signal,
+        })
+        await reconcileChanges(ctx, client, repo, layout, policies, scan, commit, op.signal)
       }
     } catch {
       // Reconciliation is best effort; the next fetch repairs the change list.
@@ -3503,8 +3834,10 @@ export function createSyncService(ctx: AppContext): SyncService {
         .run(at, at, repo.id)
       clearFetchError(ctx, repo.id)
       try {
-        const scan = await scanRepository(client, repo.local_path, commit, layout, op.signal)
-        reconcileChanges(ctx, repo, layout, policiesOf(repo), scan, commit)
+        const scan = await scanRepository(client, ctx.blobs, repo.local_path, commit, layout, {
+          signal: op.signal,
+        })
+        await reconcileChanges(ctx, client, repo, layout, policiesOf(repo), scan, commit, op.signal)
       } catch {
         // The next fetch reconciles any remaining rows.
       }
@@ -3711,12 +4044,19 @@ export function createSyncService(ctx: AppContext): SyncService {
         }))
       : []
     const remoteFiles: NewAssetFile[] = remote
-      ? remote.files.map((file) => ({
-          path: file.assetPath,
-          content: file.content,
-          mediaKind: file.mediaKind,
-          isExecutable: file.isExecutable,
-        }))
+      ? remote.files.length
+        ? remote.files.map((file) => ({
+            path: file.assetPath,
+            content: file.content,
+            mediaKind: file.mediaKind,
+            isExecutable: file.isExecutable,
+          }))
+        : remote.manifest.map((file) => ({
+            path: file.path,
+            content: ctx.blobs.readSync(file.blobHash),
+            mediaKind: file.mediaKind,
+            isExecutable: file.isExecutable,
+          }))
       : []
     let baseFiles: NewAssetFile[]
     if (asset.kind === 'skill') {
@@ -3813,8 +4153,8 @@ export function createSyncService(ctx: AppContext): SyncService {
     try {
       const commit = await client.remoteHead(repo.local_path, REMOTE_NAME, repo.branch)
       if (!commit) return []
-      const scan = await scanRepository(client, repo.local_path, commit, layout)
-      reconcileChanges(ctx, repo, layout, policies, scan, commit)
+      const scan = await scanRepository(client, ctx.blobs, repo.local_path, commit, layout)
+      await reconcileChanges(ctx, client, repo, layout, policies, scan, commit)
       return ctx.db
         .prepare(
           "SELECT id, asset_id AS assetId, direction FROM sync_changes WHERE repo_id = ? AND status IN ('open','reviewed')",
@@ -4051,9 +4391,10 @@ export function createSyncService(ctx: AppContext): SyncService {
       try {
         const commit = await client.remoteHead(repo.local_path, REMOTE_NAME, repo.branch)
         if (commit) {
-          const scan = await scanRepository(client, repo.local_path, commit, nextLayout)
-          reconcileChanges(
+          const scan = await scanRepository(client, ctx.blobs, repo.local_path, commit, nextLayout)
+          await reconcileChanges(
             ctx,
+            client,
             { ...repo, policies_json: JSON.stringify(nextPolicies), layout_json: JSON.stringify(nextLayout) },
             nextLayout,
             nextPolicies,
@@ -4192,7 +4533,7 @@ export function createSyncService(ctx: AppContext): SyncService {
       if (existing) {
         throw new AppError('CONFLICT', 'A repository is already connected to this workspace.')
       }
-      const plan = planConnect(input)
+      const plan = await planConnect(input)
       if (input.confirm !== true) return repoPreview(plan, input)
       return repoApply(plan, input)
     },

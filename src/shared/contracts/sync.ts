@@ -52,12 +52,15 @@ export interface RepoStatus {
 }
 
 export interface RepoConnectInput {
-  url: string
+  /** Required for a managed clone. A bound clone may omit it to use its origin remote. */
+  url?: string
   provider?: RepoProvider
+  /** Defaults to the checked-out branch of a bound clone, otherwise `main`. */
   branch?: string
   localPath?: string
   cloneMode: 'managed' | 'bound'
-  auth: RepoAuthInput
+  /** Defaults to the system Git configuration. A bound clone never needs a token. */
+  auth?: RepoAuthInput
   policies?: RepoPolicies
   layout?: RepoLayout
   autoFetch?: boolean

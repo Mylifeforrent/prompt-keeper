@@ -55,6 +55,22 @@ export interface GitTreeEntry {
   type: 'blob' | 'tree' | 'commit'
   hash: string
   path: string
+  /** Blob size from `ls-tree -l`; null for trees or when Git reports `-`. */
+  size: number | null
+}
+
+export interface GitBlobReadResult {
+  size: number
+  missing: boolean
+}
+
+/**
+ * Sequential reader over `git cat-file --batch`. Content is streamed to the
+ * callback so callers can hash or stage large blobs without buffering them.
+ */
+export interface GitBlobReader {
+  read(oid: string, onChunk: (chunk: Buffer) => void): Promise<GitBlobReadResult>
+  close(): Promise<void>
 }
 
 export interface GitStatusEntry {
@@ -98,6 +114,10 @@ export interface GitClient {
   revParse(repoPath: string, ref: string): Promise<string | null>
   lsTree(repoPath: string, ref: string, paths?: string[], options?: GitRunOptions): Promise<GitTreeEntry[]>
   show(repoPath: string, ref: string, path: string, options?: GitRunOptions): Promise<Buffer | null>
+  openBlobReader(
+    repoPath: string,
+    options?: { signal?: OperationSignal; timeoutMs?: number },
+  ): Promise<GitBlobReader>
   statusPorcelain(repoPath: string, paths?: string[]): Promise<GitStatusEntry[]>
   add(repoPath: string, paths: string[]): Promise<void>
   commit(repoPath: string, message: string, paths?: string[]): Promise<string>
@@ -192,6 +212,9 @@ const NOT_FOUND_HINTS: RegExp[] = [
 ]
 
 const SAFE_REF = /^(?!-)[A-Za-z0-9._/@]+$/
+const SAFE_OID = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/
+const GIT_BLOB_TIMEOUT_MS = 120_000
+const GIT_BATCH_STDERR_BYTES = 64 * 1024
 const SAFE_REMOTE = /^(?!-)[A-Za-z0-9._-]+$/
 const SAFE_BRANCH = /^(?![-/.])(?!.*\.\.)(?!.*@\{)[A-Za-z0-9._/-]+$/
 const SAFE_REFSPEC = /^(?:HEAD|[A-Za-z0-9._/-]+):refs\/heads\/[A-Za-z0-9._/-]+$/
@@ -263,6 +286,225 @@ function validatePaths(paths: string[]): string[] {
 
 function decodePath(value: string): string {
   return value.replace(/\\/g, '/')
+}
+
+type BatchPhase = 'idle' | 'header' | 'content' | 'trailing'
+
+interface BatchRequest {
+  resolve: (result: GitBlobReadResult) => void
+  reject: (error: Error) => void
+  onChunk: (chunk: Buffer) => void
+  onData: () => void
+}
+
+/**
+ * Line-and-payload parser for `git cat-file --batch`. One request is read at a
+ * time; the state machine consumes exactly the announced byte count so binary
+ * content cannot desynchronize the stream.
+ */
+class CatFileBatchReader implements GitBlobReader {
+  private phase: BatchPhase = 'idle'
+  private header = ''
+  private remaining = 0
+  private total = 0
+  private request: BatchRequest | null = null
+  private closed = false
+  private exitError: AppError | null = null
+  private stderr = ''
+  private timer: NodeJS.Timeout | null = null
+  private readonly cancelTimer: NodeJS.Timeout
+  private readonly timeoutMs: number
+  private readonly signal?: OperationSignal
+
+  constructor(
+    private readonly child: ReturnType<typeof spawn>,
+    options: { signal?: OperationSignal; timeoutMs?: number },
+  ) {
+    this.signal = options.signal
+    this.timeoutMs = options.timeoutMs ?? GIT_BLOB_TIMEOUT_MS
+    this.child.stdout?.on('data', (chunk: Buffer) => this.onData(chunk))
+    this.child.stderr?.on('data', (chunk: Buffer) => {
+      if (this.stderr.length < GIT_BATCH_STDERR_BYTES) {
+        this.stderr += chunk.toString('utf8')
+      }
+    })
+    this.child.on('error', (error: NodeJS.ErrnoException) => {
+      const appError =
+        error.code === 'ENOENT'
+          ? new AppError(
+              'GIT_NOT_FOUND',
+              'Git was not found. Install Git and make sure the git executable is on PATH.',
+            )
+          : new AppError('INTERNAL', `Git could not start: ${error.message}`)
+      this.fail(appError)
+    })
+    this.child.stdin?.on('error', (error) => {
+      this.fail(new AppError('INTERNAL', `The Git object reader stdin failed: ${error.message}`))
+    })
+    this.child.on('close', (code: number | null) => {
+      if (this.closed) return
+      if (this.exitError) return
+      if (code === 0) {
+        this.fail(new AppError('INTERNAL', 'The Git object reader closed before the request completed.'))
+        return
+      }
+      this.fail(mapGitFailure(this.stderr, {}))
+    })
+    this.cancelTimer = setInterval(() => {
+      if (this.signal?.cancelled && !this.closed) {
+        this.fail(new AppError('INTERNAL', 'The operation was cancelled.'))
+      }
+    }, 100)
+    this.cancelTimer.unref?.()
+  }
+
+  async read(oid: string, onChunk: (chunk: Buffer) => void): Promise<GitBlobReadResult> {
+    if (!SAFE_OID.test(oid)) {
+      throw new AppError('VALIDATION', 'The Git object name is not valid.')
+    }
+    if (this.exitError) {
+      throw this.exitError
+    }
+    if (this.closed) {
+      throw new AppError('INTERNAL', 'The Git object reader is closed.')
+    }
+    if (this.request) {
+      throw new AppError('INTERNAL', 'The Git object reader is busy.')
+    }
+    const stdin = this.child.stdin
+    if (!stdin || stdin.destroyed) {
+      throw new AppError('INTERNAL', 'The Git object reader stdin is closed.')
+    }
+    return new Promise<GitBlobReadResult>((resolve, reject) => {
+      this.phase = 'header'
+      this.header = ''
+      this.remaining = 0
+      this.total = 0
+      this.request = {
+        resolve,
+        reject,
+        onChunk,
+        onData: () => this.touch(),
+      }
+      this.touch()
+      stdin.write(`${oid}\n`)
+    })
+  }
+
+  async close(): Promise<void> {
+    if (this.closed) return
+    this.fail(new AppError('INTERNAL', 'The Git object reader was closed.'))
+    this.closed = true
+    if (this.timer) clearTimeout(this.timer)
+    clearInterval(this.cancelTimer)
+    this.child.stdin?.end()
+    if (!this.child.killed) {
+      this.child.kill('SIGTERM')
+    }
+  }
+
+  private touch(): void {
+    if (this.timer) clearTimeout(this.timer)
+    this.timer = setTimeout(() => {
+      this.fail(
+        new AppError('INTERNAL', `The Git object reader did not respond within ${Math.round(this.timeoutMs / 1000)} seconds.`),
+      )
+    }, this.timeoutMs)
+    this.timer.unref?.()
+  }
+
+  private fail(error: AppError): void {
+    if (this.exitError) return
+    this.exitError = error
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+    const request = this.request
+    this.request = null
+    this.phase = 'idle'
+    request?.reject(error)
+    if (!this.child.killed) this.child.kill('SIGTERM')
+  }
+
+  private settle(): void {
+    const request = this.request
+    if (!request) return
+    this.request = null
+    this.phase = 'idle'
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+    request.resolve({ size: this.total, missing: false })
+  }
+
+  private onData(chunk: Buffer): void {
+    if (this.exitError || !this.request) return
+    const request = this.request
+    request.onData()
+    let offset = 0
+    try {
+      while (offset < chunk.length) {
+        if (this.phase === 'header') {
+          const newline = chunk.indexOf(0x0a, offset)
+          if (newline === -1) {
+            this.header += chunk.subarray(offset).toString('utf8')
+            offset = chunk.length
+            break
+          }
+          this.header += chunk.subarray(offset, newline).toString('utf8')
+          offset = newline + 1
+          const header = this.header.trim()
+          this.header = ''
+          const parts = header.split(' ')
+          if (parts.length === 2 && parts[1] === 'missing') {
+            this.request = null
+            this.phase = 'idle'
+            if (this.timer) {
+              clearTimeout(this.timer)
+              this.timer = null
+            }
+            request.resolve({ size: 0, missing: true })
+            return
+          }
+          if (parts.length !== 3 || parts[1] !== 'blob') {
+            throw new AppError('CORRUPT', `Git returned an unexpected object header for ${parts[0] ?? 'unknown'}.`)
+          }
+          const size = Number.parseInt(parts[2], 10)
+          if (!Number.isFinite(size) || size < 0) {
+            throw new AppError('CORRUPT', 'Git returned an invalid object size.')
+          }
+          this.total = 0
+          this.remaining = size
+          this.phase = size === 0 ? 'trailing' : 'content'
+          continue
+        }
+        if (this.phase === 'content') {
+          const take = Math.min(this.remaining, chunk.length - offset)
+          if (take > 0) {
+            request.onChunk(chunk.subarray(offset, offset + take))
+            offset += take
+            this.remaining -= take
+            this.total += take
+          }
+          if (this.remaining === 0) this.phase = 'trailing'
+          continue
+        }
+        if (this.phase === 'trailing') {
+          const newline = chunk.indexOf(0x0a, offset)
+          if (newline === -1) {
+            offset = chunk.length
+            break
+          }
+          offset = newline + 1
+          this.settle()
+        }
+      }
+    } catch (error) {
+      this.fail(error instanceof AppError ? error : new AppError('INTERNAL', 'The Git object stream could not be read.'))
+    }
+  }
 }
 
 export class GitAdapter implements GitClient {
@@ -583,7 +825,7 @@ export class GitAdapter implements GitClient {
   ): Promise<GitTreeEntry[]> {
     if (!SAFE_REF.test(ref)) throw new AppError('VALIDATION', 'The Git revision is not valid.')
     if (paths.length) validatePaths(paths)
-    const args = ['ls-tree', '-r', '-z', '--full-tree', ref]
+    const args = ['ls-tree', '-r', '-l', '-z', '--full-tree', ref]
     if (paths.length) args.push('--', ...paths)
     const result = await this.run(args, {
       cwd: repoPath,
@@ -596,15 +838,24 @@ export class GitAdapter implements GitClient {
       if (!record) continue
       const tab = record.indexOf('\t')
       if (tab === -1) continue
-      const meta = record.slice(0, tab).split(' ')
+      const meta = record
+        .slice(0, tab)
+        .trim()
+        .split(/\s+/)
       if (meta.length < 3) continue
       const type = meta[1] === 'blob' || meta[1] === 'tree' || meta[1] === 'commit' ? meta[1] : null
       if (!type) continue
+      const sizeToken = meta[3]
+      const size =
+        sizeToken && sizeToken !== '-' && /^\d+$/.test(sizeToken)
+          ? Number.parseInt(sizeToken, 10)
+          : null
       entries.push({
         mode: meta[0],
         type,
         hash: meta[2],
         path: decodePath(record.slice(tab + 1)),
+        size,
       })
     }
     return entries
@@ -630,6 +881,21 @@ export class GitAdapter implements GitClient {
       throw mapGitFailure(result.stderr, { network: false })
     }
     return result.stdout
+  }
+
+  async openBlobReader(
+    repoPath: string,
+    options: { signal?: OperationSignal; timeoutMs?: number } = {},
+  ): Promise<GitBlobReader> {
+    const env = await this.buildEnv()
+    const child = spawn('git', ['--no-pager', '--no-optional-locks', 'cat-file', '--batch'], {
+      cwd: repoPath,
+      shell: false,
+      windowsHide: true,
+      env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    return new CatFileBatchReader(child, options)
   }
 
   async statusPorcelain(repoPath: string, paths: string[] = []): Promise<GitStatusEntry[]> {

@@ -156,7 +156,7 @@ The Sync Center's dispatch matrix shows every Skill and MCP server across every 
 
 Git is the **shared** source of truth. The local library is the **operational** source of truth. Agent directories are **delivery targets** — never the other way around.
 
-1. **Connect a repository.** A two-phase connection previews layout detection, asset counts, malformed files, duplicate IDs, scripts, and credential findings before writing anything.
+1. **Connect a repository.** Point at a local Git worktree and the app reads its `origin` and branch, reusing your existing Git credentials with no token. A managed clone from a remote URL is also available. Either way, a two-phase connection previews layout detection, asset counts, malformed files, duplicate IDs, scripts, and credential findings before writing anything.
 2. **Curate locally.** SQLite indexes the library; content-addressed blobs store revisions; full-text search stays on the machine.
 3. **Deliver with intent.** Projection for instruction contracts, symlink or copy for Skills, format-preserving merge for MCP — every write previewed, tracked, and reversible.
 
